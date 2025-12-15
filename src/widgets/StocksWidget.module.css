@@ -1,0 +1,151 @@
+.container {
+  height: 100%;
+  padding: 1rem;
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.1) 0%, rgba(16, 185, 129, 0.1) 100%);
+  border-radius: var(--mantine-radius-md);
+  display: flex;
+  flex-direction: column;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.75rem;
+  flex-shrink: 0;
+}
+
+.title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 600;
+  font-size: 1rem;
+  color: var(--mantine-color-green-5);
+}
+
+.refreshBtn {
+  color: var(--mantine-color-dimmed);
+}
+
+.refreshBtn:hover {
+  color: white;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.stocksList {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.stockRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  transition: all 0.2s ease;
+}
+
+.stockRow:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(34, 197, 94, 0.3);
+}
+
+.stockInfo {
+  flex: 1;
+  min-width: 0;
+}
+
+.stockPrice {
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.change {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.25rem;
+  margin-top: 2px;
+}
+
+.positive {
+  color: #22c55e;
+}
+
+.negative {
+  color: #ef4444;
+}
+
+.neutral {
+  color: var(--mantine-color-dimmed);
+}
+
+.attribution {
+  opacity: 0.5;
+  flex-shrink: 0;
+}
+
+/* Empty state */
+.empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 0.5rem;
+}
+
+.emptyIcon {
+  color: var(--mantine-color-green-5);
+  opacity: 0.5;
+}
+
+/* Loading state */
+.loading {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Settings */
+.checkboxLabel {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+}
+
+.checkboxLabel input {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+}
+
+.searchResults {
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  max-height: 250px;
+  overflow-y: auto;
+}
+
+.searchResult {
+  color: var(--mantine-color-dimmed);
+  font-weight: normal;
+}
+
+.searchResult:hover:not(:disabled) {
+  color: white;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.searchResult:disabled {
+  opacity: 0.7;
+}
+

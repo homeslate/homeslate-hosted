@@ -1,0 +1,48 @@
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1.5rem;
+  background: rgba(20, 20, 28, 0.8);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.logo {
+  color: #6366f1;
+}
+
+.title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.selectInput {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.selectInput:focus {
+  border-color: rgba(99, 102, 241, 0.5);
+}
+
+.actionButton {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.actionButton:hover {
+  color: white;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.editButton {
+  font-weight: 500;
+}
+

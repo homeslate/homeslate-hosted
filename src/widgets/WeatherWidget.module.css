@@ -1,0 +1,166 @@
+.container {
+  height: 100%;
+  padding: 1rem;
+  background: linear-gradient(135deg, rgba(251, 146, 60, 0.1) 0%, rgba(251, 191, 36, 0.1) 100%);
+  border-radius: var(--mantine-radius-md);
+  display: flex;
+  flex-direction: column;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+}
+
+.location {
+  font-weight: 600;
+  font-size: 1rem;
+  color: var(--mantine-color-orange-6);
+}
+
+.current {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.mainTemp {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.temperature {
+  font-size: clamp(2rem, 5vw, 3rem);
+  font-weight: 300;
+  line-height: 1;
+  background: linear-gradient(135deg, #fb923c 0%, #fbbf24 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.condition {
+  font-size: 1rem;
+  color: var(--mantine-color-dimmed);
+}
+
+.details {
+  display: flex;
+  gap: 1rem;
+  margin-top: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.detailItem {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  color: var(--mantine-color-dimmed);
+}
+
+.forecast {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  overflow-x: auto;
+}
+
+.forecastDay {
+  flex: 1;
+  min-width: 48px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.5rem;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: var(--mantine-radius-sm);
+}
+
+.iconSunny {
+  color: #fbbf24;
+}
+
+.iconMoon {
+  color: #a78bfa;
+}
+
+.iconCloudy {
+  color: #94a3b8;
+}
+
+.iconRainy {
+  color: #60a5fa;
+}
+
+.iconSnowy {
+  color: #a5f3fc;
+}
+
+.iconStormy {
+  color: #c084fc;
+}
+
+/* Empty state */
+.empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 0.5rem;
+}
+
+.emptyIcon {
+  color: var(--mantine-color-orange-6);
+  opacity: 0.5;
+}
+
+/* Loading state */
+.loading {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Error state */
+.error {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+/* Settings styles */
+.searchResults {
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.searchResult {
+  color: var(--mantine-color-dimmed);
+  font-weight: normal;
+}
+
+.searchResult:hover {
+  color: white;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.currentLocation {
+  background: rgba(251, 146, 60, 0.1);
+  border: 1px solid rgba(251, 146, 60, 0.2);
+}

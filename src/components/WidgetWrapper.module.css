@@ -1,0 +1,128 @@
+.wrapper {
+  height: 100%;
+  position: relative;
+  background: rgba(30, 30, 40, 0.6);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+  transition: box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.wrapper:hover {
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+.editing {
+  border: 2px dashed rgba(99, 102, 241, 0.5);
+}
+
+.editing:hover {
+  border-color: rgba(99, 102, 241, 0.8);
+  box-shadow: 0 0 20px rgba(99, 102, 241, 0.2);
+}
+
+/* Size indicator in bottom right */
+.editing::before {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 24px;
+  height: 24px;
+  background: linear-gradient(135deg, transparent 50%, rgba(99, 102, 241, 0.3) 50%);
+  z-index: 5;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.editing:hover::before {
+  opacity: 1;
+}
+
+.toolbar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.25rem 0.5rem;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.6) 0%, transparent 100%);
+  z-index: 10;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.editing:hover .toolbar {
+  opacity: 1;
+}
+
+.dragHandle {
+  cursor: grab;
+  padding: 0.25rem;
+  color: rgba(255, 255, 255, 0.6);
+  display: flex;
+  align-items: center;
+}
+
+.dragHandle:hover {
+  color: white;
+}
+
+.dragHandle:active {
+  cursor: grabbing;
+}
+
+.toolbarButton {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.toolbarButton:hover {
+  color: white;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.content {
+  height: 100%;
+}
+
+.widgetName {
+  font-weight: 500;
+  opacity: 0.8;
+}
+
+.sizeIndicator {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px;
+  background: rgba(99, 102, 241, 0.2);
+  border-radius: 4px;
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 10px;
+  cursor: default;
+}
+
+.resizeHint {
+  position: absolute;
+  bottom: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 4px 10px;
+  background: rgba(0, 0, 0, 0.7);
+  border-radius: 4px;
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.7);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  z-index: 10;
+  white-space: nowrap;
+}
+
+.editing:hover .resizeHint {
+  opacity: 1;
+}
+
