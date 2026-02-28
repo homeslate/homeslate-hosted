@@ -35,6 +35,7 @@ export interface GoogleCalendarEvent {
 export interface ParsedCalendarEvent {
   id: string;
   calendarId: string;
+  calendarName?: string;
   title: string;
   description?: string;
   location?: string;
@@ -45,8 +46,26 @@ export interface ParsedCalendarEvent {
   htmlLink?: string;
 }
 
+// Google Calendar event colorId → hex color
+const GOOGLE_EVENT_COLORS: Record<string, string> = {
+  '1': '#7986CB', // Lavender
+  '2': '#33B679', // Sage
+  '3': '#8E24AA', // Grape
+  '4': '#E67C73', // Flamingo
+  '5': '#F6BF26', // Banana
+  '6': '#F4511E', // Tangerine
+  '7': '#039BE5', // Peacock
+  '8': '#3F51B5', // Blueberry
+  '9': '#0F9D58', // Basil
+  '10': '#D50000', // Tomato
+  '11': '#616161', // Graphite
+};
+
 const GOOGLE_API_BASE = 'https://www.googleapis.com/calendar/v3';
-const SCOPES = 'https://www.googleapis.com/auth/calendar.readonly';
+const SCOPES = 'https://www.googleapis.com/auth/calendar';
+
+const TOKEN_KEY = 'gcal_access_token';
+const TOKEN_EXPIRY_KEY = 'gcal_token_expiry';
 
 // Token storage
 let accessToken: string | null = null;
@@ -59,6 +78,24 @@ function isGoogleLoaded(): boolean {
 }
 
 /**
+ * Restore a previously saved token from localStorage if it hasn't expired
+ */
+function restoreToken(): void {
+  const stored = localStorage.getItem(TOKEN_KEY);
+  const expiry = localStorage.getItem(TOKEN_EXPIRY_KEY);
+  if (stored && expiry) {
+    const expiryMs = parseInt(expiry, 10);
+    if (Date.now() < expiryMs) {
+      accessToken = stored;
+      tokenExpiry = expiryMs;
+    } else {
+      localStorage.removeItem(TOKEN_KEY);
+      localStorage.removeItem(TOKEN_EXPIRY_KEY);
+    }
+  }
+}
+
+/**
  * Initialize Google OAuth client
  */
 export function initGoogleAuth(clientId: string): Promise<void> {
@@ -67,6 +104,9 @@ export function initGoogleAuth(clientId: string): Promise<void> {
       reject(new Error('Google Client ID is required'));
       return;
     }
+
+    // Restore any saved token before initializing
+    restoreToken();
 
     // Check if script is already loaded
     if (isGoogleLoaded()) {
@@ -123,6 +163,9 @@ export function requestGoogleAuth(): Promise<string> {
       accessToken = response.access_token;
       // Token typically expires in 1 hour
       tokenExpiry = Date.now() + (response.expires_in || 3600) * 1000;
+      // Persist so page reloads within the expiry window don't require re-auth
+      localStorage.setItem(TOKEN_KEY, accessToken);
+      localStorage.setItem(TOKEN_EXPIRY_KEY, String(tokenExpiry));
       resolve(response.access_token);
     };
 
@@ -157,6 +200,8 @@ export function clearGoogleAuth(): void {
   }
   accessToken = null;
   tokenExpiry = null;
+  localStorage.removeItem(TOKEN_KEY);
+  localStorage.removeItem(TOKEN_EXPIRY_KEY);
 }
 
 /**
@@ -249,7 +294,7 @@ export async function fetchAllCalendarEvents(
       for (const event of events) {
         if (event.status === 'cancelled') continue;
         
-        const parsed = parseGoogleEvent(event, calendarId, calendar?.backgroundColor || '#4285f4');
+        const parsed = parseGoogleEvent(event, calendarId, calendar?.backgroundColor || '#4285f4', calendar?.summary);
         if (parsed) {
           allEvents.push(parsed);
         }
@@ -269,7 +314,8 @@ export async function fetchAllCalendarEvents(
 function parseGoogleEvent(
   event: GoogleCalendarEvent,
   calendarId: string,
-  calendarColor: string
+  calendarColor: string,
+  calendarName?: string
 ): ParsedCalendarEvent | null {
   const startDate = event.start.dateTime 
     ? new Date(event.start.dateTime)
@@ -285,18 +331,133 @@ function parseGoogleEvent(
 
   if (!startDate || !endDate) return null;
 
+  // Event-specific colorId overrides calendar color
+  const color = event.colorId ? (GOOGLE_EVENT_COLORS[event.colorId] ?? calendarColor) : calendarColor;
+
   return {
     id: event.id,
     calendarId,
+    calendarName,
     title: event.summary || '(No title)',
     description: event.description,
     location: event.location,
     start: startDate,
     end: endDate,
     allDay: !event.start.dateTime,
-    color: calendarColor,
+    color,
     htmlLink: event.htmlLink,
   };
+}
+
+/**
+ * Input shape for creating or updating a calendar event
+ */
+export interface CalendarEventInput {
+  summary: string;
+  description?: string;
+  location?: string;
+  start: {
+    dateTime?: string;
+    date?: string;
+    timeZone?: string;
+  };
+  end: {
+    dateTime?: string;
+    date?: string;
+    timeZone?: string;
+  };
+}
+
+/**
+ * Create a new event in a calendar
+ */
+export async function createCalendarEvent(
+  token: string,
+  calendarId: string,
+  event: CalendarEventInput
+): Promise<GoogleCalendarEvent> {
+  const response = await fetch(
+    `${GOOGLE_API_BASE}/calendars/${encodeURIComponent(calendarId)}/events`,
+    {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(event),
+    }
+  );
+
+  if (!response.ok) {
+    if (response.status === 401) {
+      accessToken = null;
+      tokenExpiry = null;
+      throw new Error('Token expired. Please sign in again.');
+    }
+    throw new Error(`Failed to create event: ${response.statusText}`);
+  }
+  return response.json();
+}
+
+/**
+ * Update an existing event (full replace)
+ */
+export async function updateCalendarEvent(
+  token: string,
+  calendarId: string,
+  eventId: string,
+  event: CalendarEventInput
+): Promise<GoogleCalendarEvent> {
+  const response = await fetch(
+    `${GOOGLE_API_BASE}/calendars/${encodeURIComponent(calendarId)}/events/${encodeURIComponent(eventId)}`,
+    {
+      method: 'PUT',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(event),
+    }
+  );
+
+  if (!response.ok) {
+    if (response.status === 401) {
+      accessToken = null;
+      tokenExpiry = null;
+      throw new Error('Token expired. Please sign in again.');
+    }
+    throw new Error(`Failed to update event: ${response.statusText}`);
+  }
+  return response.json();
+}
+
+/**
+ * Delete an event from a calendar
+ */
+export async function deleteCalendarEvent(
+  token: string,
+  calendarId: string,
+  eventId: string
+): Promise<void> {
+  const response = await fetch(
+    `${GOOGLE_API_BASE}/calendars/${encodeURIComponent(calendarId)}/events/${encodeURIComponent(eventId)}`,
+    {
+      method: 'DELETE',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  );
+
+  if (!response.ok) {
+    if (response.status === 401) {
+      accessToken = null;
+      tokenExpiry = null;
+      throw new Error('Token expired. Please sign in again.');
+    }
+    if (response.status === 410) return; // already deleted
+    throw new Error(`Failed to delete event: ${response.statusText}`);
+  }
 }
 
 // Type declaration for Google Identity Services

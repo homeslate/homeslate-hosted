@@ -7,7 +7,6 @@ import {
   Button,
   Paper,
   TextInput,
-  MultiSelect,
   PasswordInput,
   Anchor,
   Group,

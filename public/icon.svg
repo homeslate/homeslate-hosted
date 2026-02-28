@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- App background -->
+  <rect width="512" height="512" rx="100" fill="#1a1b1e"/>
+  <!-- Calendar body -->
+  <rect x="76" y="148" width="360" height="280" rx="24" fill="#25262b"/>
+  <!-- Calendar header -->
+  <path d="M76 172 Q76 148 100 148 H412 Q436 148 436 172 V208 H76 Z" fill="#4285f4"/>
+  <!-- Calendar hanger pegs -->
+  <rect x="164" y="116" width="24" height="56" rx="12" fill="#4285f4"/>
+  <rect x="324" y="116" width="24" height="56" rx="12" fill="#4285f4"/>
+  <!-- Event dots row 1 -->
+  <circle cx="164" cy="272" r="20" fill="#34a853"/>
+  <circle cx="256" cy="272" r="20" fill="#4285f4"/>
+  <circle cx="348" cy="272" r="20" fill="#ea4335"/>
+  <!-- Event dots row 2 -->
+  <circle cx="164" cy="352" r="20" fill="#fbbc04"/>
+  <circle cx="256" cy="352" r="20" fill="#34a853"/>
+  <!-- Grid lines -->
+  <line x1="76" y1="232" x2="436" y2="232" stroke="rgba(255,255,255,0.08)" stroke-width="2"/>
+  <line x1="76" y1="312" x2="436" y2="312" stroke="rgba(255,255,255,0.08)" stroke-width="2"/>
+  <line x1="210" y1="208" x2="210" y2="428" stroke="rgba(255,255,255,0.08)" stroke-width="2"/>
+  <line x1="302" y1="208" x2="302" y2="428" stroke="rgba(255,255,255,0.08)" stroke-width="2"/>
+</svg>

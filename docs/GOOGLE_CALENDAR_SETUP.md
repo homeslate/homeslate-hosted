@@ -43,7 +43,9 @@ The Google Calendar widget uses OAuth 2.0 to securely access your Google Calenda
 ### Add Scopes:
 
 1. Click **"Add or Remove Scopes"**
-2. Search for and add: `https://www.googleapis.com/auth/calendar.readonly`
+2. Search for and add: `https://www.googleapis.com/auth/calendar`
+   - This grants read **and write** access so you can create and edit events from the display
+   - If you only want read-only access, use `https://www.googleapis.com/auth/calendar.readonly` instead (you will need to remove the create/edit features)
 3. Click **"Update"**, then **"Save and Continue"**
 
 ### Add Test Users (Important!):

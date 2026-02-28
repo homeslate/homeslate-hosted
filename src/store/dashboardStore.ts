@@ -3,17 +3,32 @@ import { persist } from 'zustand/middleware';
 import { v4 as uuidv4 } from 'uuid';
 import type { DashboardLayout, WidgetDefinition, WidgetConfig } from '../types/widget';
 
+export interface RemoteConfig {
+  layouts: DashboardLayout[];
+  activeLayoutId: string | null;
+  rotationEnabled: boolean;
+  rotationIntervalMs: number;
+}
+
 interface DashboardState {
   layouts: DashboardLayout[];
   activeLayoutId: string | null;
   isEditing: boolean;
-  
+  rotationEnabled: boolean;
+  rotationIntervalMs: number;
+
+  // Sync
+  loadFromRemote: (config: RemoteConfig) => void;
+
   // Actions
   createLayout: (name: string) => void;
   deleteLayout: (id: string) => void;
   setActiveLayout: (id: string) => void;
   toggleEditing: () => void;
-  
+  setRotationEnabled: (enabled: boolean) => void;
+  setRotationIntervalMs: (ms: number) => void;
+  navigateToView: (direction: 'next' | 'prev') => void;
+
   // Widget actions
   addWidget: (type: string, defaultConfig: WidgetConfig, defaultLayout: WidgetDefinition['layout']) => void;
   removeWidget: (widgetId: string) => void;
@@ -36,6 +51,17 @@ export const useDashboardStore = create<DashboardState>()(
       layouts: [createDefaultLayout()],
       activeLayoutId: null,
       isEditing: false,
+      rotationEnabled: false,
+      rotationIntervalMs: 30000,
+
+      loadFromRemote: (config: RemoteConfig) => {
+        set({
+          layouts: config.layouts,
+          activeLayoutId: config.activeLayoutId,
+          rotationEnabled: config.rotationEnabled,
+          rotationIntervalMs: config.rotationIntervalMs,
+        });
+      },
 
       createLayout: (name: string) => {
         const newLayout: DashboardLayout = {
@@ -66,6 +92,21 @@ export const useDashboardStore = create<DashboardState>()(
 
       toggleEditing: () => {
         set((state) => ({ isEditing: !state.isEditing }));
+      },
+
+      setRotationEnabled: (enabled) => set({ rotationEnabled: enabled }),
+      setRotationIntervalMs: (ms) => set({ rotationIntervalMs: ms }),
+
+      navigateToView: (direction) => {
+        const { layouts, activeLayoutId } = get();
+        if (layouts.length <= 1) return;
+        const idx = layouts.findIndex((l) => l.id === activeLayoutId);
+        if (idx === -1) return;
+        const next =
+          direction === 'next'
+            ? (idx + 1) % layouts.length
+            : (idx - 1 + layouts.length) % layouts.length;
+        set({ activeLayoutId: layouts[next].id });
       },
 
       addWidget: (type: string, defaultConfig: WidgetConfig, defaultLayout: WidgetDefinition['layout']) => {

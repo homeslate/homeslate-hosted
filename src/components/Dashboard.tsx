@@ -1,5 +1,7 @@
-import { useMemo } from 'react';
-import GridLayout from 'react-grid-layout';
+import { useMemo, useEffect, useRef, useState } from 'react';
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+import GridLayoutImport from 'react-grid-layout';
+const GridLayout = GridLayoutImport as any;
 import { useDashboardStore } from '../store/dashboardStore';
 import { WidgetWrapper } from './WidgetWrapper';
 import { useElementSize } from '@mantine/hooks';
@@ -11,10 +13,22 @@ export function Dashboard() {
   const { layouts, activeLayoutId, isEditing, updateAllWidgetLayouts } = useDashboardStore();
   const { ref, width } = useElementSize();
   
-  const activeLayout = useMemo(() => 
-    layouts.find(l => l.id === activeLayoutId),
+  const activeLayout = useMemo(() =>
+    layouts.find((l) => l.id === activeLayoutId),
     [layouts, activeLayoutId]
   );
+
+  // Trigger fade-in animation whenever the active view changes
+  const prevLayoutId = useRef(activeLayoutId);
+  const [isFading, setIsFading] = useState(false);
+  useEffect(() => {
+    if (prevLayoutId.current !== activeLayoutId) {
+      prevLayoutId.current = activeLayoutId;
+      setIsFading(true);
+      const t = setTimeout(() => setIsFading(false), 350);
+      return () => clearTimeout(t);
+    }
+  }, [activeLayoutId]);
 
   if (!activeLayout) {
     return (
@@ -36,9 +50,10 @@ export function Dashboard() {
     maxH: widget.layout.maxH,
   }));
 
-  const handleLayoutChange = (newLayout: GridLayout.Layout[]) => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const handleLayoutChange = (newLayout: any[]) => {
     if (!isEditing) return;
-    updateAllWidgetLayouts(newLayout.map(l => ({
+    updateAllWidgetLayouts(newLayout.map((l: { i: string; x: number; y: number; w: number; h: number }) => ({
       i: l.i,
       x: l.x,
       y: l.y,
@@ -50,7 +65,7 @@ export function Dashboard() {
   const calculatedWidth = width || 1200;
 
   return (
-    <div ref={ref} className={classes.container}>
+    <div ref={ref} className={`${classes.container} ${isFading ? classes.fadeIn : ''}`}>
       {activeLayout.widgets.length === 0 ? (
         <div className={classes.empty}>
           <h2>Welcome to Kitchen Display</h2>
