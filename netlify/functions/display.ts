@@ -6,7 +6,7 @@ const CORS = {
   'Content-Type': 'application/json',
 };
 
-// Public endpoint — returns the display config for a given display_id.
+// Public endpoint — returns the display config for a given display_id (public polling UUID).
 // No authentication required; used by the display device for polling.
 export const handler: Handler = async (event) => {
   if (event.httpMethod === 'OPTIONS') {
@@ -23,8 +23,8 @@ export const handler: Handler = async (event) => {
     const rows = await sql`
       SELECT dc.config, dc.updated_at
       FROM display_configs dc
-      JOIN users u ON u.id = dc.user_id
-      WHERE u.display_id = ${displayId}::uuid
+      JOIN displays d ON d.id = dc.display_id
+      WHERE d.display_id = ${displayId}::uuid
     `;
     return {
       statusCode: 200,

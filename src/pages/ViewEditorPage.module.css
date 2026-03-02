@@ -1,0 +1,33 @@
+.root {
+  height: 100vh;
+  background: var(--mantine-color-dark-8);
+  display: flex;
+  flex-direction: column;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1.5rem;
+  background: var(--mantine-color-dark-7);
+  border-bottom: 1px solid var(--mantine-color-dark-5);
+  height: 56px;
+  flex-shrink: 0;
+  z-index: 10;
+}
+
+.body {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+}
+
+.main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-width: 0;
+  background: var(--theme-bg, var(--mantine-color-dark-8));
+}

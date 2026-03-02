@@ -1,14 +1,32 @@
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Space+Grotesk:wght@300;400;500;600;700&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=Nunito:wght@300;400;500;600;700&family=Sora:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500&family=Space+Mono:wght@400;700&display=swap');
 
 :root {
+  /* Legacy aliases */
   --gradient-primary: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   --gradient-accent: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
   --glass-bg: rgba(30, 30, 40, 0.6);
   --glass-border: rgba(255, 255, 255, 0.08);
+
+  /* Theme defaults (Cosmos) — overridden by ThemeProvider inline styles */
+  --theme-bg:
+    radial-gradient(ellipse at 20% 20%, rgba(99, 102, 241, 0.15) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 80%, rgba(168, 85, 247, 0.1) 0%, transparent 50%),
+    radial-gradient(ellipse at 50% 50%, rgba(16, 185, 129, 0.05) 0%, transparent 50%),
+    #0a0a0f;
+  --theme-accent: #6366f1;
+  --theme-accent-rgb: 99, 102, 241;
+  --theme-accent-secondary: #a855f7;
+  --theme-surface-bg: rgba(30, 30, 40, 0.6);
+  --theme-surface-border: rgba(255, 255, 255, 0.08);
+  --theme-text: #e8e8f0;
+  --theme-text-muted: #6c6c7e;
+  --theme-glow: rgba(99, 102, 241, 0.3);
+  --theme-font-family: 'Outfit', 'Inter', sans-serif;
 }
 
 * {
   box-sizing: border-box;
+  touch-action: manipulation;
 }
 
 html, body, #root {

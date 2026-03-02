@@ -1,0 +1,56 @@
+.root {
+  min-height: 100vh;
+  background: var(--mantine-color-dark-8);
+  display: flex;
+  flex-direction: column;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1.5rem;
+  background: var(--mantine-color-dark-7);
+  border-bottom: 1px solid var(--mantine-color-dark-5);
+  height: 56px;
+}
+
+.title {
+  color: var(--mantine-color-gray-1);
+}
+
+.main {
+  flex: 1;
+  padding: 2rem 1.5rem;
+  max-width: 720px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+.section {
+  margin-bottom: 2rem;
+}
+
+.sectionTitle {
+  color: var(--mantine-color-gray-2);
+}
+
+.viewCard {
+  background: var(--mantine-color-dark-7);
+  border: 1px solid var(--mantine-color-dark-5);
+  transition: border-color 0.15s ease;
+}
+
+.viewCard:hover {
+  border-color: var(--mantine-color-indigo-7);
+}
+
+.viewCardBtn {
+  flex: 1;
+  text-align: left;
+}
+
+.settingsCard {
+  background: var(--mantine-color-dark-7);
+  border: 1px solid var(--mantine-color-dark-5);
+}

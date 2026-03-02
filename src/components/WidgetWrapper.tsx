@@ -8,14 +8,15 @@ import classes from './WidgetWrapper.module.css';
 
 interface WidgetWrapperProps {
   widget: WidgetDefinition;
+  isEditing: boolean;
 }
 
-export function WidgetWrapper({ widget }: WidgetWrapperProps) {
+export function WidgetWrapper({ widget, isEditing }: WidgetWrapperProps) {
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const { isEditing, updateWidgetConfig, removeWidget } = useDashboardStore();
-  
+  const { updateWidgetConfig, removeWidget } = useDashboardStore();
+
   const widgetEntry = getWidgetByType(widget.type);
-  
+
   if (!widgetEntry) {
     return (
       <Paper className={classes.wrapper} p="md">
@@ -53,8 +54,8 @@ export function WidgetWrapper({ widget }: WidgetWrapperProps) {
                   </div>
                 </Tooltip>
                 {SettingsComponent && (
-                  <ActionIcon 
-                    variant="subtle" 
+                  <ActionIcon
+                    variant="subtle"
                     size="sm"
                     onClick={() => setSettingsOpen(true)}
                     className={classes.toolbarButton}
@@ -62,9 +63,9 @@ export function WidgetWrapper({ widget }: WidgetWrapperProps) {
                     <IconSettings size={16} />
                   </ActionIcon>
                 )}
-                <ActionIcon 
-                  variant="subtle" 
-                  color="red" 
+                <ActionIcon
+                  variant="subtle"
+                  color="red"
                   size="sm"
                   onClick={() => removeWidget(widget.id)}
                   className={classes.toolbarButton}
@@ -79,8 +80,8 @@ export function WidgetWrapper({ widget }: WidgetWrapperProps) {
           </>
         )}
         <div className={classes.content}>
-          <WidgetComponent 
-            widget={widget} 
+          <WidgetComponent
+            widget={widget}
             isEditing={isEditing}
             onConfigChange={handleConfigChange}
           />
@@ -122,4 +123,3 @@ export function WidgetWrapper({ widget }: WidgetWrapperProps) {
     </>
   );
 }
-

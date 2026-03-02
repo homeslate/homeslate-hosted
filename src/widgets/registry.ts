@@ -2,18 +2,24 @@ import type { WidgetRegistryEntry, WidgetConfig } from '../types/widget';
 import { ClockWidget, ClockWidgetSettings, type ClockConfig } from './ClockWidget';
 import { CalendarWidget, CalendarWidgetSettings, type CalendarConfig } from './CalendarWidget';
 import { GoogleCalendarWidget, GoogleCalendarWidgetSettings, type GoogleCalendarConfig } from './GoogleCalendarWidget';
+import { GoogleCalendarMonthWidget, GoogleCalendarMonthWidgetSettings, type GoogleCalendarMonthConfig } from './GoogleCalendarMonthWidget';
+import { GoogleCalendarDayWidget, GoogleCalendarDayWidgetSettings, type GoogleCalendarDayConfig } from './GoogleCalendarDayWidget';
 import { PhotoWidget, PhotoWidgetSettings, type PhotoConfig } from './PhotoWidget';
 import { WeatherWidget, WeatherWidgetSettings, type WeatherConfig } from './WeatherWidget';
 import { NewsWidget, NewsWidgetSettings, type NewsConfig } from './NewsWidget';
 import { StocksWidget, StocksWidgetSettings, type StocksConfig } from './StocksWidget';
-import { 
-  IconClock, 
-  IconCalendar, 
-  IconPhoto, 
+import { WeekCalendarWidget, WeekCalendarWidgetSettings, type WeekCalendarConfig } from './WeekCalendarWidget';
+import {
+  IconClock,
+  IconCalendar,
+  IconCalendarMonth,
+  IconCalendarEvent,
+  IconPhoto,
   IconCloudRain,
   IconNews,
   IconChartLine,
   IconBrandGoogle,
+  IconCalendarWeek,
 } from '@tabler/icons-react';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -89,6 +95,49 @@ const googleCalendarEntry: WidgetRegistryEntry<GoogleCalendarConfig> = {
   },
 };
 widgetRegistry.set('google-calendar', googleCalendarEntry);
+
+// Google Calendar Month Widget
+const googleCalendarMonthEntry: WidgetRegistryEntry<GoogleCalendarMonthConfig> = {
+  type: 'google-calendar-month',
+  name: 'Google Calendar Month',
+  description: 'Month calendar view with event indicators and day detail panel',
+  icon: IconCalendarMonth,
+  component: GoogleCalendarMonthWidget,
+  settingsComponent: GoogleCalendarMonthWidgetSettings,
+  defaultConfig: {
+    selectedCalendarIds: [],
+    daysAhead: 60,
+  },
+  defaultLayout: {
+    w: 4,
+    h: 5,
+    minW: 3,
+    minH: 4,
+  },
+};
+widgetRegistry.set('google-calendar-month', googleCalendarMonthEntry);
+
+// Google Calendar Day Widget
+const googleCalendarDayEntry: WidgetRegistryEntry<GoogleCalendarDayConfig> = {
+  type: 'google-calendar-day',
+  name: 'Google Calendar Day',
+  description: 'Upcoming events list grouped by day with add/edit/delete',
+  icon: IconCalendarEvent,
+  component: GoogleCalendarDayWidget,
+  settingsComponent: GoogleCalendarDayWidgetSettings,
+  defaultConfig: {
+    selectedCalendarIds: [],
+    maxEvents: 10,
+    daysAhead: 30,
+  },
+  defaultLayout: {
+    w: 3,
+    h: 4,
+    minW: 2,
+    minH: 3,
+  },
+};
+widgetRegistry.set('google-calendar-day', googleCalendarDayEntry);
 
 // Photo Widget
 const photoEntry: WidgetRegistryEntry<PhotoConfig> = {
@@ -183,6 +232,30 @@ const stocksEntry: WidgetRegistryEntry<StocksConfig> = {
   },
 };
 widgetRegistry.set('stocks', stocksEntry);
+
+// Week Calendar Widget
+const weekCalendarEntry: WidgetRegistryEntry<WeekCalendarConfig> = {
+  type: 'week-calendar',
+  name: 'Week Calendar',
+  description: 'Google Calendar week view with timed events and current time indicator',
+  icon: IconCalendarWeek,
+  component: WeekCalendarWidget,
+  settingsComponent: WeekCalendarWidgetSettings,
+  defaultConfig: {
+    selectedCalendarIds: [],
+    viewMode: 'calendar-week',
+    weekStartsOn: 0,
+    startHour: 7,
+    endHour: 21,
+  },
+  defaultLayout: {
+    w: 7,
+    h: 6,
+    minW: 5,
+    minH: 4,
+  },
+};
+widgetRegistry.set('week-calendar', weekCalendarEntry);
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const getWidgetTypes = (): WidgetRegistryEntry<any>[] => {

@@ -3,10 +3,25 @@
   min-height: 0;
   overflow: auto;
   padding: 1rem;
+  padding-bottom: 3rem;
 }
 
 .grid {
   min-height: 100%;
+  position: relative;
+  min-height: calc(100vh - 200px);
+}
+
+.grid::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(to right, rgba(255,255,255,0.05) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255,255,255,0.05) 1px, transparent 1px);
+  background-size: calc((100% - 176px) / 12 + 16px) 80px;
+  pointer-events: none;
+  z-index: 0;
 }
 
 .widgetContainer {
@@ -28,7 +43,7 @@
   font-size: 1.5rem;
   font-weight: 500;
   margin-bottom: 0.5rem;
-  background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+  background: linear-gradient(135deg, var(--theme-accent) 0%, var(--theme-accent-secondary) 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -56,8 +71,8 @@
 
 /* Override react-grid-layout styles */
 :global(.react-grid-item.react-grid-placeholder) {
-  background: rgba(99, 102, 241, 0.2) !important;
-  border: 2px dashed rgba(99, 102, 241, 0.5) !important;
+  background: rgba(var(--theme-accent-rgb), 0.2) !important;
+  border: 2px dashed rgba(var(--theme-accent-rgb), 0.5) !important;
   border-radius: var(--mantine-radius-md);
 }
 
@@ -153,7 +168,7 @@
   width: 10px;
   height: 10px;
   border-radius: 2px;
-  background: rgba(99, 102, 241, 0.6);
+  background: rgba(var(--theme-accent-rgb), 0.6);
   transition: all 0.2s ease;
 }
 
@@ -187,7 +202,7 @@
   top: 50%;
   transform: translateY(-50%);
   border-radius: 2px;
-  background: rgba(99, 102, 241, 0.6);
+  background: rgba(var(--theme-accent-rgb), 0.6);
   transition: all 0.2s ease;
 }
 
@@ -208,7 +223,7 @@
   left: 50%;
   transform: translateX(-50%);
   border-radius: 2px;
-  background: rgba(99, 102, 241, 0.6);
+  background: rgba(var(--theme-accent-rgb), 0.6);
   transition: all 0.2s ease;
 }
 
@@ -222,7 +237,7 @@
 
 /* Hover effects for all handles */
 :global(.react-resizable-handle:hover::after) {
-  background: rgba(99, 102, 241, 1);
+  background: var(--theme-accent);
   transform: scale(1.2);
 }
 

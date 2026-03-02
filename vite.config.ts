@@ -2,10 +2,22 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 
-export default defineConfig({
+export default defineConfig(({ command }) => ({
+  server: {
+    host: true,
+    port: 5173,
+    strictPort: true,
+    proxy: {
+      '/api': {
+        target: 'http://localhost:8888',
+        rewrite: (path) => path.replace(/^\/api/, '/.netlify/functions'),
+        changeOrigin: true,
+      },
+    },
+  },
   plugins: [
     react(),
-    VitePWA({
+    command === 'build' && VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['icon.svg', 'vite.svg'],
       manifest: {
@@ -63,4 +75,4 @@ export default defineConfig({
       },
     }),
   ],
-})
+}))

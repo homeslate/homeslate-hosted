@@ -1,0 +1,60 @@
+.root {
+  min-height: 100vh;
+  background: var(--mantine-color-dark-8);
+  display: flex;
+  flex-direction: column;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1.5rem;
+  background: var(--mantine-color-dark-7);
+  border-bottom: 1px solid var(--mantine-color-dark-5);
+  height: 56px;
+}
+
+.logo {
+  color: var(--mantine-color-indigo-4);
+}
+
+.title {
+  color: var(--mantine-color-gray-1);
+}
+
+.main {
+  flex: 1;
+  padding: 2rem 1.5rem;
+  max-width: 1200px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 4rem 0;
+  color: var(--mantine-color-dark-3);
+}
+
+.card {
+  background: var(--mantine-color-dark-7);
+  border: 1px solid var(--mantine-color-dark-5);
+  transition: border-color 0.15s ease;
+}
+
+.card:hover {
+  border-color: var(--mantine-color-indigo-7);
+}
+
+.cardInner {
+  display: block;
+  width: 100%;
+}
+
+.cardTitle {
+  color: var(--mantine-color-gray-1);
+}

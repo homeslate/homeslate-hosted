@@ -38,6 +38,8 @@ export const handler: Handler = async (event) => {
     const { name, picture } = await userInfoRes.json() as { name: string; picture: string };
 
     const sql = neon(process.env.DATABASE_URL!);
+
+    // Upsert user (no display_id column anymore)
     const rows = await sql`
       INSERT INTO users (google_id, email, name, picture)
       VALUES (${googleId}, ${email}, ${name}, ${picture})
@@ -45,10 +47,23 @@ export const handler: Handler = async (event) => {
         email = EXCLUDED.email,
         name = EXCLUDED.name,
         picture = EXCLUDED.picture
-      RETURNING id, email, name, picture, display_id
+      RETURNING id, email, name, picture
     `;
 
-    return { statusCode: 200, headers: CORS, body: JSON.stringify(rows[0]) };
+    const user = rows[0] as { id: string; email: string; name: string; picture: string };
+
+    // Ensure user has at least one display
+    const displayCheck = await sql`
+      SELECT id FROM displays WHERE user_id = ${user.id} LIMIT 1
+    `;
+    if (displayCheck.length === 0) {
+      await sql`
+        INSERT INTO displays (user_id, name)
+        VALUES (${user.id}, 'Kitchen Display')
+      `;
+    }
+
+    return { statusCode: 200, headers: CORS, body: JSON.stringify(user) };
   } catch (err) {
     console.error('Auth error:', err);
     return {

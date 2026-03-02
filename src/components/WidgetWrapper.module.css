@@ -1,24 +1,24 @@
 .wrapper {
   height: 100%;
   position: relative;
-  background: rgba(30, 30, 40, 0.6);
+  background: var(--theme-surface-bg);
   backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--theme-surface-border);
   overflow: hidden;
   transition: box-shadow 0.2s ease, border-color 0.2s ease;
 }
 
 .wrapper:hover {
-  border-color: rgba(255, 255, 255, 0.15);
+  box-shadow: 0 0 20px var(--theme-glow);
 }
 
 .editing {
-  border: 2px dashed rgba(99, 102, 241, 0.5);
+  border: 2px dashed rgba(var(--theme-accent-rgb), 0.5);
 }
 
 .editing:hover {
-  border-color: rgba(99, 102, 241, 0.8);
-  box-shadow: 0 0 20px rgba(99, 102, 241, 0.2);
+  border-color: rgba(var(--theme-accent-rgb), 0.8);
+  box-shadow: 0 0 20px rgba(var(--theme-accent-rgb), 0.2);
 }
 
 /* Size indicator in bottom right */
@@ -29,7 +29,7 @@
   right: 0;
   width: 24px;
   height: 24px;
-  background: linear-gradient(135deg, transparent 50%, rgba(99, 102, 241, 0.3) 50%);
+  background: linear-gradient(135deg, transparent 50%, rgba(var(--theme-accent-rgb), 0.3) 50%);
   z-index: 5;
   pointer-events: none;
   opacity: 0;
@@ -98,7 +98,7 @@
   align-items: center;
   gap: 4px;
   padding: 2px 6px;
-  background: rgba(99, 102, 241, 0.2);
+  background: rgba(var(--theme-accent-rgb), 0.2);
   border-radius: 4px;
   color: rgba(255, 255, 255, 0.8);
   font-size: 10px;

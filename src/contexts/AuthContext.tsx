@@ -23,7 +23,6 @@ export interface AuthUser {
   email: string;
   name: string;
   picture: string;
-  displayId: string;
 }
 
 interface AuthContextValue {
@@ -47,7 +46,11 @@ function readStoredToken(): string | null {
 function readStoredUser(): AuthUser | null {
   try {
     const stored = localStorage.getItem(USER_KEY);
-    return stored ? (JSON.parse(stored) as AuthUser) : null;
+    if (!stored) return null;
+    const parsed = JSON.parse(stored) as AuthUser & { displayId?: string };
+    // Strip legacy displayId if present
+    const { id, email, name, picture } = parsed;
+    return { id, email, name, picture };
   } catch {
     return null;
   }
@@ -109,14 +112,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         email: string;
         name: string;
         picture: string;
-        display_id: string;
       };
       const authUser: AuthUser = {
         id: data.id,
         email: data.email,
         name: data.name,
         picture: data.picture,
-        displayId: data.display_id,
       };
       setUser(authUser);
       localStorage.setItem(USER_KEY, JSON.stringify(authUser));

@@ -2,13 +2,17 @@ import { useEffect, useRef, useCallback } from 'react';
 import { useDashboardStore } from '../store/dashboardStore';
 
 /**
- * Manages auto-rotation between views.
+ * Manages auto-rotation between views for the selected display.
  * Returns resetTimer() so callers (e.g. swipe handler) can restart the
- * countdown after a manual navigation — preventing an immediate auto-advance.
+ * countdown after a manual navigation.
  */
 export function useViewRotation() {
-  const { layouts, rotationEnabled, rotationIntervalMs, isEditing, navigateToView } =
-    useDashboardStore();
+  const { displays, selectedDisplayId, navigateToView } = useDashboardStore();
+  const display = displays.find((d) => d.id === selectedDisplayId);
+
+  const rotationEnabled = display?.rotationEnabled ?? false;
+  const rotationIntervalMs = display?.rotationIntervalMs ?? 30000;
+  const layoutCount = display?.layouts.length ?? 0;
 
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -21,18 +25,17 @@ export function useViewRotation() {
 
   const startTimer = useCallback(() => {
     stopTimer();
-    if (!rotationEnabled || isEditing || layouts.length <= 1) return;
+    if (!rotationEnabled || layoutCount <= 1) return;
     timerRef.current = setInterval(() => {
       navigateToView('next');
     }, rotationIntervalMs);
-  }, [rotationEnabled, isEditing, layouts.length, rotationIntervalMs, navigateToView, stopTimer]);
+  }, [rotationEnabled, layoutCount, rotationIntervalMs, navigateToView, stopTimer]);
 
   useEffect(() => {
     startTimer();
     return stopTimer;
   }, [startTimer, stopTimer]);
 
-  // Call after a manual swipe to reset the countdown
   const resetTimer = useCallback(() => {
     startTimer();
   }, [startTimer]);

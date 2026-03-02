@@ -1,11 +1,15 @@
-import { useRef } from 'react';
 import { MantineProvider, createTheme } from '@mantine/core';
-import { Dashboard, Header, AddWidgetPanel, ViewIndicator } from './components';
-import { useDashboardStore } from './store/dashboardStore';
 import { useWakeLock } from './hooks/useWakeLock';
-import { useViewRotation } from './hooks/useViewRotation';
 import { useConfigSync } from './hooks/useConfigSync';
 import { AuthProvider } from './contexts/AuthContext';
+import { useAuth } from './contexts/AuthContext';
+import { ThemeProvider } from './contexts/ThemeContext';
+import { useDashboardStore } from './store/dashboardStore';
+import { DisplayViewer } from './components/DisplayViewer';
+import { AuthPage } from './pages/AuthPage';
+import { DisplayListPage } from './pages/DisplayListPage';
+import { DisplayDetailPage } from './pages/DisplayDetailPage';
+import { ViewEditorPage } from './pages/ViewEditorPage';
 import '@mantine/core/styles.css';
 import '@mantine/dates/styles.css';
 import './App.css';
@@ -38,51 +42,28 @@ const theme = createTheme({
 });
 
 function AppInner() {
-  const { isEditing, layouts, navigateToView } = useDashboardStore();
+  const { isAuthenticated } = useAuth();
+  const { selectedDisplayId, selectedViewId } = useDashboardStore();
   useWakeLock();
-  const { resetTimer } = useViewRotation();
   useConfigSync();
 
-  // ── Swipe to change views ──
-  const swipeStart = useRef({ x: 0, y: 0 });
+  // Display device mode: ?display=<uuid> → fullscreen viewer, no auth
+  const displayParam = new URLSearchParams(window.location.search).get('display');
+  if (displayParam) return <DisplayViewer displayId={displayParam} />;
 
-  const handlePointerDown = (e: React.PointerEvent<HTMLElement>) => {
-    if (isEditing || layouts.length <= 1) return;
-    swipeStart.current = { x: e.clientX, y: e.clientY };
-  };
-
-  const handlePointerUp = (e: React.PointerEvent<HTMLElement>) => {
-    if (isEditing || layouts.length <= 1) return;
-    const dx = e.clientX - swipeStart.current.x;
-    const dy = e.clientY - swipeStart.current.y;
-    // Must be predominantly horizontal and exceed 80px
-    if (Math.abs(dx) > 80 && Math.abs(dx) > Math.abs(dy) * 1.5) {
-      navigateToView(dx < 0 ? 'next' : 'prev');
-      resetTimer(); // restart auto-rotation countdown after manual swipe
-    }
-  };
-
-  return (
-    <div className="app">
-      <Header />
-      <main
-        className="main"
-        onPointerDown={handlePointerDown}
-        onPointerUp={handlePointerUp}
-      >
-        <Dashboard />
-        {isEditing && <AddWidgetPanel />}
-        <ViewIndicator />
-      </main>
-    </div>
-  );
+  if (!isAuthenticated) return <AuthPage />;
+  if (!selectedDisplayId) return <DisplayListPage />;
+  if (!selectedViewId) return <DisplayDetailPage />;
+  return <ViewEditorPage />;
 }
 
 function App() {
   return (
     <MantineProvider theme={theme} defaultColorScheme="dark">
       <AuthProvider>
-        <AppInner />
+        <ThemeProvider>
+          <AppInner />
+        </ThemeProvider>
       </AuthProvider>
     </MantineProvider>
   );

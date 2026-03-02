@@ -22,35 +22,30 @@ export const handler: Handler = async (event) => {
     return { statusCode: 204, headers: CORS, body: '' };
   }
 
-  const sql = neon(process.env.DATABASE_URL!);
-
-  if (event.httpMethod === 'GET') {
-    try {
-      const googleId = await getGoogleId(event.headers['authorization']);
-      const rows = await sql`
-        SELECT dc.config, dc.updated_at
-        FROM display_configs dc
-        JOIN users u ON u.id = dc.user_id
-        WHERE u.google_id = ${googleId}
-      `;
-      return {
-        statusCode: 200,
-        headers: CORS,
-        body: JSON.stringify(rows[0] ?? { config: null }),
-      };
-    } catch {
-      return { statusCode: 401, headers: CORS, body: JSON.stringify({ error: 'Unauthorized' }) };
-    }
-  }
-
   if (event.httpMethod === 'PUT') {
     try {
       const googleId = await getGoogleId(event.headers['authorization']);
+      const displayId = event.queryStringParameters?.displayId;
+      if (!displayId) {
+        return { statusCode: 400, headers: CORS, body: JSON.stringify({ error: 'Missing displayId' }) };
+      }
       const config = JSON.parse(event.body ?? '{}');
+      const sql = neon(process.env.DATABASE_URL!);
+
+      // Verify the display belongs to the authenticated user
+      const check = await sql`
+        SELECT d.id FROM displays d
+        JOIN users u ON u.id = d.user_id
+        WHERE d.id = ${displayId}::uuid AND u.google_id = ${googleId}
+      `;
+      if (check.length === 0) {
+        return { statusCode: 403, headers: CORS, body: JSON.stringify({ error: 'Forbidden' }) };
+      }
+
       await sql`
-        INSERT INTO display_configs (user_id, config)
-        SELECT id, ${JSON.stringify(config)}::jsonb FROM users WHERE google_id = ${googleId}
-        ON CONFLICT (user_id) DO UPDATE SET
+        INSERT INTO display_configs (display_id, config)
+        VALUES (${displayId}::uuid, ${JSON.stringify(config)}::jsonb)
+        ON CONFLICT (display_id) DO UPDATE SET
           config = EXCLUDED.config,
           updated_at = NOW()
       `;

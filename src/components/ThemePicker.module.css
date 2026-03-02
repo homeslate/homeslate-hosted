@@ -1,0 +1,55 @@
+.presetCard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  border-radius: 8px;
+  padding: 4px;
+  transition: transform 0.15s ease;
+}
+
+.presetCard:hover {
+  transform: translateY(-2px);
+}
+
+.presetSwatch {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  border-radius: 6px;
+  position: relative;
+  overflow: hidden;
+  border: 2px solid transparent;
+  transition: border-color 0.15s ease;
+}
+
+.presetCard:hover .presetSwatch {
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.selected .presetSwatch {
+  border-color: white;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.4);
+}
+
+.presetAccent {
+  position: absolute;
+  bottom: 6px;
+  left: 6px;
+  width: 28px;
+  height: 6px;
+  border-radius: 3px;
+  opacity: 0.9;
+}
+
+.presetCheck {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: white;
+  color: #1a1b1e;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
