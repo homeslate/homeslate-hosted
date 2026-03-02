@@ -1,8 +1,8 @@
 .panel {
   width: 240px;
   min-width: 240px;
-  background: var(--mantine-color-dark-7);
-  border-right: 1px solid var(--mantine-color-dark-5);
+  background: var(--theme-surface-bg, var(--mantine-color-dark-7));
+  border-right: 1px solid var(--theme-surface-border, var(--mantine-color-dark-5));
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -19,7 +19,7 @@
   display: flex;
   justify-content: flex-end;
   padding: 8px 6px 4px;
-  border-bottom: 1px solid var(--mantine-color-dark-5);
+  border-bottom: 1px solid var(--theme-surface-border, var(--mantine-color-dark-5));
 }
 
 .collapsed .toggleBar {
@@ -27,7 +27,7 @@
 }
 
 .toggleBtn {
-  color: var(--mantine-color-dark-2);
+  color: var(--theme-text-muted, var(--mantine-color-dark-2));
 }
 
 .content {
@@ -40,6 +40,7 @@
   letter-spacing: 0.06em;
   margin-bottom: 8px;
   padding: 0 4px;
+  color: var(--theme-text, var(--mantine-color-dark-0));
 }
 
 .widgetRow {
@@ -50,6 +51,7 @@
   border-radius: 6px;
   width: 100%;
   transition: background 0.1s ease;
+  color: var(--theme-text, var(--mantine-color-dark-0));
 }
 
 .widgetRow:hover {
@@ -64,7 +66,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--mantine-color-indigo-4);
+  color: var(--theme-accent, var(--mantine-color-indigo-4));
   flex-shrink: 0;
 }
 
@@ -75,11 +77,11 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--mantine-color-dark-2);
+  color: var(--theme-text-muted, var(--mantine-color-dark-2));
   transition: background 0.1s ease, color 0.1s ease;
 }
 
 .iconOnly:hover {
   background: var(--mantine-color-dark-6);
-  color: var(--mantine-color-indigo-4);
+  color: var(--theme-accent, var(--mantine-color-indigo-4));
 }

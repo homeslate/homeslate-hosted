@@ -27,6 +27,7 @@ export interface CalendarConfig extends WidgetConfig {
   maxEvents: number;
   daysAhead: number;
   showCalendar: boolean;
+  transparentBackground: boolean;
 }
 
 // Color palette for events
@@ -65,7 +66,7 @@ function formatEventDate(event: CalendarEvent): string {
 
 export function CalendarWidget({ widget }: WidgetProps<CalendarConfig>) {
   const [selectedDate, setSelectedDate] = useState<Date | null>(new Date());
-  const { icalUrl, maxEvents, daysAhead, showCalendar } = widget.config;
+  const { icalUrl, maxEvents, daysAhead, showCalendar, transparentBackground } = widget.config;
 
   const { events, isLoading, error, refresh } = useCalendar({
     icalUrl,
@@ -82,7 +83,7 @@ export function CalendarWidget({ widget }: WidgetProps<CalendarConfig>) {
   // No calendar URL configured
   if (!icalUrl) {
     return (
-      <Box className={classes.container}>
+      <Box className={`${classes.container} ${transparentBackground ? classes.transparent : ''}`}>
         <div className={classes.empty}>
           <IconCalendarEvent size={48} className={classes.emptyIcon} />
           <Text size="lg" fw={500}>No Calendar Connected</Text>
@@ -97,7 +98,7 @@ export function CalendarWidget({ widget }: WidgetProps<CalendarConfig>) {
   // Error state
   if (error && events.length === 0) {
     return (
-      <Box className={classes.container}>
+      <Box className={`${classes.container} ${transparentBackground ? classes.transparent : ''}`}>
         <div className={classes.error}>
           <Text size="sm" c="red">{error}</Text>
           <Button
@@ -116,7 +117,7 @@ export function CalendarWidget({ widget }: WidgetProps<CalendarConfig>) {
   }
 
   return (
-    <Box className={classes.container}>
+    <Box className={`${classes.container} ${transparentBackground ? classes.transparent : ''}`}>
       <div className={classes.content}>
         {showCalendar && (
           <div className={classes.calendarSection}>

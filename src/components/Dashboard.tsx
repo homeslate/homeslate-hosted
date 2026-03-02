@@ -1,7 +1,5 @@
 import { useMemo, useEffect, useRef, useState } from 'react';
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-import GridLayoutImport from 'react-grid-layout';
-const GridLayout = GridLayoutImport as any;
+import GridLayout from 'react-grid-layout/legacy';
 import { useDashboardStore } from '../store/dashboardStore';
 import { WidgetWrapper } from './WidgetWrapper';
 import { useElementSize } from '@mantine/hooks';
@@ -16,9 +14,15 @@ interface Props {
   externalLayouts?: DashboardLayout[]; // for DisplayViewer (bypasses store)
 }
 
+const MARGIN_X = 16;
+const MARGIN_Y = 16;
+const MAX_ROWS = 12;
+const CONTAINER_PADDING_X = 32; // 1rem left + 1rem right
+const CONTAINER_PADDING_Y = 64; // 1rem top + 3rem bottom
+
 export function Dashboard({ layoutId, isEditing: isEditingProp, externalLayouts }: Props) {
   const store = useDashboardStore();
-  const { ref, width } = useElementSize();
+  const { ref, width, height } = useElementSize();
 
   // Resolve which display/layout to show
   const storeDisplay = store.displays.find((d) => d.id === store.selectedDisplayId);
@@ -51,33 +55,45 @@ export function Dashboard({ layoutId, isEditing: isEditingProp, externalLayouts 
     );
   }
 
-  const gridLayout = activeLayout.widgets.map((widget) => ({
-    i: widget.id,
-    x: widget.layout.x,
-    y: widget.layout.y,
-    w: widget.layout.w,
-    h: widget.layout.h,
-    minW: widget.layout.minW,
-    minH: widget.layout.minH,
-    maxW: widget.layout.maxW,
-    maxH: widget.layout.maxH,
-  }));
+  const COLS = activeLayout.columns;
+
+  // Calculate dimensions so 12x12 grid fits exactly in the viewport (no scrolling)
+  const availableWidth = Math.max(0, (width ?? 1200) - CONTAINER_PADDING_X);
+  const availableHeight = Math.max(0, (height ?? 0) - CONTAINER_PADDING_Y);
+  const rowHeight = Math.max(24, (availableHeight - (MAX_ROWS - 1) * MARGIN_Y) / MAX_ROWS);
+  const gridHeight = MAX_ROWS * rowHeight + (MAX_ROWS - 1) * MARGIN_Y;
+
+  const gridLayout = activeLayout.widgets.map((widget) => {
+    const { x, y, w, h } = widget.layout;
+    // Clamp maxW/maxH to grid bounds so resize handles can't extend past the 12x12 grid
+    const maxW = Math.min(widget.layout.maxW ?? COLS, COLS - x);
+    const maxH = Math.min(widget.layout.maxH ?? MAX_ROWS, MAX_ROWS - y);
+    return {
+      i: widget.id,
+      x,
+      y,
+      w,
+      h,
+      minW: widget.layout.minW,
+      minH: widget.layout.minH,
+      maxW,
+      maxH,
+    };
+  });
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const handleLayoutChange = (newLayout: any[]) => {
+  const handleLayoutChange = (newLayout: readonly any[]) => {
     if (!isEditing) return;
-    store.updateAllWidgetLayouts(
-      newLayout.map((l: { i: string; x: number; y: number; w: number; h: number }) => ({
-        i: l.i,
-        x: l.x,
-        y: l.y,
-        w: l.w,
-        h: l.h,
-      }))
-    );
+    // Clamp all layout items to the 12x12 grid bounds
+    const clamped = newLayout.map((l: { i: string; x: number; y: number; w: number; h: number }) => {
+      const x = Math.max(0, Math.min(l.x, COLS - 1));
+      const y = Math.max(0, Math.min(l.y, MAX_ROWS - 1));
+      const w = Math.max(1, Math.min(l.w, COLS - x));
+      const h = Math.max(1, Math.min(l.h, MAX_ROWS - y));
+      return { i: l.i, x, y, w, h };
+    });
+    store.updateAllWidgetLayouts(clamped);
   };
-
-  const calculatedWidth = width || 1200;
 
   return (
     <div ref={ref} className={`${classes.container} ${isFading ? classes.fadeIn : ''}`}>
@@ -87,28 +103,34 @@ export function Dashboard({ layoutId, isEditing: isEditingProp, externalLayouts 
           <p>Click a widget in the left panel to add it here</p>
         </div>
       ) : (
-        <GridLayout
-          className={`${classes.grid} ${isEditing ? classes.editing : ''}`}
-          layout={gridLayout}
-          cols={activeLayout.columns}
-          rowHeight={activeLayout.rowHeight}
-          width={calculatedWidth}
-          onLayoutChange={handleLayoutChange}
-          isDraggable={isEditing}
-          isResizable={isEditing}
-          draggableHandle=".widget-drag-handle"
-          compactType="vertical"
-          preventCollision={false}
-          isBounded={true}
-          margin={[16, 16]}
-          resizeHandles={['se', 'sw', 'ne', 'nw', 'e', 'w', 's', 'n']}
+        <div
+          className={classes.gridWrapper}
+          style={{ width: availableWidth, height: gridHeight }}
         >
-          {activeLayout.widgets.map((widget) => (
-            <div key={widget.id} className={classes.widgetContainer}>
-              <WidgetWrapper widget={widget} isEditing={isEditing} />
-            </div>
-          ))}
-        </GridLayout>
+          <GridLayout
+            className={`${classes.grid} ${isEditing ? classes.editing : ''}`}
+            layout={gridLayout}
+            cols={COLS}
+            rowHeight={rowHeight}
+            width={availableWidth}
+            maxRows={MAX_ROWS}
+            onLayoutChange={handleLayoutChange}
+            isDraggable={isEditing}
+            isResizable={isEditing}
+            draggableHandle=".widget-drag-handle"
+            compactType="vertical"
+            preventCollision={false}
+            isBounded={true}
+            margin={[MARGIN_X, MARGIN_Y]}
+            resizeHandles={['se', 'sw', 'ne', 'nw', 'e', 'w', 's', 'n']}
+          >
+            {activeLayout.widgets.map((widget) => (
+              <div key={widget.id} className={classes.widgetContainer}>
+                <WidgetWrapper widget={widget} isEditing={isEditing} />
+              </div>
+            ))}
+          </GridLayout>
+        </div>
       )}
     </div>
   );

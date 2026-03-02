@@ -74,6 +74,8 @@ const createDefaultLayout = (): DashboardLayout => ({
   rowHeight: 80,
 });
 
+const GRID_MAX_ROWS = 12;
+
 function findAvailablePosition(
   widgets: WidgetDefinition[],
   cols: number,
@@ -82,7 +84,7 @@ function findAvailablePosition(
 ): { x: number; y: number } {
   const grid: boolean[][] = [];
   
-  for (let y = 0; y < 100; y++) {
+  for (let y = 0; y < GRID_MAX_ROWS; y++) {
     grid[y] = [];
     for (let x = 0; x < cols; x++) {
       grid[y][x] = false;
@@ -97,14 +99,14 @@ function findAvailablePosition(
     
     for (let dy = 0; dy < h; dy++) {
       for (let dx = 0; dx < w; dx++) {
-        if (y + dy < 100 && x + dx < cols) {
+        if (y + dy < GRID_MAX_ROWS && x + dx < cols) {
           grid[y + dy][x + dx] = true;
         }
       }
     }
   }
   
-  for (let y = 0; y < 100; y++) {
+  for (let y = 0; y <= GRID_MAX_ROWS - height; y++) {
     for (let x = 0; x <= cols - width; x++) {
       let fits = true;
       for (let dy = 0; dy < height; dy++) {
@@ -166,11 +168,29 @@ export const useDashboardStore = create<DashboardState>()(
           };
           const layouts = config.layouts.length > 0 ? config.layouts : [createDefaultLayout()];
           const activeLayoutId = config.activeLayoutId ?? layouts[0].id;
+          
+          // Merge widget configs from existing local state to preserve any local-only settings
+          const mergedLayouts = layouts.map((layout, idx) => {
+            const existingLayout = existing?.layouts?.[idx];
+            if (!existingLayout) return layout;
+            return {
+              ...layout,
+              widgets: layout.widgets.map((widget) => {
+                const existingWidget = existingLayout.widgets.find((w) => w.id === widget.id);
+                if (!existingWidget) return widget;
+                return {
+                  ...widget,
+                  config: { ...widget.config, ...existingWidget.config },
+                };
+              }),
+            };
+          });
+          
           return {
             id: remote.id,
             displayId: remote.display_id,
             name: remote.name,
-            layouts,
+            layouts: mergedLayouts,
             activeLayoutId,
             rotationEnabled: config.rotationEnabled ?? existing?.rotationEnabled ?? false,
             rotationIntervalMs: config.rotationIntervalMs ?? existing?.rotationIntervalMs ?? 30000,
@@ -385,21 +405,24 @@ export const useDashboardStore = create<DashboardState>()(
       updateWidgetConfig: (widgetId: string, config: Partial<WidgetConfig>) => {
         const { selectedDisplayId, selectedViewId } = get();
         if (!selectedDisplayId || !selectedViewId) return;
-        set((state) => ({
-          displays: updateDisplay(state.displays, selectedDisplayId, (d) => ({
-            ...d,
-            layouts: d.layouts.map((layout) =>
-              layout.id === selectedViewId
-                ? {
-                    ...layout,
-                    widgets: layout.widgets.map((w) =>
-                      w.id === widgetId ? { ...w, config: { ...w.config, ...config } } : w
-                    ),
-                  }
-                : layout
-            ),
-          })),
-        }));
+        set((state) => {
+          const newState = {
+            displays: updateDisplay(state.displays, selectedDisplayId, (d) => ({
+              ...d,
+              layouts: d.layouts.map((layout) =>
+                layout.id === selectedViewId
+                  ? {
+                      ...layout,
+                      widgets: layout.widgets.map((w) =>
+                        w.id === widgetId ? { ...w, config: { ...w.config, ...config } } : w
+                      ),
+                    }
+                  : layout
+              ),
+            })),
+          };
+          return newState;
+        });
       },
 
       updateWidgetLayout: (widgetId: string, layoutUpdate: Partial<WidgetDefinition['layout']>) => {

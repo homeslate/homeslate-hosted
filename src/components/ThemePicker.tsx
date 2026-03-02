@@ -86,6 +86,15 @@ export function ThemePicker({ value, onChange }: ThemePickerProps) {
           </Accordion.Control>
           <Accordion.Panel>
             <Stack gap="md">
+              <ColorInput
+                label="Background"
+                description="CSS background value - can be a gradient or solid color"
+                value={current.background}
+                onChange={(v) => updateField('background', v)}
+                size="sm"
+                placeholder="Enter CSS background value"
+              />
+
               <Group grow>
                 <ColorInput
                   label="Primary accent"
@@ -102,6 +111,25 @@ export function ThemePicker({ value, onChange }: ThemePickerProps) {
                   format="hex"
                   size="sm"
                   swatches={PRESET_THEMES.map((p) => p.accentSecondary)}
+                />
+              </Group>
+
+              <Group grow>
+                <ColorInput
+                  label="Primary text"
+                  value={current.textPrimary}
+                  onChange={(v) => updateField('textPrimary', v)}
+                  format="hex"
+                  size="sm"
+                  swatches={PRESET_THEMES.map((p) => p.textPrimary)}
+                />
+                <ColorInput
+                  label="Muted text"
+                  value={current.textMuted}
+                  onChange={(v) => updateField('textMuted', v)}
+                  format="hex"
+                  size="sm"
+                  swatches={PRESET_THEMES.map((p) => p.textMuted)}
                 />
               </Group>
 
@@ -155,6 +183,17 @@ export function ThemePicker({ value, onChange }: ThemePickerProps) {
                   size="sm"
                 />
               )}
+
+              <Group justify="space-between">
+                <Stack gap={2}>
+                  <Text size="sm" fw={500}>Dark mode</Text>
+                  <Text size="xs" c="dimmed">Use dark color scheme for UI elements</Text>
+                </Stack>
+                <Switch
+                  checked={current.isDark}
+                  onChange={(e) => updateField('isDark', e.currentTarget.checked)}
+                />
+              </Group>
             </Stack>
           </Accordion.Panel>
         </Accordion.Item>

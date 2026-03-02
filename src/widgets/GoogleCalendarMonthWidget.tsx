@@ -30,6 +30,7 @@ import dayjs from 'dayjs';
 export interface GoogleCalendarMonthConfig extends WidgetConfig {
   selectedCalendarIds: string[];
   daysAhead: number;
+  transparentBackground: boolean;
 }
 
 function formatTimeRange(event: ParsedCalendarEvent): string {
@@ -45,7 +46,7 @@ function formatTimeRange(event: ParsedCalendarEvent): string {
 // ── Main widget ──
 
 export function GoogleCalendarMonthWidget({ widget }: WidgetProps<GoogleCalendarMonthConfig>) {
-  const { selectedCalendarIds, daysAhead } = widget.config;
+  const { selectedCalendarIds, daysAhead, transparentBackground } = widget.config;
   const { isAuthenticated } = useAuth();
   const { isLoading, events, refresh } = useGoogleCalendar({ selectedCalendarIds, daysAhead });
 
@@ -73,7 +74,7 @@ export function GoogleCalendarMonthWidget({ widget }: WidgetProps<GoogleCalendar
 
   if (!isAuthenticated) {
     return (
-      <Box className={classes.container}>
+      <Box className={`${classes.container} ${transparentBackground ? classes.transparent : ''}`}>
         <div className={classes.empty}>
           <IconBrandGoogle size={40} opacity={0.3} />
           <Text size="sm" c="dimmed" ta="center">
@@ -86,7 +87,7 @@ export function GoogleCalendarMonthWidget({ widget }: WidgetProps<GoogleCalendar
 
   if (selectedCalendarIds.length === 0) {
     return (
-      <Box className={classes.container}>
+      <Box className={`${classes.container} ${transparentBackground ? classes.transparent : ''}`}>
         <div className={classes.empty}>
           <IconCalendarEvent size={40} opacity={0.3} />
           <Text size="sm" c="dimmed" ta="center">
@@ -98,7 +99,7 @@ export function GoogleCalendarMonthWidget({ widget }: WidgetProps<GoogleCalendar
   }
 
   return (
-    <Box className={classes.container}>
+    <Box className={`${classes.container} ${transparentBackground ? classes.transparent : ''}`}>
       <div className={classes.header}>
         <span className={classes.title}>
           <IconCalendarEvent size={12} />

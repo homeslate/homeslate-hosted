@@ -9,6 +9,7 @@ export interface PhotoConfig extends WidgetConfig {
   interval: number;
   transition: 'fade' | 'slide' | 'none';
   showCaption: boolean;
+  transparentBackground: boolean;
 }
 
 // Sample photos for demo
@@ -32,7 +33,7 @@ const samplePhotos = [
 ];
 
 export function PhotoWidget({ widget }: WidgetProps<PhotoConfig>) {
-  const { photos, interval, transition, showCaption } = widget.config;
+  const { photos, interval, transition, showCaption, transparentBackground } = widget.config;
   const displayPhotos = photos.length > 0 ? photos : samplePhotos;
   
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -58,7 +59,7 @@ export function PhotoWidget({ widget }: WidgetProps<PhotoConfig>) {
   const currentPhoto = displayPhotos[currentIndex];
 
   return (
-    <Box className={classes.container}>
+    <Box className={`${classes.container} ${transparentBackground ? classes.transparent : ''}`}>
       <div 
         className={`${classes.photo} ${isTransitioning ? classes[transition] : ''}`}
         style={{ backgroundImage: `url(${currentPhoto.url})` }}

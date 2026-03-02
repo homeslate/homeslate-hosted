@@ -8,6 +8,16 @@
   transition: box-shadow 0.2s ease, border-color 0.2s ease;
 }
 
+.wrapper.transparent {
+  background: transparent;
+  backdrop-filter: none;
+  border-color: transparent;
+}
+
+.wrapper.transparent:hover {
+  border-color: var(--theme-surface-border);
+}
+
 .wrapper:hover {
   box-shadow: 0 0 20px var(--theme-glow);
 }

@@ -5,6 +5,7 @@ import { GoogleCalendarWidget, GoogleCalendarWidgetSettings, type GoogleCalendar
 import { GoogleCalendarMonthWidget, GoogleCalendarMonthWidgetSettings, type GoogleCalendarMonthConfig } from './GoogleCalendarMonthWidget';
 import { GoogleCalendarDayWidget, GoogleCalendarDayWidgetSettings, type GoogleCalendarDayConfig } from './GoogleCalendarDayWidget';
 import { PhotoWidget, PhotoWidgetSettings, type PhotoConfig } from './PhotoWidget';
+import { GooglePhotosWidget, GooglePhotosWidgetSettings, type GooglePhotosConfig } from './GooglePhotosWidget';
 import { WeatherWidget, WeatherWidgetSettings, type WeatherConfig } from './WeatherWidget';
 import { NewsWidget, NewsWidgetSettings, type NewsConfig } from './NewsWidget';
 import { StocksWidget, StocksWidgetSettings, type StocksConfig } from './StocksWidget';
@@ -38,6 +39,7 @@ const clockEntry: WidgetRegistryEntry<ClockConfig> = {
     showDate: true,
     use24Hour: false,
     timezone: 'local',
+    transparentBackground: false,
   },
   defaultLayout: {
     w: 3,
@@ -62,6 +64,7 @@ const calendarEntry: WidgetRegistryEntry<CalendarConfig> = {
     maxEvents: 5,
     daysAhead: 30,
     showCalendar: true,
+    transparentBackground: false,
   },
   defaultLayout: {
     w: 4,
@@ -152,6 +155,7 @@ const photoEntry: WidgetRegistryEntry<PhotoConfig> = {
     interval: 10,
     transition: 'fade',
     showCaption: true,
+    transparentBackground: false,
   },
   defaultLayout: {
     w: 4,
@@ -161,6 +165,29 @@ const photoEntry: WidgetRegistryEntry<PhotoConfig> = {
   },
 };
 widgetRegistry.set('photo', photoEntry);
+
+// Google Photos Widget
+const googlePhotosEntry: WidgetRegistryEntry<GooglePhotosConfig> = {
+  type: 'google-photos',
+  name: 'Google Photos',
+  description: 'Display a random photo from a Google Photos album',
+  icon: IconBrandGoogle,
+  component: GooglePhotosWidget,
+  settingsComponent: GooglePhotosWidgetSettings,
+  defaultConfig: {
+    albumId: '',
+    showCaption: true,
+    refreshInterval: 60,
+    transparentBackground: false,
+  },
+  defaultLayout: {
+    w: 4,
+    h: 3,
+    minW: 2,
+    minH: 2,
+  },
+};
+widgetRegistry.set('google-photos', googlePhotosEntry);
 
 // Weather Widget
 const weatherEntry: WidgetRegistryEntry<WeatherConfig> = {
@@ -177,6 +204,7 @@ const weatherEntry: WidgetRegistryEntry<WeatherConfig> = {
     units: 'imperial',
     showForecast: true,
     forecastDays: 5,
+    transparentBackground: false,
   },
   defaultLayout: {
     w: 3,
@@ -200,6 +228,7 @@ const newsEntry: WidgetRegistryEntry<NewsConfig> = {
     maxItems: 10,
     showSource: true,
     showDescription: false,
+    transparentBackground: false,
   },
   defaultLayout: {
     w: 4,
@@ -223,6 +252,7 @@ const stocksEntry: WidgetRegistryEntry<StocksConfig> = {
     apiKey: '',
     showChange: true,
     showDayRange: false,
+    transparentBackground: false,
   },
   defaultLayout: {
     w: 3,
@@ -247,6 +277,7 @@ const weekCalendarEntry: WidgetRegistryEntry<WeekCalendarConfig> = {
     weekStartsOn: 0,
     startHour: 7,
     endHour: 21,
+    transparentBackground: false,
   },
   defaultLayout: {
     w: 7,

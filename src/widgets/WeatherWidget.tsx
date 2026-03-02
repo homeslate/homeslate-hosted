@@ -41,6 +41,7 @@ export interface WeatherConfig extends WidgetConfig {
   units: 'imperial' | 'metric';
   showForecast: boolean;
   forecastDays: number;
+  transparentBackground: boolean;
 }
 
 const WeatherIcon = ({ condition, size = 48, isDay = true }: { condition: string; size?: number; isDay?: boolean }) => {
@@ -62,7 +63,7 @@ const WeatherIcon = ({ condition, size = 48, isDay = true }: { condition: string
 };
 
 export function WeatherWidget({ widget }: WidgetProps<WeatherConfig>) {
-  const { latitude, longitude, units, showForecast, forecastDays, location } = widget.config;
+  const { latitude, longitude, units, showForecast, forecastDays, location, transparentBackground } = widget.config;
   
   const locationInfo = useMemo(() => {
     if (!location) return undefined;
@@ -88,7 +89,7 @@ export function WeatherWidget({ widget }: WidgetProps<WeatherConfig>) {
   // No location configured
   if (!latitude || !longitude) {
     return (
-      <Box className={classes.container}>
+      <Box className={`${classes.container} ${transparentBackground ? classes.transparent : ''}`}>
         <div className={classes.empty}>
           <IconMapPin size={48} className={classes.emptyIcon} />
           <Text size="lg" fw={500}>No Location Set</Text>
@@ -103,7 +104,7 @@ export function WeatherWidget({ widget }: WidgetProps<WeatherConfig>) {
   // Loading state
   if (isLoading && !weather) {
     return (
-      <Box className={classes.container}>
+      <Box className={`${classes.container} ${transparentBackground ? classes.transparent : ''}`}>
         <div className={classes.loading}>
           <Loader size="lg" color="orange" />
           <Text size="sm" c="dimmed" mt="sm">Loading weather...</Text>
@@ -115,7 +116,7 @@ export function WeatherWidget({ widget }: WidgetProps<WeatherConfig>) {
   // Error state
   if (error) {
     return (
-      <Box className={classes.container}>
+      <Box className={`${classes.container} ${transparentBackground ? classes.transparent : ''}`}>
         <div className={classes.error}>
           <Text size="sm" c="red">{error}</Text>
           <Button 
@@ -139,7 +140,7 @@ export function WeatherWidget({ widget }: WidgetProps<WeatherConfig>) {
   const description = getWeatherDescription(weather.current.weatherCode);
 
   return (
-    <Box className={classes.container}>
+    <Box className={`${classes.container} ${transparentBackground ? classes.transparent : ''}`}>
       <div className={classes.header}>
         <Text className={classes.location}>
           {weather.location.name}

@@ -1,4 +1,6 @@
 .container {
+  width: 100%;
+  min-height: 0;
   height: 100%;
   display: flex;
   align-items: center;
@@ -11,11 +13,15 @@
   border-radius: var(--mantine-radius-md);
 }
 
+.container.transparent {
+  background: transparent;
+}
+
 .time {
   font-family: 'JetBrains Mono', 'Space Mono', 'SF Mono', monospace;
-  font-size: clamp(2rem, 6vw, 4rem);
   font-weight: 300;
   letter-spacing: 0.05em;
+  line-height: 1;
   background: linear-gradient(135deg, var(--theme-accent) 0%, var(--theme-accent-secondary) 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -24,10 +30,9 @@
 }
 
 .date {
-  font-size: clamp(0.875rem, 2vw, 1.25rem);
   font-weight: 500;
   color: var(--mantine-color-dimmed);
   text-transform: capitalize;
-  margin-top: 0.5rem;
+  margin-top: 0.4em;
 }
 

@@ -1,4 +1,4 @@
-import { useEffect, useCallback } from 'react';
+import { useEffect } from 'react';
 import {
   Group,
   Text,
@@ -30,33 +30,31 @@ export function ViewEditorPage() {
   const display = displays.find((d) => d.id === selectedDisplayId);
   const view = display?.layouts.find((l) => l.id === selectedViewId);
 
-  // Save immediately on each action
-  const saveConfig = useCallback(() => {
-    if (!accessToken || !selectedDisplayId || !display) return;
-    const { layouts, activeLayoutId, rotationEnabled, rotationIntervalMs, theme: displayTheme } = display;
-    fetch(`/api/config?displayId=${selectedDisplayId}`, {
-      method: 'PUT',
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ layouts, activeLayoutId, rotationEnabled, rotationIntervalMs, theme: displayTheme }),
-    }).catch(console.error);
-  }, [accessToken, selectedDisplayId, display]);
-
-  // Subscribe to store changes and save immediately on each action
+  // Subscribe to store changes and save immediately on each action.
+  // We read state directly from the subscription callback so we always
+  // save the latest layout rather than a stale closure snapshot.
   useEffect(() => {
+    if (!accessToken || !selectedDisplayId) return;
     const unsubscribe = useDashboardStore.subscribe((state, prevState) => {
       const d = state.displays.find((d) => d.id === selectedDisplayId);
       const prev = prevState.displays.find((d) => d.id === selectedDisplayId);
-      if (d && prev && (d.layouts !== prev.layouts || d.theme !== prev.theme)) {
-        saveConfig();
+      if (!d || !prev) return;
+      if (d.layouts !== prev.layouts || d.theme !== prev.theme) {
+        const { layouts, activeLayoutId, rotationEnabled, rotationIntervalMs, theme: displayTheme } = d;
+        fetch(`/api/config?displayId=${selectedDisplayId}`, {
+          method: 'PUT',
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ layouts, activeLayoutId, rotationEnabled, rotationIntervalMs, theme: displayTheme }),
+        }).catch(console.error);
       }
     });
     return () => {
       unsubscribe();
     };
-  }, [selectedDisplayId, saveConfig]);
+  }, [accessToken, selectedDisplayId]);
 
   if (!display || !view) return null;
 
@@ -68,7 +66,7 @@ export function ViewEditorPage() {
   ];
 
   return (
-    <div className={classes.root}>
+    <div className={classes.root} style={themeToVars(theme) as React.CSSProperties}>
       <header className={classes.header}>
         <Group gap="sm">
           <Tooltip label="Back to display">
@@ -86,7 +84,6 @@ export function ViewEditorPage() {
             <ActionIcon
               variant="subtle"
               onClick={() => {
-                saveConfig();
                 window.open(`/?display=${display.displayId}`, '_blank');
               }}
             >

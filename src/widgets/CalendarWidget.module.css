@@ -8,6 +8,10 @@
   flex-direction: column;
 }
 
+.container.transparent {
+  background: transparent;
+}
+
 .content {
   display: flex;
   gap: 1rem;

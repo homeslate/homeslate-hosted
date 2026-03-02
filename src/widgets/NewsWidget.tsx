@@ -21,10 +21,11 @@ export interface NewsConfig extends WidgetConfig {
   maxItems: number;
   showSource: boolean;
   showDescription: boolean;
+  transparentBackground: boolean;
 }
 
 export function NewsWidget({ widget }: WidgetProps<NewsConfig>) {
-  const { feedUrls, maxItems, showSource, showDescription } = widget.config;
+  const { feedUrls, maxItems, showSource, showDescription, transparentBackground } = widget.config;
 
   const feeds: RSSFeed[] = useMemo(() => {
     return feedUrls
@@ -40,7 +41,7 @@ export function NewsWidget({ widget }: WidgetProps<NewsConfig>) {
   // No feeds configured
   if (feedUrls.length === 0) {
     return (
-      <Box className={classes.container}>
+      <Box className={`${classes.container} ${transparentBackground ? classes.transparent : ''}`}>
         <div className={classes.empty}>
           <IconNews size={48} className={classes.emptyIcon} />
           <Text size="lg" fw={500}>No News Feeds</Text>
@@ -55,7 +56,7 @@ export function NewsWidget({ widget }: WidgetProps<NewsConfig>) {
   // Loading state
   if (isLoading && items.length === 0) {
     return (
-      <Box className={classes.container}>
+      <Box className={`${classes.container} ${transparentBackground ? classes.transparent : ''}`}>
         <div className={classes.loading}>
           <Loader size="lg" color="blue" />
           <Text size="sm" c="dimmed" mt="sm">Loading news...</Text>
@@ -67,7 +68,7 @@ export function NewsWidget({ widget }: WidgetProps<NewsConfig>) {
   // Error state
   if (error && items.length === 0) {
     return (
-      <Box className={classes.container}>
+      <Box className={`${classes.container} ${transparentBackground ? classes.transparent : ''}`}>
         <div className={classes.error}>
           <Text size="sm" c="red">{error}</Text>
           <Button
@@ -97,7 +98,7 @@ export function NewsWidget({ widget }: WidgetProps<NewsConfig>) {
   };
 
   return (
-    <Box className={classes.container}>
+    <Box className={`${classes.container} ${transparentBackground ? classes.transparent : ''}`}>
       <div className={classes.header}>
         <Text className={classes.title}>
           <IconNews size={18} />

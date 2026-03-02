@@ -26,16 +26,16 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.07em;
-  color: rgba(255, 255, 255, 0.4);
+  color: var(--theme-text-muted, rgba(255, 255, 255, 0.4));
 }
 
 .refreshBtn {
-  color: rgba(255, 255, 255, 0.3) !important;
+  color: var(--theme-text-muted, rgba(255, 255, 255, 0.3)) !important;
 }
 
 .refreshBtn:hover {
-  color: rgba(255, 255, 255, 0.8) !important;
-  background: rgba(255, 255, 255, 0.08) !important;
+  color: var(--theme-text, rgba(255, 255, 255, 0.8)) !important;
+  background: var(--theme-surface-bg, rgba(255, 255, 255, 0.08)) !important;
 }
 
 /* ── Calendar ── */
@@ -47,7 +47,7 @@
 }
 
 .calendarHeader {
-  color: #4285f4;
+  color: var(--theme-accent, #4285f4);
   font-size: 0.82rem;
 }
 
@@ -85,7 +85,7 @@
   display: flex;
   flex-direction: column;
   margin-top: 0.5rem;
-  border-top: 1px solid rgba(255, 255, 255, 0.07);
+  border-top: 1px solid var(--theme-surface-border, rgba(255, 255, 255, 0.07));
   padding-top: 0.5rem;
 }
 
@@ -102,7 +102,7 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  color: #4285f4;
+  color: var(--theme-accent, #4285f4);
 }
 
 .eventCount {
@@ -125,8 +125,8 @@
 .eventCard {
   display: flex;
   align-items: stretch;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.07);
+  background: var(--theme-surface-bg, rgba(255, 255, 255, 0.05));
+  border: 1px solid var(--theme-surface-border, rgba(255, 255, 255, 0.07));
   border-radius: 6px;
   overflow: hidden;
   margin-bottom: 0.25rem;
@@ -150,7 +150,7 @@
 .eventTitle {
   font-size: 0.78rem;
   font-weight: 600;
-  color: rgba(255, 255, 255, 0.88);
+  color: var(--theme-text, rgba(255, 255, 255, 0.88));
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -158,7 +158,7 @@
 
 .eventTime {
   font-size: 0.67rem;
-  color: rgba(255, 255, 255, 0.45);
+  color: var(--theme-text-muted, rgba(255, 255, 255, 0.45));
   margin-top: 1px;
 }
 
@@ -167,7 +167,7 @@
   align-items: center;
   gap: 3px;
   font-size: 0.65rem;
-  color: rgba(255, 255, 255, 0.35);
+  color: var(--theme-text-muted, rgba(255, 255, 255, 0.35));
   margin-top: 1px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -189,6 +189,6 @@
 /* ── Settings ── */
 
 .authSection {
-  background: rgba(0, 0, 0, 0.2);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--theme-surface-bg, rgba(0, 0, 0, 0.2));
+  border: 1px solid var(--theme-surface-border, rgba(255, 255, 255, 0.1));
 }

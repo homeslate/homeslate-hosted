@@ -29,6 +29,7 @@ export interface StocksConfig extends WidgetConfig {
   apiKey: string;
   showChange: boolean;
   showDayRange: boolean;
+  transparentBackground: boolean;
 }
 
 function StockRow({ quote, showChange, showDayRange }: { 
@@ -36,42 +37,41 @@ function StockRow({ quote, showChange, showDayRange }: {
   showChange: boolean;
   showDayRange: boolean;
 }) {
-  const isPositive = quote.change > 0;
-  const isNegative = quote.change < 0;
+  const change = quote.change ?? 0;
+  const changePercent = quote.changePercent ?? 0;
+  const isPositive = change > 0;
+  const isNegative = change < 0;
   
-  const TrendIcon = isPositive ? IconTrendingUp : isNegative ? IconTrendingDown : IconMinus;
-  const changeClass = isPositive ? classes.positive : isNegative ? classes.negative : classes.neutral;
-
   return (
-    <Paper className={classes.stockRow} p="xs">
-      <div className={classes.stockInfo}>
+    <Group justify="space-between" wrap="nowrap" className={classes.stockRow}>
+      <Group gap="xs" wrap="nowrap">
         <Text fw={600} size="sm">{quote.symbol}</Text>
-        {quote.name && (
-          <Text size="xs" c="dimmed" lineClamp={1}>{quote.name}</Text>
-        )}
-      </div>
-      <div className={classes.stockPrice}>
-        <Text fw={600} size="sm">${quote.currentPrice.toFixed(2)}</Text>
+        <Text size="xs" c="dimmed">{quote.name}</Text>
+      </Group>
+      <Group gap="xs" wrap="nowrap">
+        <Text size="sm" fw={500}>${quote.price?.toFixed(2) ?? '—'}</Text>
         {showChange && (
-          <div className={`${classes.change} ${changeClass}`}>
-            <TrendIcon size={14} />
-            <Text size="xs">
-              {isPositive ? '+' : ''}{quote.change.toFixed(2)} ({isPositive ? '+' : ''}{quote.changePercent.toFixed(2)}%)
+          <>
+            <Text size="xs" c={isPositive ? 'teal' : isNegative ? 'red' : 'dimmed'}>
+              {isPositive ? '+' : ''}{change?.toFixed(2) ?? '—'}
             </Text>
-          </div>
+            <Text size="xs" c={isPositive ? 'teal' : isNegative ? 'red' : 'dimmed'}>
+              ({isPositive ? '+' : ''}{changePercent?.toFixed(2) ?? '—'}%)
+            </Text>
+          </>
         )}
         {showDayRange && (
           <Text size="xs" c="dimmed">
-            L: ${quote.lowPrice.toFixed(2)} · H: ${quote.highPrice.toFixed(2)}
+            {quote.dayLow?.toFixed(2) ?? '—'} - {quote.dayHigh?.toFixed(2) ?? '—'}
           </Text>
         )}
-      </div>
-    </Paper>
+      </Group>
+    </Group>
   );
 }
 
 export function StocksWidget({ widget }: WidgetProps<StocksConfig>) {
-  const { symbols, apiKey, showChange, showDayRange } = widget.config;
+  const { symbols, apiKey, showChange, showDayRange, transparentBackground } = widget.config;
 
   const { quotes, isLoading, errors, refresh } = useStocks({
     symbols,
@@ -81,7 +81,7 @@ export function StocksWidget({ widget }: WidgetProps<StocksConfig>) {
   // No API key configured
   if (!apiKey) {
     return (
-      <Box className={classes.container}>
+      <Box className={`${classes.container} ${transparentBackground ? classes.transparent : ''}`}>
         <div className={classes.empty}>
           <IconChartLine size={48} className={classes.emptyIcon} />
           <Text size="lg" fw={500}>API Key Required</Text>
@@ -99,7 +99,7 @@ export function StocksWidget({ widget }: WidgetProps<StocksConfig>) {
   // No symbols configured
   if (symbols.length === 0) {
     return (
-      <Box className={classes.container}>
+      <Box className={`${classes.container} ${transparentBackground ? classes.transparent : ''}`}>
         <div className={classes.empty}>
           <IconChartLine size={48} className={classes.emptyIcon} />
           <Text size="lg" fw={500}>No Stocks Selected</Text>
@@ -114,7 +114,7 @@ export function StocksWidget({ widget }: WidgetProps<StocksConfig>) {
   // Loading state
   if (isLoading && quotes.size === 0) {
     return (
-      <Box className={classes.container}>
+      <Box className={`${classes.container} ${transparentBackground ? classes.transparent : ''}`}>
         <div className={classes.loading}>
           <Loader size="lg" color="green" />
           <Text size="sm" c="dimmed" mt="sm">Loading stocks...</Text>
@@ -124,7 +124,7 @@ export function StocksWidget({ widget }: WidgetProps<StocksConfig>) {
   }
 
   return (
-    <Box className={classes.container}>
+    <Box className={`${classes.container} ${transparentBackground ? classes.transparent : ''}`}>
       <div className={classes.header}>
         <Text className={classes.title}>
           <IconChartLine size={18} />

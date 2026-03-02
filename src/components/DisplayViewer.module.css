@@ -4,6 +4,13 @@
   background: var(--theme-bg, var(--mantine-color-dark-9));
   overflow: hidden;
   position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+.root > :not(.dots) {
+  flex: 1;
+  min-height: 0;
 }
 
 .dots {

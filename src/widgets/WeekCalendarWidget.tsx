@@ -16,6 +16,7 @@ export interface WeekCalendarConfig extends WidgetConfig {
   weekStartsOn: 0 | 1; // 0 = Sunday, 1 = Monday
   startHour: number;   // e.g. 7
   endHour: number;     // e.g. 21
+  transparentBackground: boolean;
 }
 
 // ── Layout constants ────────────────────────────────────────────────────────
@@ -112,7 +113,7 @@ function positionEvents(
 // ── Main Component ──────────────────────────────────────────────────────────
 
 export function WeekCalendarWidget({ widget }: WidgetProps<WeekCalendarConfig>) {
-  const { selectedCalendarIds, viewMode, weekStartsOn, startHour, endHour } = widget.config;
+  const { selectedCalendarIds, viewMode, weekStartsOn, startHour, endHour, transparentBackground } = widget.config;
   const { isAuthenticated } = useAuth();
   const { events } = useGoogleCalendar({ selectedCalendarIds, daysAhead: 14 });
 
@@ -196,7 +197,7 @@ export function WeekCalendarWidget({ widget }: WidgetProps<WeekCalendarConfig>) 
   // ── Render ───────────────────────────────────────────────────────────────
 
   return (
-    <div className={classes.container}>
+    <div className={`${classes.container} ${transparentBackground ? classes.transparent : ''}`}>
       {/* Day headers */}
       <div className={classes.dayHeaders}>
         <div className={classes.timeGutterHead} />
@@ -254,6 +255,16 @@ export function WeekCalendarWidget({ widget }: WidgetProps<WeekCalendarConfig>) 
             ))}
           </div>
 
+          {/* Full-width current time line */}
+          {showCurrentTime && (
+            <div
+              className={classes.currentTimeLine}
+              style={{ top: `${currentTimePct}%` }}
+            >
+              <div className={classes.currentTimeDot} />
+            </div>
+          )}
+
           {/* Day columns */}
           {days.map((day, i) => {
             const isToday = day.isSame(today, 'day');
@@ -300,15 +311,7 @@ export function WeekCalendarWidget({ widget }: WidgetProps<WeekCalendarConfig>) 
                   </div>
                 ))}
 
-                {/* Current time line (today only) */}
-                {isToday && showCurrentTime && (
-                  <div
-                    className={classes.currentTimeLine}
-                    style={{ top: `${currentTimePct}%` }}
-                  >
-                    <div className={classes.currentTimeDot} />
-                  </div>
-                )}
+
               </div>
             );
           })}

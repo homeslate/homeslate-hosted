@@ -6,6 +6,10 @@
   font-size: 12px;
 }
 
+.container.transparent {
+  background: transparent;
+}
+
 /* ── Day header row ── */
 .dayHeaders {
   display: grid;
@@ -49,9 +53,10 @@
 }
 
 .dayNumToday {
-  background: var(--mantine-color-indigo-6);
+  background: var(--mantine-color-indigo-5);
   color: #fff;
   font-weight: 700;
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.4);
 }
 
 .dayHeadPast .dayName,
@@ -136,7 +141,7 @@
 }
 
 .dayColumnToday {
-  background: rgba(99, 102, 241, 0.04);
+  background: rgba(99, 102, 241, 0.10);
 }
 
 .dayColumnPast {
@@ -202,22 +207,22 @@
 /* ── Current time indicator ── */
 .currentTimeLine {
   position: absolute;
-  left: -1px;
+  left: 48px;
   right: 0;
   height: 2px;
-  background: #ff4d4f;
+  background: rgba(255, 77, 79, 0.55);
   z-index: 4;
   pointer-events: none;
 }
 
 .currentTimeDot {
   position: absolute;
-  left: -4px;
+  left: -5px;
   top: -4px;
   width: 10px;
   height: 10px;
   border-radius: 50%;
-  background: #ff4d4f;
+  background: rgba(255, 77, 79, 0.55);
 }
 
 /* ── Empty / auth states ── */

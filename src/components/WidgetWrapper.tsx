@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Paper, ActionIcon, Group, Text, Modal, Stack, Button, Tooltip } from '@mantine/core';
+import { Paper, ActionIcon, Group, Text, Modal, Stack, Button, Tooltip, Switch, Divider } from '@mantine/core';
 import { IconSettings, IconTrash, IconGripVertical, IconArrowsMaximize } from '@tabler/icons-react';
 import type { WidgetDefinition, WidgetConfig } from '../types/widget';
 import { getWidgetByType } from '../widgets/registry';
@@ -27,6 +27,7 @@ export function WidgetWrapper({ widget, isEditing }: WidgetWrapperProps) {
 
   const WidgetComponent = widgetEntry.component;
   const SettingsComponent = widgetEntry.settingsComponent;
+  const isTransparent = widget.config.transparentBackground === true;
 
   const handleConfigChange = (config: Partial<WidgetConfig>) => {
     updateWidgetConfig(widget.id, config);
@@ -34,7 +35,7 @@ export function WidgetWrapper({ widget, isEditing }: WidgetWrapperProps) {
 
   return (
     <>
-      <Paper className={`${classes.wrapper} ${isEditing ? classes.editing : ''}`}>
+      <Paper className={`${classes.wrapper} ${isTransparent ? classes.transparent : ''} ${isEditing ? classes.editing : ''}`}>
         {isEditing && (
           <>
             <div className={classes.toolbar}>
@@ -108,6 +109,15 @@ export function WidgetWrapper({ widget, isEditing }: WidgetWrapperProps) {
             onTouchEnd={(e) => e.stopPropagation()}
           >
             <Stack gap="md">
+              <Divider label="Display" labelPosition="left" />
+              <Group justify="space-between">
+                <Text size="sm">Transparent Background</Text>
+                <Switch
+                  checked={widget.config.transparentBackground === true}
+                  onChange={(e) => handleConfigChange({ transparentBackground: e.currentTarget.checked })}
+                />
+              </Group>
+              <Divider label="Settings" labelPosition="left" />
               <SettingsComponent
                 widget={widget}
                 isEditing={true}

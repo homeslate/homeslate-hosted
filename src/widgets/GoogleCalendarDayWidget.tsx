@@ -45,6 +45,7 @@ export interface GoogleCalendarDayConfig extends WidgetConfig {
   selectedCalendarIds: string[];
   maxEvents: number;
   daysAhead: number;
+  transparentBackground: boolean;
 }
 
 interface EventFormData {
@@ -141,7 +142,7 @@ function formDataToEventInput(data: EventFormData): CalendarEventInput {
 // ── Main widget ──
 
 export function GoogleCalendarDayWidget({ widget }: WidgetProps<GoogleCalendarDayConfig>) {
-  const { selectedCalendarIds, maxEvents, daysAhead } = widget.config;
+  const { selectedCalendarIds, maxEvents, daysAhead, transparentBackground } = widget.config;
 
   const {
     isAuthenticated,
@@ -303,7 +304,7 @@ export function GoogleCalendarDayWidget({ widget }: WidgetProps<GoogleCalendarDa
 
   if (!isAuthenticated) {
     return (
-      <Box className={classes.container}>
+      <Box className={`${classes.container} ${transparentBackground ? classes.transparent : ''}`}>
         <div className={classes.empty}>
           <IconBrandGoogle size={48} className={classes.googleIcon} />
           <Text size="lg" fw={500} mb="xs">Google Calendar</Text>
@@ -317,7 +318,7 @@ export function GoogleCalendarDayWidget({ widget }: WidgetProps<GoogleCalendarDa
 
   if (selectedCalendarIds.length === 0) {
     return (
-      <Box className={classes.container}>
+      <Box className={`${classes.container} ${transparentBackground ? classes.transparent : ''}`}>
         <div className={classes.empty}>
           <IconCalendarEvent size={48} className={classes.emptyIcon} />
           <Text size="lg" fw={500}>No Calendars Selected</Text>
@@ -328,7 +329,7 @@ export function GoogleCalendarDayWidget({ widget }: WidgetProps<GoogleCalendarDa
   }
 
   return (
-    <Box className={classes.container}>
+    <Box className={`${classes.container} ${transparentBackground ? classes.transparent : ''}`}>
       <div className={classes.header}>
         <div className={classes.headerTitle}>
           <IconCalendarEvent size={13} />

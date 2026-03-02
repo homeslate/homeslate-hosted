@@ -5,6 +5,10 @@
   overflow: hidden;
 }
 
+.container.transparent {
+  background: transparent;
+}
+
 .photo {
   position: absolute;
   inset: 0;

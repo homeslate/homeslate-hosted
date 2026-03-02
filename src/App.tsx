@@ -14,7 +14,7 @@ import '@mantine/core/styles.css';
 import '@mantine/dates/styles.css';
 import './App.css';
 
-const theme = createTheme({
+const mantineTheme = createTheme({
   primaryColor: 'indigo',
   fontFamily: '"Outfit", "Inter", -apple-system, BlinkMacSystemFont, sans-serif',
   headings: {
@@ -41,6 +41,12 @@ const theme = createTheme({
   },
 });
 
+function useCurrentDisplayTheme() {
+  const { selectedDisplayId, displays } = useDashboardStore();
+  const display = displays.find((d) => d.id === selectedDisplayId);
+  return display?.theme;
+}
+
 function AppInner() {
   const { isAuthenticated } = useAuth();
   const { selectedDisplayId, selectedViewId } = useDashboardStore();
@@ -58,8 +64,11 @@ function AppInner() {
 }
 
 function App() {
+  const displayTheme = useCurrentDisplayTheme();
+  const colorScheme = displayTheme?.isDark === false ? 'light' : 'dark';
+
   return (
-    <MantineProvider theme={theme} defaultColorScheme="dark">
+    <MantineProvider theme={mantineTheme} defaultColorScheme={colorScheme}>
       <AuthProvider>
         <ThemeProvider>
           <AppInner />
