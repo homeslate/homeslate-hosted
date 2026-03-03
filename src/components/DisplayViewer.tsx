@@ -8,6 +8,11 @@ import { themeToVars } from '../themes/utils';
 import { Dashboard } from './Dashboard';
 import classes from './DisplayViewer.module.css';
 
+// Minimum horizontal distance (px) to register as a swipe.
+const SWIPE_THRESHOLD = 60;
+// Once the angle exceeds this ratio (dx/dy), we lock the gesture as horizontal.
+const SWIPE_ANGLE_RATIO = 1.2;
+
 interface DisplayConfig {
   layouts: DashboardLayout[];
   activeLayoutId: string | null;
@@ -30,6 +35,7 @@ export function DisplayViewer({ displayId }: Props) {
   const [pinInput, setPinInput] = useState('');
   const [pinError, setPinError] = useState(false);
   const rotationRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const rootRef = useRef<HTMLDivElement>(null);
   useWakeLock();
 
   // Load and poll config
@@ -94,29 +100,78 @@ export function DisplayViewer({ displayId }: Props) {
     };
   }, [config, navigate]);
 
-  // Swipe to change views
-  const swipeStart = useRef({ x: 0, y: 0 });
-
-  const handlePointerDown = (e: React.PointerEvent<HTMLElement>) => {
-    const visibleCount = config?.layouts.filter((l) => !l.hidden).length ?? 0;
-    if (!config || visibleCount <= 1) return;
-    swipeStart.current = { x: e.clientX, y: e.clientY };
-  };
-
-  const handlePointerUp = (e: React.PointerEvent<HTMLElement>) => {
+  // Reset the rotation timer (called after a manual swipe).
+  const resetRotation = useCallback(() => {
+    if (rotationRef.current) clearInterval(rotationRef.current);
     const visibleLayouts = config?.layouts.filter((l) => !l.hidden) ?? [];
-    if (!config || visibleLayouts.length <= 1) return;
-    const dx = e.clientX - swipeStart.current.x;
-    const dy = e.clientY - swipeStart.current.y;
-    if (Math.abs(dx) > 80 && Math.abs(dx) > Math.abs(dy) * 1.5) {
-      navigate(dx < 0 ? 'next' : 'prev');
-      // Reset rotation timer
-      if (rotationRef.current) clearInterval(rotationRef.current);
-      if (config.rotationEnabled && visibleLayouts.length > 1) {
-        rotationRef.current = setInterval(() => navigate('next'), config.rotationIntervalMs);
-      }
+    if (config?.rotationEnabled && visibleLayouts.length > 1) {
+      rotationRef.current = setInterval(() => navigate('next'), config.rotationIntervalMs);
     }
-  };
+  }, [config, navigate]);
+
+  // Swipe to change views — uses native Touch Events with passive:false so we
+  // can call preventDefault() once a horizontal gesture is confirmed, preventing
+  // the browser from stealing it as a scroll or back-navigation gesture.
+  useEffect(() => {
+    const el = rootRef.current;
+    if (!el) return;
+
+    let startX = 0;
+    let startY = 0;
+    // null = undecided, 'h' = horizontal lock, 'v' = vertical (pass through)
+    let direction: 'h' | 'v' | null = null;
+
+    const onTouchStart = (e: TouchEvent) => {
+      const visibleCount = config?.layouts.filter((l) => !l.hidden).length ?? 0;
+      if (!config || visibleCount <= 1) return;
+      const t = e.touches[0];
+      startX = t.clientX;
+      startY = t.clientY;
+      direction = null;
+    };
+
+    const onTouchMove = (e: TouchEvent) => {
+      if (!config) return;
+      const t = e.touches[0];
+      const dx = t.clientX - startX;
+      const dy = t.clientY - startY;
+
+      if (direction === null) {
+        // Determine gesture axis once movement is unambiguous
+        if (Math.abs(dx) > 5 || Math.abs(dy) > 5) {
+          direction = Math.abs(dx) > Math.abs(dy) * SWIPE_ANGLE_RATIO ? 'h' : 'v';
+        }
+      }
+
+      // Block browser scroll/swipe-back only for horizontal gestures
+      if (direction === 'h') {
+        e.preventDefault();
+      }
+    };
+
+    const onTouchEnd = (e: TouchEvent) => {
+      if (!config || direction !== 'h') return;
+      const t = e.changedTouches[0];
+      const dx = t.clientX - startX;
+      const dy = t.clientY - startY;
+
+      if (Math.abs(dx) >= SWIPE_THRESHOLD && Math.abs(dx) > Math.abs(dy) * SWIPE_ANGLE_RATIO) {
+        navigate(dx < 0 ? 'next' : 'prev');
+        resetRotation();
+      }
+      direction = null;
+    };
+
+    el.addEventListener('touchstart', onTouchStart, { passive: true });
+    el.addEventListener('touchmove', onTouchMove, { passive: false });
+    el.addEventListener('touchend', onTouchEnd, { passive: true });
+
+    return () => {
+      el.removeEventListener('touchstart', onTouchStart);
+      el.removeEventListener('touchmove', onTouchMove);
+      el.removeEventListener('touchend', onTouchEnd);
+    };
+  }, [config, navigate, resetRotation]);
 
   // Show PIN entry screen if passcode is required and not yet verified
   if (passcodeRequired) {
@@ -174,10 +229,9 @@ export function DisplayViewer({ displayId }: Props) {
 
   return (
     <div
+      ref={rootRef}
       className={classes.root}
       style={themeVars as React.CSSProperties}
-      onPointerDown={handlePointerDown}
-      onPointerUp={handlePointerUp}
     >
       {/* Render the dashboard read-only using local state, not the store */}
       {config && (

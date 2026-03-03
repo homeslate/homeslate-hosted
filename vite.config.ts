@@ -19,7 +19,7 @@ export default defineConfig(({ command }) => ({
     react(),
     command === 'build' && VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['icon.svg', 'vite.svg'],
+      includeAssets: ['icon.svg', 'vite.svg', 'icons/*.png'],
       manifest: {
         name: 'Kitchen Display',
         short_name: 'Kitchen',
@@ -27,6 +27,10 @@ export default defineConfig(({ command }) => ({
         theme_color: '#1a1b1e',
         background_color: '#1a1b1e',
         display: 'standalone',
+        // display_override: fullscreen hides the Android status bar entirely
+        // when the PWA is launched. 'standalone' is the fallback for browsers
+        // that don't support display_override.
+        display_override: ['fullscreen', 'standalone'],
         orientation: 'landscape',
         start_url: '/',
         icons: [
@@ -36,11 +40,24 @@ export default defineConfig(({ command }) => ({
             type: 'image/svg+xml',
             purpose: 'any',
           },
+          // PNG icons required for Android Chrome install prompt
+          {
+            src: 'icons/icon-192.png',
+            sizes: '192x192',
+            type: 'image/png',
+            purpose: 'any maskable',
+          },
+          {
+            src: 'icons/icon-512.png',
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'any maskable',
+          },
         ],
       },
       workbox: {
         // Pre-cache all built assets
-        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2}'],
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,webp,woff,woff2}'],
         runtimeCaching: [
           {
             // Weather API — short cache, fall back to stale data if offline

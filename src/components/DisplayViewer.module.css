@@ -1,11 +1,15 @@
 .root {
   width: 100vw;
-  height: 100vh;
+  height: 100dvh;
   background: var(--theme-bg, var(--mantine-color-dark-9));
   overflow: hidden;
   position: relative;
   display: flex;
   flex-direction: column;
+  /* Tell the browser that horizontal touch is handled by JS (swipe navigation).
+     This prevents Chrome from intercepting the horizontal gesture as a
+     back/forward navigation or scroll before our touchmove listener fires. */
+  touch-action: pan-y;
 }
 
 .pinScreen {

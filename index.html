@@ -3,17 +3,27 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/icon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 
-    <!-- PWA / theme -->
+    <!--
+      viewport-fit=cover: content extends into notch/status-bar safe areas.
+      user-scalable=no + maximum-scale=1: disable pinch-zoom so the display
+      never accidentally zooms on an accidental touch.
+    -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+
+    <!-- PWA / theme — match the app background so the status bar blends in
+         when running in standalone mode (status bar is still visible there). -->
     <meta name="theme-color" content="#1a1b1e" />
     <meta name="description" content="Family Kitchen Display - Customizable dashboard with widgets" />
+
+    <!-- Android Chrome: treat as a full-screen web app -->
+    <meta name="mobile-web-app-capable" content="yes" />
 
     <!-- iOS PWA: full-screen when added to home screen -->
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="Kitchen" />
-    <link rel="apple-touch-icon" href="/icon.svg" />
+    <link rel="apple-touch-icon" href="/icons/icon-192.png" />
 
     <title>Kitchen Display</title>
   </head>
