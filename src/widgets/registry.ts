@@ -89,6 +89,7 @@ const googleCalendarEntry: WidgetRegistryEntry<GoogleCalendarConfig> = {
     maxEvents: 10,
     daysAhead: 30,
     showCalendar: true,
+    transparentBackground: false,
   },
   defaultLayout: {
     w: 4,
@@ -110,6 +111,7 @@ const googleCalendarMonthEntry: WidgetRegistryEntry<GoogleCalendarMonthConfig> =
   defaultConfig: {
     selectedCalendarIds: [],
     daysAhead: 60,
+    transparentBackground: false,
   },
   defaultLayout: {
     w: 4,
@@ -132,6 +134,7 @@ const googleCalendarDayEntry: WidgetRegistryEntry<GoogleCalendarDayConfig> = {
     selectedCalendarIds: [],
     maxEvents: 10,
     daysAhead: 30,
+    transparentBackground: false,
   },
   defaultLayout: {
     w: 3,

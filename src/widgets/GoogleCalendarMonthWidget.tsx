@@ -13,7 +13,7 @@ import {
   Button,
   NumberInput,
 } from '@mantine/core';
-import { Calendar } from '@mantine/dates';
+import { DatePicker } from '@mantine/dates';
 import {
   IconBrandGoogle,
   IconCalendarEvent,
@@ -114,9 +114,9 @@ export function GoogleCalendarMonthWidget({ widget }: WidgetProps<GoogleCalendar
       </div>
 
       <div className={classes.calendarWrap}>
-        <Calendar
+        <DatePicker
           value={selectedDate}
-          onChange={(d) => d && setSelectedDate(d)}
+          onChange={(d) => d && setSelectedDate(new Date(d))}
           renderDay={(date) => {
             const key = dayjs(date).format('YYYY-MM-DD');
             const dayEvents = eventsByDate.get(key) ?? [];

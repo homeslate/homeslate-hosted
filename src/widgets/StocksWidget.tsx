@@ -14,9 +14,6 @@ import {
 import {
   IconChartLine,
   IconRefresh,
-  IconTrendingUp,
-  IconTrendingDown,
-  IconMinus,
   IconExternalLink,
 } from '@tabler/icons-react';
 import type { WidgetProps, WidgetConfig } from '../types/widget';
@@ -49,7 +46,7 @@ function StockRow({ quote, showChange, showDayRange }: {
         <Text size="xs" c="dimmed">{quote.name}</Text>
       </Group>
       <Group gap="xs" wrap="nowrap">
-        <Text size="sm" fw={500}>${quote.price?.toFixed(2) ?? '—'}</Text>
+        <Text size="sm" fw={500}>${quote.currentPrice?.toFixed(2) ?? '—'}</Text>
         {showChange && (
           <>
             <Text size="xs" c={isPositive ? 'teal' : isNegative ? 'red' : 'dimmed'}>
@@ -62,7 +59,7 @@ function StockRow({ quote, showChange, showDayRange }: {
         )}
         {showDayRange && (
           <Text size="xs" c="dimmed">
-            {quote.dayLow?.toFixed(2) ?? '—'} - {quote.dayHigh?.toFixed(2) ?? '—'}
+            {quote.lowPrice?.toFixed(2) ?? '—'} - {quote.highPrice?.toFixed(2) ?? '—'}
           </Text>
         )}
       </Group>

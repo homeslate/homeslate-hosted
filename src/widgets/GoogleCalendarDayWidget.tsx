@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef, useCallback } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import {
   Box,
   Text,
@@ -156,8 +156,6 @@ export function GoogleCalendarDayWidget({ widget }: WidgetProps<GoogleCalendarDa
     removeEvent,
   } = useGoogleCalendar({ selectedCalendarIds, daysAhead });
 
-  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
   const [detailEvent, setDetailEvent] = useState<ParsedCalendarEvent | null>(null);
   const [deleteConfirming, setDeleteConfirming] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
@@ -200,13 +198,6 @@ export function GoogleCalendarDayWidget({ widget }: WidgetProps<GoogleCalendarDa
       })),
     [calendars]
   );
-
-  const clearLongPress = useCallback(() => {
-    if (longPressTimer.current) {
-      clearTimeout(longPressTimer.current);
-      longPressTimer.current = null;
-    }
-  }, []);
 
   const openCreateModal = useCallback(
     (date: Date) => {
