@@ -18,19 +18,20 @@ import {
   IconLayoutDashboard,
   IconLogout,
   IconPlus,
-  IconCopy,
-  IconCheck,
+  IconShare,
 } from '@tabler/icons-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useDashboardStore } from '../store/dashboardStore';
 import type { RemoteDisplay } from '../store/dashboardStore';
+import { ShareDisplayModal } from '../components/ShareDisplayModal';
 import classes from './DisplayListPage.module.css';
 
 export function DisplayListPage() {
   const { user, accessToken, signOut } = useAuth();
   const { displays, setDisplays, addDisplay, selectDisplay } = useDashboardStore();
   const [creating, setCreating] = useState(false);
-  const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [shareDisplayId, setShareDisplayId] = useState<string | null>(null);
+  const [shareDisplayName, setShareDisplayName] = useState<string>('');
 
   // Load displays from API on mount
   useEffect(() => {
@@ -66,15 +67,21 @@ export function DisplayListPage() {
     }
   };
 
-  const handleCopyUrl = (displayId: string) => {
-    const url = `${window.location.origin}/?display=${displayId}`;
-    navigator.clipboard.writeText(url).then(() => {
-      setCopiedId(displayId);
-      setTimeout(() => setCopiedId(null), 2000);
-    });
+  const handleShare = (displayId: string, displayName: string) => {
+    setShareDisplayId(displayId);
+    setShareDisplayName(displayName);
   };
 
   return (
+    <>
+    {shareDisplayId && (
+      <ShareDisplayModal
+        opened={!!shareDisplayId}
+        onClose={() => setShareDisplayId(null)}
+        displayId={shareDisplayId}
+        displayName={shareDisplayName}
+      />
+    )}
     <div className={classes.root}>
       <header className={classes.header}>
         <Group gap="sm">
@@ -138,12 +145,12 @@ export function DisplayListPage() {
                   </Stack>
                 </UnstyledButton>
                 <Group mt="md" justify="flex-end">
-                  <Tooltip label={copiedId === display.displayId ? 'Copied!' : 'Copy display URL'}>
+                  <Tooltip label="Share / QR code">
                     <ActionIcon
                       variant="subtle"
-                      onClick={(e) => { e.stopPropagation(); handleCopyUrl(display.displayId); }}
+                      onClick={(e) => { e.stopPropagation(); handleShare(display.displayId, display.name); }}
                     >
-                      {copiedId === display.displayId ? <IconCheck size={16} /> : <IconCopy size={16} />}
+                      <IconShare size={16} />
                     </ActionIcon>
                   </Tooltip>
                 </Group>
@@ -153,5 +160,6 @@ export function DisplayListPage() {
         )}
       </main>
     </div>
+    </>
   );
 }

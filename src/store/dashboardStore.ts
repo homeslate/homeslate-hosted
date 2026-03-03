@@ -13,12 +13,14 @@ export interface Display {
   rotationEnabled: boolean;
   rotationIntervalMs: number;
   theme?: DisplayTheme;
+  passcodeEnabled?: boolean; // whether a viewer passcode is set on the server
 }
 
 export interface RemoteDisplay {
   id: string;
   display_id: string;
   name: string;
+  passcode_enabled?: boolean;
   config: {
     layouts: DashboardLayout[];
     activeLayoutId: string | null;
@@ -50,11 +52,14 @@ interface DashboardState {
   setRotationEnabled: (enabled: boolean) => void;
   setRotationIntervalMs: (ms: number) => void;
   setDisplayTheme: (displayId: string, theme: DisplayTheme) => void;
+  setPasscodeEnabled: (displayId: string, enabled: boolean) => void;
 
   // Per-display layout/view actions (act on selectedDisplayId)
   createLayout: (name: string) => void;
   deleteLayout: (id: string) => void;
   renameLayout: (id: string, name: string) => void;
+  reorderLayouts: (orderedIds: string[]) => void;
+  toggleLayoutHidden: (id: string) => void;
   setActiveLayout: (id: string) => void;
   navigateToView: (direction: 'next' | 'prev') => void;
 
@@ -195,6 +200,7 @@ export const useDashboardStore = create<DashboardState>()(
             rotationEnabled: config.rotationEnabled ?? existing?.rotationEnabled ?? false,
             rotationIntervalMs: config.rotationIntervalMs ?? existing?.rotationIntervalMs ?? 30000,
             theme: config.theme ?? existing?.theme,
+            passcodeEnabled: remote.passcode_enabled ?? existing?.passcodeEnabled ?? false,
           };
         });
         // Keep selectedDisplayId valid
@@ -284,6 +290,15 @@ export const useDashboardStore = create<DashboardState>()(
         }));
       },
 
+      setPasscodeEnabled: (displayId: string, enabled: boolean) => {
+        set((state) => ({
+          displays: updateDisplay(state.displays, displayId, (d) => ({
+            ...d,
+            passcodeEnabled: enabled,
+          })),
+        }));
+      },
+
       createLayout: (name: string) => {
         const { selectedDisplayId } = get();
         if (!selectedDisplayId) return;
@@ -325,6 +340,33 @@ export const useDashboardStore = create<DashboardState>()(
         }));
       },
 
+      reorderLayouts: (orderedIds: string[]) => {
+        const { selectedDisplayId } = get();
+        if (!selectedDisplayId) return;
+        set((state) => ({
+          displays: updateDisplay(state.displays, selectedDisplayId, (d) => {
+            const layoutMap = new Map(d.layouts.map((l) => [l.id, l]));
+            const reordered = orderedIds
+              .map((id) => layoutMap.get(id))
+              .filter((l): l is NonNullable<typeof l> => l !== undefined);
+            // Append any layouts not in orderedIds (safety net)
+            const remaining = d.layouts.filter((l) => !orderedIds.includes(l.id));
+            return { ...d, layouts: [...reordered, ...remaining] };
+          }),
+        }));
+      },
+
+      toggleLayoutHidden: (id: string) => {
+        const { selectedDisplayId } = get();
+        if (!selectedDisplayId) return;
+        set((state) => ({
+          displays: updateDisplay(state.displays, selectedDisplayId, (d) => ({
+            ...d,
+            layouts: d.layouts.map((l) => (l.id === id ? { ...l, hidden: !l.hidden } : l)),
+          })),
+        }));
+      },
+
       setActiveLayout: (id: string) => {
         const { selectedDisplayId } = get();
         if (!selectedDisplayId) return;
@@ -340,17 +382,19 @@ export const useDashboardStore = create<DashboardState>()(
         const { selectedDisplayId, displays } = get();
         if (!selectedDisplayId) return;
         const display = displays.find((d) => d.id === selectedDisplayId);
-        if (!display || display.layouts.length <= 1) return;
-        const idx = display.layouts.findIndex((l) => l.id === display.activeLayoutId);
-        if (idx === -1) return;
+        if (!display) return;
+        const visibleLayouts = display.layouts.filter((l) => !l.hidden);
+        if (visibleLayouts.length <= 1) return;
+        const idx = visibleLayouts.findIndex((l) => l.id === display.activeLayoutId);
+        const currentIdx = idx === -1 ? 0 : idx;
         const next =
           direction === 'next'
-            ? (idx + 1) % display.layouts.length
-            : (idx - 1 + display.layouts.length) % display.layouts.length;
+            ? (currentIdx + 1) % visibleLayouts.length
+            : (currentIdx - 1 + visibleLayouts.length) % visibleLayouts.length;
         set((state) => ({
           displays: updateDisplay(state.displays, selectedDisplayId, (d) => ({
             ...d,
-            activeLayoutId: d.layouts[next].id,
+            activeLayoutId: visibleLayouts[next].id,
           })),
         }));
       },

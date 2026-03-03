@@ -51,5 +51,6 @@ export interface DashboardLayout {
   widgets: WidgetDefinition[];
   columns: number;
   rowHeight: number;
+  hidden?: boolean;
 }
 

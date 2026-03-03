@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
+import { PinInput, Stack, Text, Button } from '@mantine/core';
+import { IconLock } from '@tabler/icons-react';
 import { useWakeLock } from '../hooks/useWakeLock';
 import type { DashboardLayout } from '../types/widget';
 import type { DisplayTheme } from '../types/theme';
@@ -23,21 +25,38 @@ const POLL_INTERVAL_MS = 30_000;
 export function DisplayViewer({ displayId }: Props) {
   const [config, setConfig] = useState<DisplayConfig | null>(null);
   const [activeLayoutId, setActiveLayoutId] = useState<string | null>(null);
+  const [passcodeRequired, setPasscodeRequired] = useState(false);
+  const [passcode, setPasscode] = useState<string | null>(null);
+  const [pinInput, setPinInput] = useState('');
+  const [pinError, setPinError] = useState(false);
   const rotationRef = useRef<ReturnType<typeof setInterval> | null>(null);
   useWakeLock();
 
   // Load and poll config
   useEffect(() => {
     const load = () => {
-      fetch(`/api/display?id=${displayId}`)
+      const url = passcode
+        ? `/api/display?id=${displayId}&passcode=${passcode}`
+        : `/api/display?id=${displayId}`;
+
+      fetch(url)
         .then((r) => r.json())
-        .then(({ config: cfg }: { config: DisplayConfig | null }) => {
+        .then((data: { config?: DisplayConfig | null; passcodeRequired?: boolean }) => {
+          if (data.passcodeRequired) {
+            setPasscodeRequired(true);
+            setConfig(null);
+            return;
+          }
+          setPasscodeRequired(false);
+          const cfg = data.config ?? null;
           if (cfg) {
             setConfig(cfg);
+            const visibleLayouts = cfg.layouts.filter((l) => !l.hidden);
             setActiveLayoutId((prev) => {
-              // Don't reset current view if we already have one from this config
-              if (prev && cfg.layouts.find((l) => l.id === prev)) return prev;
-              return cfg.activeLayoutId ?? cfg.layouts[0]?.id ?? null;
+              if (prev && visibleLayouts.find((l) => l.id === prev)) return prev;
+              const preferredId = cfg.activeLayoutId;
+              if (preferredId && visibleLayouts.find((l) => l.id === preferredId)) return preferredId;
+              return visibleLayouts[0]?.id ?? cfg.layouts[0]?.id ?? null;
             });
           }
         })
@@ -46,25 +65,28 @@ export function DisplayViewer({ displayId }: Props) {
     load();
     const interval = setInterval(load, POLL_INTERVAL_MS);
     return () => clearInterval(interval);
-  }, [displayId]);
+  }, [displayId, passcode]);
 
   // Auto-rotation
   const navigate = useCallback((direction: 'next' | 'prev') => {
-    if (!config || config.layouts.length <= 1) return;
+    if (!config) return;
+    const visibleLayouts = config.layouts.filter((l) => !l.hidden);
+    if (visibleLayouts.length <= 1) return;
     setActiveLayoutId((curr) => {
-      const idx = config.layouts.findIndex((l) => l.id === curr);
-      if (idx === -1) return curr;
+      const idx = visibleLayouts.findIndex((l) => l.id === curr);
+      const currentIdx = idx === -1 ? 0 : idx;
       const next =
         direction === 'next'
-          ? (idx + 1) % config.layouts.length
-          : (idx - 1 + config.layouts.length) % config.layouts.length;
-      return config.layouts[next].id;
+          ? (currentIdx + 1) % visibleLayouts.length
+          : (currentIdx - 1 + visibleLayouts.length) % visibleLayouts.length;
+      return visibleLayouts[next].id;
     });
   }, [config]);
 
   useEffect(() => {
     if (rotationRef.current) clearInterval(rotationRef.current);
-    if (config?.rotationEnabled && config.layouts.length > 1) {
+    const visibleCount = config?.layouts.filter((l) => !l.hidden).length ?? 0;
+    if (config?.rotationEnabled && visibleCount > 1) {
       rotationRef.current = setInterval(() => navigate('next'), config.rotationIntervalMs);
     }
     return () => {
@@ -76,26 +98,76 @@ export function DisplayViewer({ displayId }: Props) {
   const swipeStart = useRef({ x: 0, y: 0 });
 
   const handlePointerDown = (e: React.PointerEvent<HTMLElement>) => {
-    if (!config || config.layouts.length <= 1) return;
+    const visibleCount = config?.layouts.filter((l) => !l.hidden).length ?? 0;
+    if (!config || visibleCount <= 1) return;
     swipeStart.current = { x: e.clientX, y: e.clientY };
   };
 
   const handlePointerUp = (e: React.PointerEvent<HTMLElement>) => {
-    if (!config || config.layouts.length <= 1) return;
+    const visibleLayouts = config?.layouts.filter((l) => !l.hidden) ?? [];
+    if (!config || visibleLayouts.length <= 1) return;
     const dx = e.clientX - swipeStart.current.x;
     const dy = e.clientY - swipeStart.current.y;
     if (Math.abs(dx) > 80 && Math.abs(dx) > Math.abs(dy) * 1.5) {
       navigate(dx < 0 ? 'next' : 'prev');
       // Reset rotation timer
       if (rotationRef.current) clearInterval(rotationRef.current);
-      if (config.rotationEnabled && config.layouts.length > 1) {
+      if (config.rotationEnabled && visibleLayouts.length > 1) {
         rotationRef.current = setInterval(() => navigate('next'), config.rotationIntervalMs);
       }
     }
   };
 
-  // View indicator dots
-  const layouts = config?.layouts ?? [];
+  // Show PIN entry screen if passcode is required and not yet verified
+  if (passcodeRequired) {
+    const handleSubmit = () => {
+      if (pinInput.length === 4) {
+        setPinError(false);
+        setPasscode(pinInput);
+        setPinInput('');
+      }
+    };
+
+    // If we just submitted a passcode and got back passcodeRequired, show error
+    const showError = pinError || (passcode !== null && passcodeRequired);
+
+    return (
+      <div className={classes.pinScreen}>
+        <Stack align="center" gap="lg">
+          <IconLock size={40} opacity={0.7} />
+          <Text size="xl" fw={600}>Enter Display PIN</Text>
+          <PinInput
+            length={4}
+            type="number"
+            value={pinInput}
+            onChange={(val) => {
+              setPinInput(val);
+              setPinError(false);
+            }}
+            onComplete={(val) => {
+              setPinError(false);
+              setPasscode(val);
+              setPinInput('');
+            }}
+            error={showError}
+            placeholder="·"
+            size="xl"
+            autoFocus
+          />
+          {showError && (
+            <Text size="sm" c="red">Incorrect PIN. Please try again.</Text>
+          )}
+          <Button onClick={handleSubmit} disabled={pinInput.length !== 4}>
+            Unlock
+          </Button>
+        </Stack>
+      </div>
+    );
+  }
+
+  // View indicator dots — only show visible layouts
+  const allLayouts = config?.layouts ?? [];
+  const layouts = allLayouts.filter((l) => !l.hidden);
   const showDots = layouts.length > 1;
 
   const themeVars = config?.theme ? themeToVars(config.theme) : {};
@@ -138,9 +210,5 @@ function ViewerDashboard({
   layouts: DashboardLayout[];
   activeLayoutId: string | null;
 }) {
-  // We use the Dashboard component passing the layoutId override;
-  // since DisplayViewer doesn't use the store, we need to render from local state.
-  // We'll set the store's selectedViewId temporarily or just render widgets directly.
-  // Simplest approach: pass layoutId prop to Dashboard which now supports it.
   return <Dashboard layoutId={activeLayoutId ?? undefined} isEditing={false} externalLayouts={layouts} />;
 }

@@ -1,11 +1,16 @@
 import type { Handler } from '@netlify/functions';
 import { neon } from '@neondatabase/serverless';
+import { createHash } from 'crypto';
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'Authorization, Content-Type',
   'Content-Type': 'application/json',
 };
+
+function hashPin(pin: string): string {
+  return createHash('sha256').update(pin).digest('hex');
+}
 
 async function getGoogleId(authHeader: string | undefined): Promise<string> {
   if (!authHeader?.startsWith('Bearer ')) throw new Error('No token');
@@ -30,6 +35,13 @@ export const handler: Handler = async (event) => {
     return { statusCode: 401, headers: CORS, body: JSON.stringify({ error: 'Unauthorized' }) };
   }
 
+  // Ensure passcode_hash column exists (idempotent migration)
+  try {
+    await sql`ALTER TABLE displays ADD COLUMN IF NOT EXISTS passcode_hash TEXT`;
+  } catch {
+    // column already exists or DDL not supported — ignore
+  }
+
   // GET /api/displays — list user's displays with embedded configs
   if (event.httpMethod === 'GET') {
     try {
@@ -39,6 +51,7 @@ export const handler: Handler = async (event) => {
           d.display_id,
           d.name,
           d.created_at,
+          (d.passcode_hash IS NOT NULL) AS passcode_enabled,
           dc.config,
           dc.updated_at AS config_updated_at
         FROM displays d
@@ -71,30 +84,68 @@ export const handler: Handler = async (event) => {
     }
   }
 
-  // PATCH /api/displays?id=<id> — rename a display
+  // PATCH /api/displays?id=<id> — rename a display or update its passcode
   if (event.httpMethod === 'PATCH') {
     try {
       const id = event.queryStringParameters?.id;
       if (!id) return { statusCode: 400, headers: CORS, body: JSON.stringify({ error: 'Missing id' }) };
-      const { name } = JSON.parse(event.body ?? '{}') as { name?: string };
-      if (!name?.trim()) return { statusCode: 400, headers: CORS, body: JSON.stringify({ error: 'Missing name' }) };
+      const body = JSON.parse(event.body ?? '{}') as { name?: string; passcode?: string | null };
 
-      const rows = await sql`
-        UPDATE displays d
-        SET name = ${name.trim()}
-        FROM users u
-        WHERE d.id = ${id}::uuid
-          AND d.user_id = u.id
-          AND u.google_id = ${googleId}
-        RETURNING d.id, d.display_id, d.name, d.created_at
-      `;
+      // Validate: must have at least one field to update
+      if (!body.name?.trim() && !('passcode' in body)) {
+        return { statusCode: 400, headers: CORS, body: JSON.stringify({ error: 'Nothing to update' }) };
+      }
+
+      // Validate passcode format if provided (4 digits or null to clear)
+      if ('passcode' in body && body.passcode !== null) {
+        if (!/^\d{4}$/.test(body.passcode ?? '')) {
+          return { statusCode: 400, headers: CORS, body: JSON.stringify({ error: 'Passcode must be 4 digits' }) };
+        }
+      }
+
+      // Build update: name only, passcode only, or both
+      let rows;
+      if (body.name?.trim() && 'passcode' in body) {
+        const newHash = body.passcode !== null ? hashPin(body.passcode!) : null;
+        rows = await sql`
+          UPDATE displays d
+          SET name = ${body.name.trim()}, passcode_hash = ${newHash}
+          FROM users u
+          WHERE d.id = ${id}::uuid
+            AND d.user_id = u.id
+            AND u.google_id = ${googleId}
+          RETURNING d.id, d.display_id, d.name, d.created_at, (d.passcode_hash IS NOT NULL) AS passcode_enabled
+        `;
+      } else if (body.name?.trim()) {
+        rows = await sql`
+          UPDATE displays d
+          SET name = ${body.name.trim()}
+          FROM users u
+          WHERE d.id = ${id}::uuid
+            AND d.user_id = u.id
+            AND u.google_id = ${googleId}
+          RETURNING d.id, d.display_id, d.name, d.created_at, (d.passcode_hash IS NOT NULL) AS passcode_enabled
+        `;
+      } else {
+        const newHash = body.passcode !== null ? hashPin(body.passcode!) : null;
+        rows = await sql`
+          UPDATE displays d
+          SET passcode_hash = ${newHash}
+          FROM users u
+          WHERE d.id = ${id}::uuid
+            AND d.user_id = u.id
+            AND u.google_id = ${googleId}
+          RETURNING d.id, d.display_id, d.name, d.created_at, (d.passcode_hash IS NOT NULL) AS passcode_enabled
+        `;
+      }
+
       if (rows.length === 0) {
         return { statusCode: 404, headers: CORS, body: JSON.stringify({ error: 'Not found' }) };
       }
       return { statusCode: 200, headers: CORS, body: JSON.stringify(rows[0]) };
     } catch (err) {
-      console.error('Display rename error:', err);
-      return { statusCode: 500, headers: CORS, body: JSON.stringify({ error: 'Failed to rename' }) };
+      console.error('Display patch error:', err);
+      return { statusCode: 500, headers: CORS, body: JSON.stringify({ error: 'Failed to update' }) };
     }
   }
 

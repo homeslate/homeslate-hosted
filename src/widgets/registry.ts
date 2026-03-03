@@ -6,6 +6,7 @@ import { GoogleCalendarMonthWidget, GoogleCalendarMonthWidgetSettings, type Goog
 import { GoogleCalendarDayWidget, GoogleCalendarDayWidgetSettings, type GoogleCalendarDayConfig } from './GoogleCalendarDayWidget';
 import { PhotoWidget, PhotoWidgetSettings, type PhotoConfig } from './PhotoWidget';
 import { GooglePhotosWidget, GooglePhotosWidgetSettings, type GooglePhotosConfig } from './GooglePhotosWidget';
+import { GooglePhotoCollageWidget, GooglePhotoCollageWidgetSettings, type GooglePhotoCollageConfig } from './GooglePhotoCollageWidget';
 import { WeatherWidget, WeatherWidgetSettings, type WeatherConfig } from './WeatherWidget';
 import { NewsWidget, NewsWidgetSettings, type NewsConfig } from './NewsWidget';
 import { StocksWidget, StocksWidgetSettings, type StocksConfig } from './StocksWidget';
@@ -21,6 +22,7 @@ import {
   IconChartLine,
   IconBrandGoogle,
   IconCalendarWeek,
+  IconLayoutGrid,
 } from '@tabler/icons-react';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -191,6 +193,28 @@ const googlePhotosEntry: WidgetRegistryEntry<GooglePhotosConfig> = {
   },
 };
 widgetRegistry.set('google-photos', googlePhotosEntry);
+
+// Google Photo Collage Widget
+const googlePhotoCollageEntry: WidgetRegistryEntry<GooglePhotoCollageConfig> = {
+  type: 'google-photo-collage',
+  name: 'Google Photos Collage',
+  description: 'Display a masonry collage of Google Photos that rotates one photo at a time',
+  icon: IconLayoutGrid,
+  component: GooglePhotoCollageWidget,
+  settingsComponent: GooglePhotoCollageWidgetSettings,
+  defaultConfig: {
+    rotationInterval: 10,
+    transparentBackground: false,
+    savedMediaItems: [],
+  },
+  defaultLayout: {
+    w: 5,
+    h: 4,
+    minW: 3,
+    minH: 3,
+  },
+};
+widgetRegistry.set('google-photo-collage', googlePhotoCollageEntry);
 
 // Weather Widget
 const weatherEntry: WidgetRegistryEntry<WeatherConfig> = {

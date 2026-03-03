@@ -8,6 +8,16 @@
   flex-direction: column;
 }
 
+.pinScreen {
+  width: 100vw;
+  height: 100vh;
+  background: var(--mantine-color-dark-9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+}
+
 .root > :not(.dots) {
   flex: 1;
   min-height: 0;
