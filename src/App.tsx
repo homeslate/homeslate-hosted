@@ -1,4 +1,5 @@
-import { MantineProvider, createTheme } from '@mantine/core';
+import { MantineProvider, createTheme, ActionIcon, Tooltip } from '@mantine/core';
+import { IconX } from '@tabler/icons-react';
 import { useWakeLock } from './hooks/useWakeLock';
 import { useConfigSync } from './hooks/useConfigSync';
 import { AuthProvider } from './contexts/AuthContext';
@@ -47,17 +48,58 @@ function useCurrentDisplayTheme() {
   return display?.theme;
 }
 
+// If the URL has ?display=<uuid>, persist it so it survives OAuth redirects.
+// We do this at module load time (before any component mounts) so we catch
+// the very first navigation, including cases where the browser reloads after
+// a Google OAuth redirect flow and the query string has been stripped.
+const DISPLAY_SESSION_KEY = 'kd_pending_display';
+const _initialDisplayParam = new URLSearchParams(window.location.search).get('display');
+if (_initialDisplayParam) {
+  sessionStorage.setItem(DISPLAY_SESSION_KEY, _initialDisplayParam);
+}
+
 function AppInner() {
   const { isAuthenticated } = useAuth();
-  const { selectedDisplayId, selectedViewId } = useDashboardStore();
+  const { selectedDisplayId, selectedViewId, previewDisplayId, closePreview } = useDashboardStore();
   useWakeLock();
   useConfigSync();
 
-  // Display device mode: ?display=<uuid> → fullscreen viewer, no auth
-  const displayParam = new URLSearchParams(window.location.search).get('display');
+  // Display device mode: ?display=<uuid> → fullscreen viewer, no auth needed.
+  // Also check sessionStorage so we survive OAuth redirects that strip query params
+  // (e.g. on Android Chrome where the Google consent flow can reload the page).
+  const urlDisplayParam = new URLSearchParams(window.location.search).get('display');
+  const displayParam = urlDisplayParam ?? sessionStorage.getItem(DISPLAY_SESSION_KEY);
   if (displayParam) return <DisplayViewer displayId={displayParam} />;
 
+  // No display param — clear any stale pending display so the management UI
+  // is reachable if the user navigates to the root URL without the parameter.
+  sessionStorage.removeItem(DISPLAY_SESSION_KEY);
+
   if (!isAuthenticated) return <AuthPage />;
+
+  // In-app preview mode: render the viewer with an exit button overlay
+  if (previewDisplayId) {
+    return (
+      <div style={{ position: 'relative', width: '100%', height: '100%' }}>
+        <DisplayViewer displayId={previewDisplayId} />
+        <div style={{ position: 'fixed', top: 12, right: 12, zIndex: 9999 }}>
+          <Tooltip label="Exit preview" position="left" withArrow>
+            <ActionIcon
+              size="lg"
+              radius="xl"
+              variant="filled"
+              color="dark"
+              onClick={closePreview}
+              style={{ boxShadow: '0 2px 8px rgba(0,0,0,0.5)' }}
+            >
+              <IconX size={18} />
+            </ActionIcon>
+          </Tooltip>
+        </div>
+      </div>
+    );
+  }
+
   if (!selectedDisplayId) return <DisplayListPage />;
   if (!selectedViewId) return <DisplayDetailPage />;
   return <ViewEditorPage />;

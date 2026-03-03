@@ -25,6 +25,7 @@ export function ViewEditorPage() {
     selectedViewId,
     selectDisplay,
     selectView,
+    openPreview,
   } = useDashboardStore();
   const { theme } = useTheme();
   const display = displays.find((d) => d.id === selectedDisplayId);
@@ -80,16 +81,14 @@ export function ViewEditorPage() {
           <Tooltip label="Auto-save enabled">
             <IconCloudCheck size={18} opacity={0.5} />
           </Tooltip>
-            <Tooltip label="Open display preview in new tab">
-            <ActionIcon
-              variant="subtle"
-              onClick={() => {
-                window.open(`/?display=${display.displayId}`, '_blank');
-              }}
-            >
-              <IconDeviceTv size={18} />
-            </ActionIcon>
-          </Tooltip>
+            <Tooltip label="Preview display">
+              <ActionIcon
+                variant="subtle"
+                onClick={() => openPreview(display.displayId)}
+              >
+                <IconDeviceTv size={18} />
+              </ActionIcon>
+            </Tooltip>
           <Menu position="bottom-end" withArrow shadow="md">
             <Menu.Target>
               <Tooltip label={user?.name ?? ''}>

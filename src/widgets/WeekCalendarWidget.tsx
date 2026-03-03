@@ -1,11 +1,14 @@
-import { useState, useEffect, useMemo, useRef } from 'react';
-import { Text, Stack, Select, Group, MultiSelect, Paper, Button, NumberInput, Badge } from '@mantine/core';
-import { IconBrandGoogle, IconCalendarWeek } from '@tabler/icons-react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import {
+  Text, Stack, Select, Group, MultiSelect, Paper, Button, NumberInput, Badge,
+  Modal, TextInput, Textarea, Switch, Alert, ActionIcon, ScrollArea,
+} from '@mantine/core';
+import { IconBrandGoogle, IconCalendarWeek, IconPlus, IconCheck } from '@tabler/icons-react';
 import dayjs from 'dayjs';
 import type { WidgetProps, WidgetConfig } from '../types/widget';
 import { useGoogleCalendar } from '../hooks/useGoogleCalendar';
 import { useAuth } from '../contexts/AuthContext';
-import type { ParsedCalendarEvent } from '../services/googleCalendar';
+import type { ParsedCalendarEvent, CalendarEventInput } from '../services/googleCalendar';
 import classes from './WeekCalendarWidget.module.css';
 
 // ── Config ──────────────────────────────────────────────────────────────────
@@ -110,12 +113,124 @@ function positionEvents(
   });
 }
 
+// ── Create-event helpers ─────────────────────────────────────────────────────
+
+interface EventFormData {
+  title: string;
+  calendarId: string;
+  date: string;
+  allDay: boolean;
+  startTime: string;
+  endTime: string;
+  location: string;
+  description: string;
+}
+
+function roundToNext30(date: Date): string {
+  const total = date.getHours() * 60 + date.getMinutes();
+  const rounded = Math.ceil(total / 30) * 30;
+  const h = Math.floor(rounded / 60) % 24;
+  const m = rounded % 60;
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+}
+
+function addMinutesToTime(time: string, minutes: number): string {
+  const [h, m] = time.split(':').map(Number);
+  const total = (h * 60 + m + minutes) % (24 * 60);
+  return `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`;
+}
+
+function formDataToEventInput(data: EventFormData): CalendarEventInput {
+  const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  if (data.allDay) {
+    const nextDay = dayjs(data.date).add(1, 'day').format('YYYY-MM-DD');
+    return {
+      summary: data.title.trim(),
+      ...(data.description ? { description: data.description } : {}),
+      ...(data.location ? { location: data.location } : {}),
+      start: { date: data.date },
+      end: { date: nextDay },
+    };
+  }
+  return {
+    summary: data.title.trim(),
+    ...(data.description ? { description: data.description } : {}),
+    ...(data.location ? { location: data.location } : {}),
+    start: { dateTime: `${data.date}T${data.startTime}:00`, timeZone },
+    end: { dateTime: `${data.date}T${data.endTime}:00`, timeZone },
+  };
+}
+
 // ── Main Component ──────────────────────────────────────────────────────────
 
 export function WeekCalendarWidget({ widget }: WidgetProps<WeekCalendarConfig>) {
   const { selectedCalendarIds, viewMode, weekStartsOn, startHour, endHour, transparentBackground } = widget.config;
   const { isAuthenticated } = useAuth();
-  const { events } = useGoogleCalendar({ selectedCalendarIds, daysAhead: 14 });
+  const { events, calendars, addEvent } = useGoogleCalendar({ selectedCalendarIds, daysAhead: 14 });
+
+  // ── Create-event form state ──
+  const [formOpen, setFormOpen] = useState(false);
+  const [formData, setFormData] = useState<EventFormData>({
+    title: '',
+    calendarId: '',
+    date: dayjs().format('YYYY-MM-DD'),
+    allDay: false,
+    startTime: '09:00',
+    endTime: '10:00',
+    location: '',
+    description: '',
+  });
+  const [formLoading, setFormLoading] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
+
+  const calendarOptions = useMemo(
+    () =>
+      calendars.map((cal) => ({
+        value: cal.id,
+        label: cal.summary + (cal.primary ? ' (Primary)' : ''),
+        color: cal.backgroundColor ?? '#4285f4',
+      })),
+    [calendars]
+  );
+
+  const openCreateModal = useCallback(
+    (date: dayjs.Dayjs) => {
+      const start = roundToNext30(new Date());
+      setFormData({
+        title: '',
+        calendarId: selectedCalendarIds[0] ?? calendars[0]?.id ?? '',
+        date: date.format('YYYY-MM-DD'),
+        allDay: false,
+        startTime: start,
+        endTime: addMinutesToTime(start, 60),
+        location: '',
+        description: '',
+      });
+      setFormError(null);
+      setFormOpen(true);
+    },
+    [selectedCalendarIds, calendars]
+  );
+
+  const handleFormSubmit = useCallback(async () => {
+    if (!formData.title.trim()) { setFormError('Title is required'); return; }
+    if (!formData.calendarId) { setFormError('Please select a calendar'); return; }
+    if (!formData.allDay) {
+      const startMins = parseInt(formData.startTime.split(':')[0]) * 60 + parseInt(formData.startTime.split(':')[1]);
+      const endMins = parseInt(formData.endTime.split(':')[0]) * 60 + parseInt(formData.endTime.split(':')[1]);
+      if (endMins <= startMins) { setFormError('End time must be after start time'); return; }
+    }
+    setFormLoading(true);
+    setFormError(null);
+    try {
+      await addEvent(formData.calendarId, formDataToEventInput(formData));
+      setFormOpen(false);
+    } catch (err) {
+      setFormError(err instanceof Error ? err.message : 'Failed to create event');
+    } finally {
+      setFormLoading(false);
+    }
+  }, [formData, addEvent]);
 
   const [now, setNow] = useState(() => dayjs());
   useEffect(() => {
@@ -213,6 +328,15 @@ export function WeekCalendarWidget({ widget }: WidgetProps<WeekCalendarConfig>) 
               <span className={`${classes.dayNum} ${isToday ? classes.dayNumToday : ''}`}>
                 {day.format('D')}
               </span>
+              <ActionIcon
+                variant="subtle"
+                size={14}
+                className={classes.dayAddBtn}
+                onClick={() => openCreateModal(day)}
+                title={`Add event on ${day.format('ddd MMM D')}`}
+              >
+                <IconPlus size={9} />
+              </ActionIcon>
             </div>
           );
         })}
@@ -238,6 +362,112 @@ export function WeekCalendarWidget({ widget }: WidgetProps<WeekCalendarConfig>) 
           ))}
         </div>
       )}
+
+      {/* ── Create event modal ── */}
+      <Modal
+        opened={formOpen}
+        onClose={() => setFormOpen(false)}
+        title="New Event"
+        size="sm"
+        centered
+        scrollAreaComponent={ScrollArea.Autosize}
+      >
+        <Stack gap="sm">
+          <TextInput
+            label="Title"
+            placeholder="Event title"
+            required
+            value={formData.title}
+            onChange={(e) => setFormData((d) => ({ ...d, title: e.currentTarget.value }))}
+            autoFocus
+          />
+
+          <Select
+            label="Calendar"
+            placeholder="Select a calendar"
+            required
+            data={calendarOptions}
+            value={formData.calendarId}
+            onChange={(v) => setFormData((d) => ({ ...d, calendarId: v ?? '' }))}
+            renderOption={({ option }) => {
+              const cal = calendars.find((c) => c.id === option.value);
+              return (
+                <Group gap="xs">
+                  <div style={{ width: 10, height: 10, borderRadius: '50%', backgroundColor: cal?.backgroundColor ?? '#4285f4', flexShrink: 0 }} />
+                  <Text size="sm">{option.label}</Text>
+                </Group>
+              );
+            }}
+          />
+
+          <TextInput
+            label="Date"
+            type="date"
+            value={formData.date}
+            onChange={(e) => setFormData((d) => ({ ...d, date: e.currentTarget.value }))}
+          />
+
+          <Group justify="space-between">
+            <Text size="sm">All day</Text>
+            <Switch
+              checked={formData.allDay}
+              onChange={(e) => setFormData((d) => ({ ...d, allDay: e.currentTarget.checked }))}
+            />
+          </Group>
+
+          {!formData.allDay && (
+            <div className={classes.timeGrid}>
+              <TextInput
+                label="Start time"
+                type="time"
+                value={formData.startTime}
+                onChange={(e) => setFormData((d) => ({ ...d, startTime: e.currentTarget.value }))}
+              />
+              <TextInput
+                label="End time"
+                type="time"
+                value={formData.endTime}
+                onChange={(e) => setFormData((d) => ({ ...d, endTime: e.currentTarget.value }))}
+              />
+            </div>
+          )}
+
+          <TextInput
+            label="Location"
+            placeholder="Optional"
+            value={formData.location}
+            onChange={(e) => setFormData((d) => ({ ...d, location: e.currentTarget.value }))}
+          />
+
+          <Textarea
+            label="Description"
+            placeholder="Optional"
+            rows={3}
+            value={formData.description}
+            onChange={(e) => setFormData((d) => ({ ...d, description: e.currentTarget.value }))}
+          />
+
+          {formError && (
+            <Alert color="red" variant="light" p="xs">
+              <Text size="xs">{formError}</Text>
+            </Alert>
+          )}
+
+          <Group justify="flex-end" gap="xs" mt="xs">
+            <Button variant="subtle" size="sm" onClick={() => setFormOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              size="sm"
+              leftSection={<IconCheck size={14} />}
+              loading={formLoading}
+              onClick={handleFormSubmit}
+            >
+              Create Event
+            </Button>
+          </Group>
+        </Stack>
+      </Modal>
 
       {/* Scrollable time grid */}
       <div className={classes.scrollable} ref={scrollRef}>

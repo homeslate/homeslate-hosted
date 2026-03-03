@@ -34,6 +34,7 @@ export function DisplayViewer({ displayId }: Props) {
   const [passcode, setPasscode] = useState<string | null>(null);
   const [pinInput, setPinInput] = useState('');
   const [pinError, setPinError] = useState(false);
+  const [pinVerifying, setPinVerifying] = useState(false);
   const rotationRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const rootRef = useRef<HTMLDivElement>(null);
   useWakeLock();
@@ -48,20 +49,25 @@ export function DisplayViewer({ displayId }: Props) {
       fetch(url)
         .then((r) => r.json())
         .then((data: { config?: DisplayConfig | null; passcodeRequired?: boolean }) => {
+          setPinVerifying(false);
           if (data.passcodeRequired) {
+            // Only flag as an error if we actually tried a passcode and it was rejected
+            if (passcode !== null) setPinError(true);
             setPasscodeRequired(true);
+            setPasscode(null);
             setConfig(null);
             return;
           }
+          setPinError(false);
           setPasscodeRequired(false);
           const cfg = data.config ?? null;
           if (cfg) {
             setConfig(cfg);
             const visibleLayouts = cfg.layouts.filter((l) => !l.hidden);
             setActiveLayoutId((prev) => {
+              // Keep the current view if it's still visible (e.g. on a poll refresh)
               if (prev && visibleLayouts.find((l) => l.id === prev)) return prev;
-              const preferredId = cfg.activeLayoutId;
-              if (preferredId && visibleLayouts.find((l) => l.id === preferredId)) return preferredId;
+              // Otherwise always start on the first visible layout
               return visibleLayouts[0]?.id ?? cfg.layouts[0]?.id ?? null;
             });
           }
@@ -175,16 +181,14 @@ export function DisplayViewer({ displayId }: Props) {
 
   // Show PIN entry screen if passcode is required and not yet verified
   if (passcodeRequired) {
-    const handleSubmit = () => {
-      if (pinInput.length === 4) {
+    const handleSubmit = (pin: string) => {
+      if (pin.length === 4) {
+        setPinVerifying(true);
         setPinError(false);
-        setPasscode(pinInput);
+        setPasscode(pin);
         setPinInput('');
       }
     };
-
-    // If we just submitted a passcode and got back passcodeRequired, show error
-    const showError = pinError || (passcode !== null && passcodeRequired);
 
     return (
       <div className={classes.pinScreen}>
@@ -199,20 +203,20 @@ export function DisplayViewer({ displayId }: Props) {
               setPinInput(val);
               setPinError(false);
             }}
-            onComplete={(val) => {
-              setPinError(false);
-              setPasscode(val);
-              setPinInput('');
-            }}
-            error={showError}
+            onComplete={(val) => handleSubmit(val)}
+            error={pinError}
             placeholder="·"
             size="xl"
             autoFocus
           />
-          {showError && (
+          {pinError && (
             <Text size="sm" c="red">Incorrect PIN. Please try again.</Text>
           )}
-          <Button onClick={handleSubmit} disabled={pinInput.length !== 4}>
+          <Button
+            onClick={() => handleSubmit(pinInput)}
+            disabled={pinInput.length !== 4 || pinVerifying}
+            loading={pinVerifying}
+          >
             Unlock
           </Button>
         </Stack>
@@ -241,16 +245,28 @@ export function DisplayViewer({ displayId }: Props) {
         />
       )}
       {showDots && (
-        <div className={classes.dots}>
-          {layouts.map((l) => (
-            <button
-              key={l.id}
-              className={`${classes.dot} ${l.id === activeLayoutId ? classes.dotActive : ''}`}
-              onClick={() => setActiveLayoutId(l.id)}
-              aria-label={`Switch to ${l.name}`}
-            />
-          ))}
-        </div>
+        <>
+          <button
+            className={classes.navPrev}
+            onClick={() => { navigate('prev'); resetRotation(); }}
+            aria-label="Previous view"
+          />
+          <button
+            className={classes.navNext}
+            onClick={() => { navigate('next'); resetRotation(); }}
+            aria-label="Next view"
+          />
+          <div className={classes.dots}>
+            {layouts.map((l) => (
+              <button
+                key={l.id}
+                className={`${classes.dot} ${l.id === activeLayoutId ? classes.dotActive : ''}`}
+                onClick={() => setActiveLayoutId(l.id)}
+                aria-label={`Switch to ${l.name}`}
+              />
+            ))}
+          </div>
+        </>
       )}
     </div>
   );

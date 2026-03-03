@@ -34,6 +34,7 @@ interface DashboardState {
   displays: Display[];
   selectedDisplayId: string | null;
   selectedViewId: string | null;
+  previewDisplayId: string | null; // in-app preview mode (not persisted)
 
   // Sync
   setDisplays: (remoteDisplays: RemoteDisplay[]) => void;
@@ -47,6 +48,8 @@ interface DashboardState {
   // Navigation
   selectDisplay: (id: string | null) => void;
   selectView: (id: string | null) => void;
+  openPreview: (displayId: string) => void;
+  closePreview: () => void;
 
   // Per-display settings (act on selectedDisplayId)
   setRotationEnabled: (enabled: boolean) => void;
@@ -160,6 +163,7 @@ export const useDashboardStore = create<DashboardState>()(
       displays: [],
       selectedDisplayId: null,
       selectedViewId: null,
+      previewDisplayId: null,
 
       setDisplays: (remoteDisplays: RemoteDisplay[]) => {
         const { displays } = get();
@@ -260,6 +264,14 @@ export const useDashboardStore = create<DashboardState>()(
 
       selectView: (id: string | null) => {
         set({ selectedViewId: id });
+      },
+
+      openPreview: (displayId: string) => {
+        set({ previewDisplayId: displayId });
+      },
+
+      closePreview: () => {
+        set({ previewDisplayId: null });
       },
 
       setRotationEnabled: (enabled: boolean) => {
@@ -518,6 +530,12 @@ export const useDashboardStore = create<DashboardState>()(
     {
       name: 'kitchen-display-storage',
       version: 3,
+      partialize: (state) => ({
+        displays: state.displays,
+        selectedDisplayId: state.selectedDisplayId,
+        selectedViewId: state.selectedViewId,
+        // previewDisplayId is intentionally excluded — it's ephemeral UI state
+      }),
       migrate: (persistedState: unknown, version: number) => {
         if (version === 3) return persistedState;
         if (version === 0 || version === 1) {

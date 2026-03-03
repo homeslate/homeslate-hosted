@@ -225,6 +225,7 @@ export function DisplayDetailPage() {
     setRotationIntervalMs,
     setDisplayTheme,
     setPasscodeEnabled,
+    openPreview,
   } = useDashboardStore();
   const display = displays.find((d) => d.id === selectedDisplayId);
   const [editingName, setEditingName] = useState(false);
@@ -400,10 +401,10 @@ export function DisplayDetailPage() {
               <IconShare size={18} />
             </ActionIcon>
           </Tooltip>
-          <Tooltip label="Open display preview in new tab">
+          <Tooltip label="Preview display">
             <ActionIcon
               variant="subtle"
-              onClick={() => window.open(`/?display=${display.displayId}`, '_blank')}
+              onClick={() => openPreview(display.displayId)}
             >
               <IconDeviceTv size={18} />
             </ActionIcon>

@@ -38,6 +38,23 @@
   background: var(--theme-surface-bg, rgba(255, 255, 255, 0.08)) !important;
 }
 
+.addBtn {
+  color: var(--theme-text-muted, rgba(255, 255, 255, 0.3)) !important;
+}
+
+.addBtn:hover {
+  color: var(--theme-accent, #4285f4) !important;
+  background: var(--theme-surface-bg, rgba(255, 255, 255, 0.08)) !important;
+}
+
+/* ── Time grid ── */
+
+.timeGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+}
+
 /* ── Calendar ── */
 
 .calendarWrap {

@@ -225,6 +225,29 @@
   background: rgba(255, 77, 79, 0.55);
 }
 
+/* ── Create event form ── */
+
+.timeGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+}
+
+/* ── Day header add button ── */
+
+.dayAddBtn {
+  color: rgba(255, 255, 255, 0.35) !important;
+  width: 14px !important;
+  height: 14px !important;
+  min-width: 14px !important;
+  min-height: 14px !important;
+}
+
+.dayAddBtn:hover {
+  color: var(--mantine-color-indigo-4) !important;
+  background: rgba(99, 102, 241, 0.15) !important;
+}
+
 /* ── Empty / auth states ── */
 .emptyState {
   display: flex;
