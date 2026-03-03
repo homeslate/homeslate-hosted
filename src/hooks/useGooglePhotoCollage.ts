@@ -5,6 +5,7 @@ import {
   getPickerSession,
   listPickedMediaItems,
   deletePickerSession,
+  fetchAuthedImageUrl,
   imageItems,
   type PickerSession,
   type PickedMediaItem,
@@ -51,13 +52,8 @@ interface UseGooglePhotoCollageResult {
 const PREFETCH_AHEAD = 3;
 const DEFAULT_POLL_INTERVAL_MS = 5000;
 
-async function fetchThumbnail(baseUrl: string, token: string): Promise<string> {
-  const response = await fetch(`${baseUrl}=w800-h600`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  if (!response.ok) throw new Error(`Failed to fetch image: ${response.status}`);
-  const blob = await response.blob();
-  return URL.createObjectURL(blob);
+function fetchThumbnail(baseUrl: string, token: string): Promise<string> {
+  return fetchAuthedImageUrl(baseUrl, token, 'w800-h600');
 }
 
 function pickRandomIndex(count: number, exclude: Set<number>): number | null {

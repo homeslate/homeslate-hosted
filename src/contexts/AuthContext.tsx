@@ -56,12 +56,56 @@ function readStoredUser(): AuthUser | null {
   }
 }
 
+// How many milliseconds before expiry to trigger a silent refresh.
+const REFRESH_BEFORE_EXPIRY_MS = 5 * 60 * 1000; // 5 minutes
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(readStoredUser);
   const [accessToken, setAccessToken] = useState<string | null>(readStoredToken);
   const [isLoading, setIsLoading] = useState(false);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const tokenClientRef = useRef<any>(null);
+  const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  /**
+   * Store a fresh token + schedule the next silent refresh.
+   * Called both from signIn() and from the silent-refresh callback.
+   */
+  const storeToken = useCallback((token: string, expiresIn: number) => {
+    const expiry = Date.now() + expiresIn * 1000;
+    localStorage.setItem(TOKEN_KEY, token);
+    localStorage.setItem(TOKEN_EXPIRY_KEY, String(expiry));
+    setAccessToken(token);
+
+    // Schedule next refresh REFRESH_BEFORE_EXPIRY_MS before the token expires.
+    const msUntilRefresh = Math.max(0, expiresIn * 1000 - REFRESH_BEFORE_EXPIRY_MS);
+    if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current);
+    refreshTimerRef.current = setTimeout(() => {
+      silentRefresh();
+    }, msUntilRefresh);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  /**
+   * Request a new access token silently (no consent prompt).
+   * GIS will use a hidden iframe / existing Google session — no user interaction.
+   */
+  const silentRefresh = useCallback(() => {
+    if (!tokenClientRef.current) return;
+    tokenClientRef.current.callback = (response: {
+      access_token: string;
+      expires_in: number;
+      error?: string;
+    }) => {
+      if (response.error) {
+        console.warn('Silent token refresh failed:', response.error);
+        return;
+      }
+      storeToken(response.access_token, response.expires_in ?? 3600);
+    };
+    // prompt: '' → silent refresh, no consent UI shown
+    tokenClientRef.current.requestAccessToken({ prompt: '' });
+  }, [storeToken]);
 
   // Load Google Identity Services and initialise the token client
   useEffect(() => {
@@ -73,8 +117,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       ).google.accounts.oauth2.initTokenClient({
         client_id: clientId,
         scope: SCOPES,
-        callback: () => {}, // replaced per-request in signIn()
+        callback: () => {}, // replaced per-request in signIn() / silentRefresh()
       });
+
+      // If we already have a stored token, schedule a refresh based on the
+      // remaining lifetime. If it's already close to expiry or expired, refresh now.
+      const expiry = localStorage.getItem(TOKEN_EXPIRY_KEY);
+      if (expiry && localStorage.getItem(TOKEN_KEY)) {
+        const msRemaining = parseInt(expiry, 10) - Date.now();
+        const msUntilRefresh = Math.max(0, msRemaining - REFRESH_BEFORE_EXPIRY_MS);
+        if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current);
+        refreshTimerRef.current = setTimeout(() => {
+          silentRefresh();
+        }, msUntilRefresh);
+      }
     };
 
     if (
@@ -91,9 +147,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     script.defer = true;
     script.onload = () => setTimeout(init, 100);
     document.head.appendChild(script);
+
+    return () => {
+      if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const clearSession = useCallback(() => {
+    if (refreshTimerRef.current) {
+      clearTimeout(refreshTimerRef.current);
+      refreshTimerRef.current = null;
+    }
     setAccessToken(null);
     setUser(null);
     localStorage.removeItem(TOKEN_KEY);
@@ -147,10 +212,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return;
       }
       const token = response.access_token;
-      const expiry = Date.now() + (response.expires_in ?? 3600) * 1000;
-      localStorage.setItem(TOKEN_KEY, token);
-      localStorage.setItem(TOKEN_EXPIRY_KEY, String(expiry));
-      setAccessToken(token);
+      storeToken(token, response.expires_in ?? 3600);
       try {
         await fetchAndStoreUser(token);
       } catch (err) {
@@ -160,7 +222,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     };
     tokenClientRef.current.requestAccessToken({ prompt: 'consent' });
-  }, [fetchAndStoreUser]);
+  }, [fetchAndStoreUser, storeToken]);
 
   const signOut = useCallback(() => {
     if (accessToken && (window as typeof window & { google?: typeof google }).google) {

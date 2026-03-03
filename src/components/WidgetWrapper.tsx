@@ -1,10 +1,18 @@
-import { useState } from 'react';
-import { Paper, ActionIcon, Group, Text, Modal, Stack, Button, Tooltip, Switch, Divider } from '@mantine/core';
+import { useState, Suspense } from 'react';
+import { Paper, ActionIcon, Group, Text, Modal, Stack, Button, Tooltip, Switch, Divider, Center, Loader } from '@mantine/core';
 import { IconSettings, IconTrash, IconGripVertical, IconArrowsMaximize } from '@tabler/icons-react';
 import type { WidgetDefinition, WidgetConfig } from '../types/widget';
 import { getWidgetByType } from '../widgets/registry';
 import { useDashboardStore } from '../store/dashboardStore';
 import classes from './WidgetWrapper.module.css';
+
+function WidgetLoader() {
+  return (
+    <Center style={{ width: '100%', height: '100%' }}>
+      <Loader size="sm" />
+    </Center>
+  );
+}
 
 interface WidgetWrapperProps {
   widget: WidgetDefinition;
@@ -81,11 +89,13 @@ export function WidgetWrapper({ widget, isEditing }: WidgetWrapperProps) {
           </>
         )}
         <div className={classes.content}>
-          <WidgetComponent
-            widget={widget}
-            isEditing={isEditing}
-            onConfigChange={handleConfigChange}
-          />
+          <Suspense fallback={<WidgetLoader />}>
+            <WidgetComponent
+              widget={widget}
+              isEditing={isEditing}
+              onConfigChange={handleConfigChange}
+            />
+          </Suspense>
         </div>
       </Paper>
 
@@ -118,11 +128,13 @@ export function WidgetWrapper({ widget, isEditing }: WidgetWrapperProps) {
                 />
               </Group>
               <Divider label="Settings" labelPosition="left" />
-              <SettingsComponent
-                widget={widget}
-                isEditing={true}
-                onConfigChange={handleConfigChange}
-              />
+              <Suspense fallback={<WidgetLoader />}>
+                <SettingsComponent
+                  widget={widget}
+                  isEditing={true}
+                  onConfigChange={handleConfigChange}
+                />
+              </Suspense>
               <Button onClick={() => setSettingsOpen(false)} mt="md">
                 Done
               </Button>

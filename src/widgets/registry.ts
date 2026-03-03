@@ -1,16 +1,17 @@
+import { lazy } from 'react';
 import type { WidgetRegistryEntry, WidgetConfig } from '../types/widget';
-import { ClockWidget, ClockWidgetSettings, type ClockConfig } from './ClockWidget';
-import { CalendarWidget, CalendarWidgetSettings, type CalendarConfig } from './CalendarWidget';
-import { GoogleCalendarWidget, GoogleCalendarWidgetSettings, type GoogleCalendarConfig } from './GoogleCalendarWidget';
-import { GoogleCalendarMonthWidget, GoogleCalendarMonthWidgetSettings, type GoogleCalendarMonthConfig } from './GoogleCalendarMonthWidget';
-import { GoogleCalendarDayWidget, GoogleCalendarDayWidgetSettings, type GoogleCalendarDayConfig } from './GoogleCalendarDayWidget';
-import { PhotoWidget, PhotoWidgetSettings, type PhotoConfig } from './PhotoWidget';
-import { GooglePhotosWidget, GooglePhotosWidgetSettings, type GooglePhotosConfig } from './GooglePhotosWidget';
-import { GooglePhotoCollageWidget, GooglePhotoCollageWidgetSettings, type GooglePhotoCollageConfig } from './GooglePhotoCollageWidget';
-import { WeatherWidget, WeatherWidgetSettings, type WeatherConfig } from './WeatherWidget';
-import { NewsWidget, NewsWidgetSettings, type NewsConfig } from './NewsWidget';
-import { StocksWidget, StocksWidgetSettings, type StocksConfig } from './StocksWidget';
-import { WeekCalendarWidget, WeekCalendarWidgetSettings, type WeekCalendarConfig } from './WeekCalendarWidget';
+import type { ClockConfig } from './ClockWidget';
+import type { CalendarConfig } from './CalendarWidget';
+import type { GoogleCalendarConfig } from './GoogleCalendarWidget';
+import type { GoogleCalendarMonthConfig } from './GoogleCalendarMonthWidget';
+import type { GoogleCalendarDayConfig } from './GoogleCalendarDayWidget';
+import type { PhotoConfig } from './PhotoWidget';
+import type { GooglePhotosConfig } from './GooglePhotosWidget';
+import type { GooglePhotoCollageConfig } from './GooglePhotoCollageWidget';
+import type { WeatherConfig } from './WeatherWidget';
+import type { NewsConfig } from './NewsWidget';
+import type { StocksConfig } from './StocksWidget';
+import type { WeekCalendarConfig } from './WeekCalendarWidget';
 import {
   IconClock,
   IconCalendar,
@@ -24,6 +25,44 @@ import {
   IconCalendarWeek,
   IconLayoutGrid,
 } from '@tabler/icons-react';
+
+// Lazy-load widget components so each widget's bundle is only fetched when
+// that widget type is first rendered on screen.
+const ClockWidget = lazy(() => import('./ClockWidget').then((m) => ({ default: m.ClockWidget })));
+const ClockWidgetSettings = lazy(() => import('./ClockWidget').then((m) => ({ default: m.ClockWidgetSettings })));
+
+const CalendarWidget = lazy(() => import('./CalendarWidget').then((m) => ({ default: m.CalendarWidget })));
+const CalendarWidgetSettings = lazy(() => import('./CalendarWidget').then((m) => ({ default: m.CalendarWidgetSettings })));
+
+const GoogleCalendarWidget = lazy(() => import('./GoogleCalendarWidget').then((m) => ({ default: m.GoogleCalendarWidget })));
+const GoogleCalendarWidgetSettings = lazy(() => import('./GoogleCalendarWidget').then((m) => ({ default: m.GoogleCalendarWidgetSettings })));
+
+const GoogleCalendarMonthWidget = lazy(() => import('./GoogleCalendarMonthWidget').then((m) => ({ default: m.GoogleCalendarMonthWidget })));
+const GoogleCalendarMonthWidgetSettings = lazy(() => import('./GoogleCalendarMonthWidget').then((m) => ({ default: m.GoogleCalendarMonthWidgetSettings })));
+
+const GoogleCalendarDayWidget = lazy(() => import('./GoogleCalendarDayWidget').then((m) => ({ default: m.GoogleCalendarDayWidget })));
+const GoogleCalendarDayWidgetSettings = lazy(() => import('./GoogleCalendarDayWidget').then((m) => ({ default: m.GoogleCalendarDayWidgetSettings })));
+
+const PhotoWidget = lazy(() => import('./PhotoWidget').then((m) => ({ default: m.PhotoWidget })));
+const PhotoWidgetSettings = lazy(() => import('./PhotoWidget').then((m) => ({ default: m.PhotoWidgetSettings })));
+
+const GooglePhotosWidget = lazy(() => import('./GooglePhotosWidget').then((m) => ({ default: m.GooglePhotosWidget })));
+const GooglePhotosWidgetSettings = lazy(() => import('./GooglePhotosWidget').then((m) => ({ default: m.GooglePhotosWidgetSettings })));
+
+const GooglePhotoCollageWidget = lazy(() => import('./GooglePhotoCollageWidget').then((m) => ({ default: m.GooglePhotoCollageWidget })));
+const GooglePhotoCollageWidgetSettings = lazy(() => import('./GooglePhotoCollageWidget').then((m) => ({ default: m.GooglePhotoCollageWidgetSettings })));
+
+const WeatherWidget = lazy(() => import('./WeatherWidget').then((m) => ({ default: m.WeatherWidget })));
+const WeatherWidgetSettings = lazy(() => import('./WeatherWidget').then((m) => ({ default: m.WeatherWidgetSettings })));
+
+const NewsWidget = lazy(() => import('./NewsWidget').then((m) => ({ default: m.NewsWidget })));
+const NewsWidgetSettings = lazy(() => import('./NewsWidget').then((m) => ({ default: m.NewsWidgetSettings })));
+
+const StocksWidget = lazy(() => import('./StocksWidget').then((m) => ({ default: m.StocksWidget })));
+const StocksWidgetSettings = lazy(() => import('./StocksWidget').then((m) => ({ default: m.StocksWidgetSettings })));
+
+const WeekCalendarWidget = lazy(() => import('./WeekCalendarWidget').then((m) => ({ default: m.WeekCalendarWidget })));
+const WeekCalendarWidgetSettings = lazy(() => import('./WeekCalendarWidget').then((m) => ({ default: m.WeekCalendarWidgetSettings })));
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const widgetRegistry = new Map<string, WidgetRegistryEntry<any>>();
@@ -328,4 +367,3 @@ export const getWidgetByType = (type: string): WidgetRegistryEntry<any> | undefi
 export const registerWidget = <T extends WidgetConfig>(entry: WidgetRegistryEntry<T>): void => {
   widgetRegistry.set(entry.type, entry);
 };
-

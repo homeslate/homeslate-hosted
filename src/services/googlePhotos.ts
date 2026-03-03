@@ -128,12 +128,22 @@ export function isImageItem(item: PickedMediaItem): boolean {
 }
 
 /**
- * Fetches an authenticated image URL and returns a blob object URL safe for use
- * in <img> src or CSS background-image. The caller is responsible for calling
- * URL.revokeObjectURL() when the URL is no longer needed.
+ * Fetches an authenticated Google Photos image via the server-side proxy and
+ * returns a blob object URL safe for use in <img> src or CSS background-image.
+ * The caller is responsible for calling URL.revokeObjectURL() when the URL is
+ * no longer needed.
+ *
+ * The proxy (/api/photo-proxy) fetches lh3.googleusercontent.com server-side,
+ * avoiding the CORS block that occurs when the browser sends an Authorization
+ * header directly to Google's image CDN.
  */
-export async function fetchAuthedImageUrl(baseUrl: string, token: string): Promise<string> {
-  const response = await fetch(`${baseUrl}=w1920-h1080`, {
+export async function fetchAuthedImageUrl(
+  baseUrl: string,
+  token: string,
+  size = 'w1920-h1080'
+): Promise<string> {
+  const proxyUrl = `/api/photo-proxy?url=${encodeURIComponent(baseUrl)}&size=${size}`;
+  const response = await fetch(proxyUrl, {
     headers: { Authorization: `Bearer ${token}` },
   });
   if (!response.ok) {

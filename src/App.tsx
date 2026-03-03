@@ -1,19 +1,32 @@
-import { MantineProvider, createTheme, ActionIcon, Tooltip } from '@mantine/core';
+import { MantineProvider, createTheme, ActionIcon, Tooltip, Loader, Center } from '@mantine/core';
 import { IconX } from '@tabler/icons-react';
+import { lazy, Suspense } from 'react';
 import { useWakeLock } from './hooks/useWakeLock';
 import { useConfigSync } from './hooks/useConfigSync';
 import { AuthProvider } from './contexts/AuthContext';
 import { useAuth } from './contexts/AuthContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { useDashboardStore } from './store/dashboardStore';
-import { DisplayViewer } from './components/DisplayViewer';
-import { AuthPage } from './pages/AuthPage';
-import { DisplayListPage } from './pages/DisplayListPage';
-import { DisplayDetailPage } from './pages/DisplayDetailPage';
-import { ViewEditorPage } from './pages/ViewEditorPage';
 import '@mantine/core/styles.css';
 import '@mantine/dates/styles.css';
 import './App.css';
+
+// Lazy-load heavy page bundles so they are only fetched when first needed.
+// DisplayViewer is used on the always-on tablet so keep it eager to avoid
+// a loading flash on every hard refresh of the display URL.
+import { DisplayViewer } from './components/DisplayViewer';
+const AuthPage = lazy(() => import('./pages/AuthPage').then((m) => ({ default: m.AuthPage })));
+const DisplayListPage = lazy(() => import('./pages/DisplayListPage').then((m) => ({ default: m.DisplayListPage })));
+const DisplayDetailPage = lazy(() => import('./pages/DisplayDetailPage').then((m) => ({ default: m.DisplayDetailPage })));
+const ViewEditorPage = lazy(() => import('./pages/ViewEditorPage').then((m) => ({ default: m.ViewEditorPage })));
+
+function PageLoader() {
+  return (
+    <Center style={{ width: '100%', height: '100%', minHeight: '60vh' }}>
+      <Loader size="lg" />
+    </Center>
+  );
+}
 
 const mantineTheme = createTheme({
   primaryColor: 'indigo',
@@ -75,7 +88,7 @@ function AppInner() {
   // is reachable if the user navigates to the root URL without the parameter.
   sessionStorage.removeItem(DISPLAY_SESSION_KEY);
 
-  if (!isAuthenticated) return <AuthPage />;
+  if (!isAuthenticated) return <Suspense fallback={<PageLoader />}><AuthPage /></Suspense>;
 
   // In-app preview mode: render the viewer with an exit button overlay
   if (previewDisplayId) {
@@ -100,9 +113,9 @@ function AppInner() {
     );
   }
 
-  if (!selectedDisplayId) return <DisplayListPage />;
-  if (!selectedViewId) return <DisplayDetailPage />;
-  return <ViewEditorPage />;
+  if (!selectedDisplayId) return <Suspense fallback={<PageLoader />}><DisplayListPage /></Suspense>;
+  if (!selectedViewId) return <Suspense fallback={<PageLoader />}><DisplayDetailPage /></Suspense>;
+  return <Suspense fallback={<PageLoader />}><ViewEditorPage /></Suspense>;
 }
 
 function App() {
