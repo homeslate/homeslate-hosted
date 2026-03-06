@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { 
   Box, 
   Text, 
@@ -24,13 +24,15 @@ import {
   IconRefresh,
   IconMapPin,
 } from '@tabler/icons-react';
-import type { WidgetProps, WidgetConfig } from '../types/widget';
+import type { WidgetProps, WidgetConfig, TextAlign } from '../types/widget';
 import { useWeather } from '../hooks/useWeather';
-import { 
-  searchLocations, 
-  getWeatherDescription, 
+import {
+  searchLocations,
+  getWeatherDescription,
   getWeatherIcon,
+  fetchAirQuality,
   type GeocodingResult,
+  type AirQualityData,
 } from '../services/weather';
 import classes from './WeatherWidget.module.css';
 
@@ -42,6 +44,27 @@ export interface WeatherConfig extends WidgetConfig {
   showForecast: boolean;
   forecastDays: number;
   transparentBackground: boolean;
+  showAirQuality: boolean;
+  textAlign: TextAlign;
+}
+
+interface AqiBand {
+  max: number;
+  label: string;
+  color: string;
+}
+
+const AQI_BANDS: AqiBand[] = [
+  { max: 50,  label: 'Good',                       color: '#22c55e' },
+  { max: 100, label: 'Moderate',                   color: '#eab308' },
+  { max: 150, label: 'Unhealthy for Sensitive',    color: '#f97316' },
+  { max: 200, label: 'Unhealthy',                  color: '#ef4444' },
+  { max: 300, label: 'Very Unhealthy',             color: '#a855f7' },
+  { max: Infinity, label: 'Hazardous',             color: '#7f1d1d' },
+];
+
+function getAqiBand(aqi: number): AqiBand {
+  return AQI_BANDS.find((b) => aqi <= b.max) ?? AQI_BANDS[AQI_BANDS.length - 1];
 }
 
 const WeatherIcon = ({ condition, size = 48, isDay = true }: { condition: string; size?: number; isDay?: boolean }) => {
@@ -63,7 +86,18 @@ const WeatherIcon = ({ condition, size = 48, isDay = true }: { condition: string
 };
 
 export function WeatherWidget({ widget }: WidgetProps<WeatherConfig>) {
-  const { latitude, longitude, units, showForecast, forecastDays, location, transparentBackground } = widget.config;
+  const { latitude, longitude, units, showForecast, forecastDays, location, transparentBackground, showAirQuality, textAlign = 'left' } = widget.config;
+  const [aqData, setAqData] = useState<AirQualityData | null>(null);
+
+  useEffect(() => {
+    if (!showAirQuality || latitude === null || longitude === null) {
+      setAqData(null);
+      return;
+    }
+    fetchAirQuality(latitude, longitude)
+      .then(setAqData)
+      .catch(() => setAqData(null));
+  }, [showAirQuality, latitude, longitude]);
   
   const locationInfo = useMemo(() => {
     if (!location) return undefined;
@@ -139,8 +173,15 @@ export function WeatherWidget({ widget }: WidgetProps<WeatherConfig>) {
   const iconCondition = getWeatherIcon(weather.current.weatherCode);
   const description = getWeatherDescription(weather.current.weatherCode);
 
+  const alignClass = textAlign === 'center' ? classes.alignCenter : textAlign === 'right' ? classes.alignRight : classes.alignLeft;
+
+  // Hide weekly forecast when widget is small (3x3 or smaller) to avoid crowding
+  const { w, h } = widget.layout;
+  const isSmallWidget = w <= 3 && h <= 3;
+  const showWeeklyForecast = showForecast && !isSmallWidget;
+
   return (
-    <Box className={`${classes.container} ${transparentBackground ? classes.transparent : ''}`}>
+    <Box className={`${classes.container} ${transparentBackground ? classes.transparent : ''} ${alignClass}`}>
       <div className={classes.header}>
         <Text className={classes.location}>
           {weather.location.name}
@@ -173,9 +214,20 @@ export function WeatherWidget({ widget }: WidgetProps<WeatherConfig>) {
             <Text size="sm" c="dimmed">Feels {weather.current.apparentTemperature}°</Text>
           </div>
         </div>
+
+        {showAirQuality && aqData !== null && (() => {
+          const band = getAqiBand(aqData.usAqi);
+          return (
+            <div className={classes.aqiBadge} style={{ borderColor: band.color }}>
+              <span className={classes.aqiDot} style={{ background: band.color }} />
+              <Text size="xs" fw={600} style={{ color: band.color }}>AQI {aqData.usAqi}</Text>
+              <Text size="xs" c="dimmed">{band.label}</Text>
+            </div>
+          );
+        })()}
       </div>
       
-      {showForecast && weather.daily.length > 1 && (
+      {showWeeklyForecast && weather.daily.length > 1 && (
         <div className={classes.forecast}>
           {weather.daily.slice(1, forecastDays + 1).map((day, index) => {
             const dayName = new Date(day.date).toLocaleDateString('en-US', { weekday: 'short' });
@@ -196,7 +248,7 @@ export function WeatherWidget({ widget }: WidgetProps<WeatherConfig>) {
 }
 
 export function WeatherWidgetSettings({ widget, onConfigChange }: WidgetProps<WeatherConfig>) {
-  const { location, units, showForecast, forecastDays } = widget.config;
+  const { location, units, showForecast, forecastDays, showAirQuality, textAlign = 'left' } = widget.config;
   
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedQuery] = useDebouncedValue(searchQuery, 300);
@@ -331,6 +383,24 @@ export function WeatherWidgetSettings({ widget, onConfigChange }: WidgetProps<We
           onChange={(value) => onConfigChange({ forecastDays: Number(value) || 5 })}
         />
       )}
+
+      <Group justify="space-between">
+        <Text size="sm">Show Air Quality (US AQI)</Text>
+        <Switch
+          checked={showAirQuality ?? false}
+          onChange={(e) => onConfigChange({ showAirQuality: e.currentTarget.checked })}
+        />
+      </Group>
+      <Select
+        label="Text Alignment"
+        data={[
+          { value: 'left', label: 'Left' },
+          { value: 'center', label: 'Center' },
+          { value: 'right', label: 'Right' },
+        ]}
+        value={textAlign}
+        onChange={(value) => onConfigChange({ textAlign: (value as TextAlign) || 'left' })}
+      />
     </Stack>
   );
 }

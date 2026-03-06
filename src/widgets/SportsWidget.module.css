@@ -1,0 +1,115 @@
+.container {
+  height: 100%;
+  padding: 1rem;
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(99, 102, 241, 0.1) 100%);
+  border-radius: var(--mantine-radius-md);
+  display: flex;
+  flex-direction: column;
+}
+
+.container.transparent {
+  background: transparent;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.75rem;
+  flex-shrink: 0;
+}
+
+.title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 600;
+  font-size: 1rem;
+  color: var(--mantine-color-blue-4);
+}
+
+.refreshBtn {
+  color: var(--mantine-color-dimmed);
+}
+
+.refreshBtn:hover {
+  color: white;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* Games list */
+.gamesList {
+  flex: 1;
+  min-height: 0;
+}
+
+.gameCard {
+  padding: 0.4rem 0.25rem;
+}
+
+.teamRow {
+  padding: 2px 0;
+}
+
+.teamLogo {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.teamName {
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.score {
+  flex-shrink: 0;
+  min-width: 2rem;
+  text-align: right;
+}
+
+.liveBadge {
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.65; }
+}
+
+.finalText {
+  font-style: italic;
+}
+
+/* Empty / loading */
+.empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 0.5rem;
+}
+
+.emptyIcon {
+  color: var(--mantine-color-blue-4);
+  opacity: 0.5;
+}
+
+.loading {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.attribution {
+  opacity: 0.5;
+  flex-shrink: 0;
+}

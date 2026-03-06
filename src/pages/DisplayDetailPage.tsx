@@ -16,6 +16,7 @@ import {
   Badge,
   TextInput,
   PinInput,
+  Modal,
 } from '@mantine/core';
 import {
   IconArrowLeft,
@@ -225,6 +226,7 @@ export function DisplayDetailPage() {
     setRotationIntervalMs,
     setDisplayTheme,
     setPasscodeEnabled,
+    setStickyNotesEnabled,
     openPreview,
   } = useDashboardStore();
   const display = displays.find((d) => d.id === selectedDisplayId);
@@ -235,6 +237,12 @@ export function DisplayDetailPage() {
   const [pinError, setPinError] = useState<string | null>(null);
   const [pinSaving, setPinSaving] = useState(false);
 
+  // Dialog modals replacing native alert / confirm / prompt
+  const [alertOpen, setAlertOpen] = useState(false);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [newViewOpen, setNewViewOpen] = useState(false);
+  const [newViewName, setNewViewName] = useState('New View');
+
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
   );
@@ -243,7 +251,7 @@ export function DisplayDetailPage() {
 
   const saveConfig = (overrides: Partial<typeof display> = {}) => {
     if (!accessToken) return;
-    const { layouts, activeLayoutId, rotationEnabled, rotationIntervalMs, theme: displayTheme } = {
+    const { layouts, activeLayoutId, rotationEnabled, rotationIntervalMs, theme: displayTheme, stickyNotesEnabled } = {
       ...display,
       ...overrides,
     };
@@ -253,7 +261,7 @@ export function DisplayDetailPage() {
         Authorization: `Bearer ${accessToken}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ layouts, activeLayoutId, rotationEnabled, rotationIntervalMs, theme: displayTheme }),
+      body: JSON.stringify({ layouts, activeLayoutId, rotationEnabled, rotationIntervalMs, theme: displayTheme, stickyNotesEnabled }),
     }).catch(console.error);
   };
 
@@ -309,16 +317,16 @@ export function DisplayDetailPage() {
   };
 
   const handleNewView = () => {
-    const name = prompt('View name:', 'New View');
-    if (name?.trim()) createLayout(name.trim());
+    setNewViewName('New View');
+    setNewViewOpen(true);
   };
 
   const handleDeleteView = (id: string) => {
     if (display.layouts.length <= 1) {
-      alert('Cannot delete the last view.');
+      setAlertOpen(true);
       return;
     }
-    if (confirm('Delete this view?')) deleteLayout(id);
+    setConfirmDeleteId(id);
   };
 
   const handleDragEnd = (event: DragEndEvent) => {
@@ -356,6 +364,81 @@ export function DisplayDetailPage() {
       displayId={display.displayId}
       displayName={display.name}
     />
+
+    {/* Alert: cannot delete last view */}
+    <Modal
+      opened={alertOpen}
+      onClose={() => setAlertOpen(false)}
+      title="Cannot delete view"
+      size="sm"
+      centered
+    >
+      <Text size="sm">You cannot delete the last view. Add another view before deleting this one.</Text>
+      <Group justify="flex-end" mt="md">
+        <Button onClick={() => setAlertOpen(false)}>OK</Button>
+      </Group>
+    </Modal>
+
+    {/* Confirm: delete view */}
+    <Modal
+      opened={confirmDeleteId !== null}
+      onClose={() => setConfirmDeleteId(null)}
+      title="Delete view"
+      size="sm"
+      centered
+    >
+      <Text size="sm">Are you sure you want to delete this view? This cannot be undone.</Text>
+      <Group justify="flex-end" mt="md" gap="sm">
+        <Button variant="default" onClick={() => setConfirmDeleteId(null)}>Cancel</Button>
+        <Button
+          color="red"
+          onClick={() => {
+            if (confirmDeleteId) deleteLayout(confirmDeleteId);
+            setConfirmDeleteId(null);
+          }}
+        >
+          Delete
+        </Button>
+      </Group>
+    </Modal>
+
+    {/* Prompt: new view name */}
+    <Modal
+      opened={newViewOpen}
+      onClose={() => setNewViewOpen(false)}
+      title="New view"
+      size="sm"
+      centered
+    >
+      <TextInput
+        label="View name"
+        value={newViewName}
+        onChange={(e) => setNewViewName(e.currentTarget.value)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' && newViewName.trim()) {
+            createLayout(newViewName.trim());
+            setNewViewOpen(false);
+          }
+          if (e.key === 'Escape') setNewViewOpen(false);
+        }}
+        autoFocus
+        data-autofocus
+      />
+      <Group justify="flex-end" mt="md" gap="sm">
+        <Button variant="default" onClick={() => setNewViewOpen(false)}>Cancel</Button>
+        <Button
+          disabled={!newViewName.trim()}
+          onClick={() => {
+            if (newViewName.trim()) {
+              createLayout(newViewName.trim());
+              setNewViewOpen(false);
+            }
+          }}
+        >
+          Create
+        </Button>
+      </Group>
+    </Modal>
     <div className={classes.root}>
       <header className={classes.header}>
         <Group gap="sm">
@@ -557,6 +640,28 @@ export function DisplayDetailPage() {
                 {pinError && <Text size="xs" c="red">{pinError}</Text>}
               </Stack>
             </Stack>
+          </Paper>
+        </section>
+
+        {/* Sticky Notes section */}
+        <section className={classes.section}>
+          <Title order={5} className={classes.sectionTitle} mb="md">Sticky Notes</Title>
+          <Paper className={classes.settingsCard} p="md" radius="md">
+            <Group justify="space-between">
+              <Stack gap={2}>
+                <Text size="sm" fw={500}>Enable sticky notes</Text>
+                <Text size="xs" c="dimmed">
+                  Show a "+" button to add floating notes on each view — visible in editor and kiosk mode
+                </Text>
+              </Stack>
+              <Switch
+                checked={display.stickyNotesEnabled ?? false}
+                onChange={(e) => {
+                  setStickyNotesEnabled(display.id, e.currentTarget.checked);
+                  saveConfig({ stickyNotesEnabled: e.currentTarget.checked });
+                }}
+              />
+            </Group>
           </Paper>
         </section>
 

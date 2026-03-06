@@ -1,21 +1,21 @@
 import { useEffect, useRef } from 'react';
-import { Box, Text, Stack, Switch, Button, Group, Loader, Alert, Anchor } from '@mantine/core';
+import { Box, Text, Stack, Switch, Button, Group, Loader, Alert, Anchor, Progress } from '@mantine/core';
 import { IconBrandGoogle, IconPhoto, IconExternalLink } from '@tabler/icons-react';
 import type { WidgetProps, WidgetConfig } from '../types/widget';
 import { useGooglePhotos } from '../hooks/useGooglePhotos';
 import { useAuth } from '../contexts/AuthContext';
-import type { PickedMediaItem } from '../services/googlePhotos';
+import type { StoredImage } from '../services/googlePhotos';
 import classes from './GooglePhotosWidget.module.css';
 
 export interface GooglePhotosConfig extends WidgetConfig {
   showCaption: boolean;
   refreshInterval: number;
   transparentBackground: boolean;
-  savedMediaItems?: PickedMediaItem[];
+  savedImages?: StoredImage[];
 }
 
 export function GooglePhotosWidget({ widget }: WidgetProps<GooglePhotosConfig>) {
-  const { refreshInterval, transparentBackground, savedMediaItems } = widget.config;
+  const { refreshInterval, transparentBackground, savedImages } = widget.config;
 
   const {
     isAuthenticated,
@@ -25,11 +25,10 @@ export function GooglePhotosWidget({ widget }: WidgetProps<GooglePhotosConfig>) 
     currentPhoto,
   } = useGooglePhotos({
     refreshInterval: refreshInterval * 1000,
-    savedMediaItems,
+    savedImages,
   });
 
-
-  if (!isAuthenticated) {
+  if (!isAuthenticated && pickerStatus === 'idle') {
     return (
       <Box className={`${classes.container} ${transparentBackground ? classes.transparent : ''}`}>
         <div className={classes.signIn}>
@@ -75,12 +74,12 @@ export function GooglePhotosWidget({ widget }: WidgetProps<GooglePhotosConfig>) 
     );
   }
 
-  if (pickerStatus === 'loading') {
+  if (pickerStatus === 'uploading') {
     return (
       <Box className={`${classes.container} ${transparentBackground ? classes.transparent : ''}`}>
         <div className={classes.loading}>
           <Loader size="lg" color="blue" />
-          <Text size="sm" c="dimmed">Loading selected photos...</Text>
+          <Text size="sm" c="dimmed">Saving selected photos...</Text>
         </div>
       </Box>
     );
@@ -123,32 +122,32 @@ export function GooglePhotosWidgetSettings({
   widget,
   onConfigChange,
 }: WidgetProps<GooglePhotosConfig>) {
-  const { showCaption, refreshInterval, savedMediaItems } = widget.config;
+  const { showCaption, refreshInterval, savedImages } = widget.config;
 
   const { isAuthenticated, isLoading, signIn } = useAuth();
   const {
     pickerStatus,
+    uploadProgress,
     error,
     pickerUri,
-    mediaItems,
+    storedImages,
     startPicker,
     clearSelection,
-  } = useGooglePhotos({ savedMediaItems });
+  } = useGooglePhotos({ savedImages });
 
-  const hasSelection = mediaItems.length > 0;
+  const hasSelection = storedImages.length > 0;
 
-  // Persist media items to widget config once when a new selection completes.
-  // A ref guards against re-firing when the parent re-renders with the new config.
+  // Persist stored images to widget config once when a new selection completes.
   const savedRef = useRef(false);
   useEffect(() => {
-    if (pickerStatus === 'ready' && mediaItems.length > 0 && !savedRef.current) {
+    if (pickerStatus === 'ready' && storedImages.length > 0 && !savedRef.current) {
       savedRef.current = true;
-      onConfigChange({ savedMediaItems: mediaItems });
+      onConfigChange({ savedImages: storedImages });
     }
     if (pickerStatus === 'idle') {
       savedRef.current = false;
     }
-  }, [pickerStatus, mediaItems, onConfigChange]);
+  }, [pickerStatus, storedImages, onConfigChange]);
 
   return (
     <Stack gap="md">
@@ -177,7 +176,7 @@ export function GooglePhotosWidgetSettings({
 
             {hasSelection && (
               <Text size="sm" c="dimmed">
-                {mediaItems.length} photo{mediaItems.length !== 1 ? 's' : ''} selected
+                {storedImages.length} photo{storedImages.length !== 1 ? 's' : ''} saved
               </Text>
             )}
 
@@ -192,11 +191,17 @@ export function GooglePhotosWidgetSettings({
               </Stack>
             )}
 
-            {pickerStatus === 'loading' && (
-              <Group gap="xs">
-                <Loader size="xs" />
-                <Text size="sm" c="dimmed">Loading your photos...</Text>
-              </Group>
+            {pickerStatus === 'uploading' && uploadProgress && (
+              <Stack gap="xs">
+                <Text size="sm" c="dimmed">
+                  Saving photos… {uploadProgress.done}/{uploadProgress.total}
+                </Text>
+                <Progress
+                  value={(uploadProgress.done / uploadProgress.total) * 100}
+                  size="sm"
+                  animated
+                />
+              </Stack>
             )}
 
             {error && (
@@ -210,8 +215,8 @@ export function GooglePhotosWidgetSettings({
                 size="sm"
                 leftSection={<IconPhoto size={16} />}
                 onClick={() => { void startPicker(); }}
-                loading={pickerStatus === 'pending' || pickerStatus === 'loading'}
-                disabled={pickerStatus === 'pending' || pickerStatus === 'loading'}
+                loading={pickerStatus === 'pending' || pickerStatus === 'uploading'}
+                disabled={pickerStatus === 'pending' || pickerStatus === 'uploading'}
               >
                 {hasSelection ? 'Change Photos' : 'Pick Photos'}
               </Button>
@@ -223,7 +228,7 @@ export function GooglePhotosWidgetSettings({
                   color="red"
                   onClick={() => {
                     clearSelection();
-                    onConfigChange({ savedMediaItems: [] });
+                    onConfigChange({ savedImages: [] });
                   }}
                 >
                   Clear

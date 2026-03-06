@@ -28,6 +28,10 @@ export interface DailyForecast {
   precipitationProbability: number;
 }
 
+export interface AirQualityData {
+  usAqi: number;
+}
+
 export interface WeatherData {
   current: CurrentWeather;
   daily: DailyForecast[];
@@ -37,6 +41,7 @@ export interface WeatherData {
     admin1?: string;
   };
   units: 'imperial' | 'metric';
+  airQuality?: AirQualityData;
 }
 
 // Weather code to description mapping (WMO codes)
@@ -184,6 +189,21 @@ export async function fetchWeather(
     },
     units,
   };
+}
+
+/**
+ * Fetch US AQI from Open-Meteo Air Quality API
+ */
+export async function fetchAirQuality(latitude: number, longitude: number): Promise<AirQualityData> {
+  const url = new URL('https://air-quality-api.open-meteo.com/v1/air-quality');
+  url.searchParams.set('latitude', latitude.toString());
+  url.searchParams.set('longitude', longitude.toString());
+  url.searchParams.set('current', 'us_aqi');
+
+  const response = await fetch(url.toString());
+  if (!response.ok) throw new Error(`Air quality fetch failed: ${response.statusText}`);
+  const data = await response.json();
+  return { usAqi: data.current?.us_aqi ?? 0 };
 }
 
 // Simple in-memory cache for weather data

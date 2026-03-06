@@ -1,16 +1,16 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { Box, Text, Stack, Switch, Button, Group, Loader, Alert, Anchor, NumberInput } from '@mantine/core';
+import { Box, Text, Stack, Switch, Button, Group, Loader, Alert, Anchor, NumberInput, Progress } from '@mantine/core';
 import { IconBrandGoogle, IconLayoutGrid, IconExternalLink } from '@tabler/icons-react';
 import type { WidgetProps, WidgetConfig } from '../types/widget';
 import { useGooglePhotoCollage } from '../hooks/useGooglePhotoCollage';
 import { useAuth } from '../contexts/AuthContext';
-import type { PickedMediaItem } from '../services/googlePhotos';
+import type { StoredImage } from '../services/googlePhotos';
 import classes from './GooglePhotoCollageWidget.module.css';
 
 export interface GooglePhotoCollageConfig extends WidgetConfig {
   rotationInterval: number;      // seconds between individual photo changes
   transparentBackground: boolean;
-  savedMediaItems?: PickedMediaItem[];
+  savedImages?: StoredImage[];
 }
 
 // ── Layout helpers ────────────────────────────────────────────────────────────
@@ -130,7 +130,7 @@ function buildSpanPattern(cols: number, rows: number, slotCount: number): CellSp
 // ── Main widget ───────────────────────────────────────────────────────────────
 
 export function GooglePhotoCollageWidget({ widget }: WidgetProps<GooglePhotoCollageConfig>) {
-  const { rotationInterval, transparentBackground, savedMediaItems } = widget.config;
+  const { rotationInterval, transparentBackground, savedImages } = widget.config;
 
   const containerRef = useRef<HTMLDivElement>(null);
   const [dimensions, setDimensions] = useState({ width: 400, height: 300 });
@@ -153,12 +153,12 @@ export function GooglePhotoCollageWidget({ widget }: WidgetProps<GooglePhotoColl
     useGooglePhotoCollage({
       slotCount,
       rotationInterval: rotationInterval * 1000,
-      savedMediaItems,
+      savedImages,
     });
 
   const containerClass = `${classes.container} ${transparentBackground ? classes.transparent : ''}`;
 
-  if (!isAuthenticated) {
+  if (!isAuthenticated && pickerStatus === 'idle') {
     return (
       <Box ref={containerRef} className={containerClass}>
         <div className={classes.stateContainer}>
@@ -204,12 +204,12 @@ export function GooglePhotoCollageWidget({ widget }: WidgetProps<GooglePhotoColl
     );
   }
 
-  if (pickerStatus === 'loading') {
+  if (pickerStatus === 'uploading') {
     return (
       <Box ref={containerRef} className={containerClass}>
         <div className={classes.stateContainer}>
           <Loader size="lg" color="blue" />
-          <Text size="sm" c="dimmed" mt="sm">Loading photos...</Text>
+          <Text size="sm" c="dimmed" mt="sm">Saving photos...</Text>
         </div>
       </Box>
     );
@@ -271,27 +271,27 @@ export function GooglePhotoCollageWidgetSettings({
   widget,
   onConfigChange,
 }: WidgetProps<GooglePhotoCollageConfig>) {
-  const { rotationInterval, savedMediaItems } = widget.config;
+  const { rotationInterval, savedImages } = widget.config;
 
   const { isAuthenticated, isLoading, signIn } = useAuth();
 
   // Dummy slotCount for settings panel — actual count is determined at runtime
-  const { pickerStatus, error, pickerUri, mediaItems, startPicker, clearSelection } =
-    useGooglePhotoCollage({ slotCount: 1, savedMediaItems });
+  const { pickerStatus, uploadProgress, error, pickerUri, storedImages, startPicker, clearSelection } =
+    useGooglePhotoCollage({ slotCount: 1, savedImages });
 
-  const hasSelection = mediaItems.length > 0;
+  const hasSelection = storedImages.length > 0;
 
-  // Persist media items once selection completes
+  // Persist stored images once selection completes
   const savedRef = useRef(false);
   useEffect(() => {
-    if (pickerStatus === 'ready' && mediaItems.length > 0 && !savedRef.current) {
+    if (pickerStatus === 'ready' && storedImages.length > 0 && !savedRef.current) {
       savedRef.current = true;
-      onConfigChange({ savedMediaItems: mediaItems });
+      onConfigChange({ savedImages: storedImages });
     }
     if (pickerStatus === 'idle') {
       savedRef.current = false;
     }
-  }, [pickerStatus, mediaItems, onConfigChange]);
+  }, [pickerStatus, storedImages, onConfigChange]);
 
   const [intervalInput, setIntervalInput] = useState<string | number>(rotationInterval);
 
@@ -333,7 +333,7 @@ export function GooglePhotoCollageWidgetSettings({
 
             {hasSelection && (
               <Text size="sm" c="dimmed">
-                {mediaItems.length} photo{mediaItems.length !== 1 ? 's' : ''} selected
+                {storedImages.length} photo{storedImages.length !== 1 ? 's' : ''} saved
               </Text>
             )}
 
@@ -348,11 +348,17 @@ export function GooglePhotoCollageWidgetSettings({
               </Stack>
             )}
 
-            {pickerStatus === 'loading' && (
-              <Group gap="xs">
-                <Loader size="xs" />
-                <Text size="sm" c="dimmed">Loading your photos...</Text>
-              </Group>
+            {pickerStatus === 'uploading' && uploadProgress && (
+              <Stack gap="xs">
+                <Text size="sm" c="dimmed">
+                  Saving photos… {uploadProgress.done}/{uploadProgress.total}
+                </Text>
+                <Progress
+                  value={(uploadProgress.done / uploadProgress.total) * 100}
+                  size="sm"
+                  animated
+                />
+              </Stack>
             )}
 
             {error && (
@@ -366,8 +372,8 @@ export function GooglePhotoCollageWidgetSettings({
                 size="sm"
                 leftSection={<IconLayoutGrid size={16} />}
                 onClick={() => { void startPicker(); }}
-                loading={pickerStatus === 'pending' || pickerStatus === 'loading'}
-                disabled={pickerStatus === 'pending' || pickerStatus === 'loading'}
+                loading={pickerStatus === 'pending' || pickerStatus === 'uploading'}
+                disabled={pickerStatus === 'pending' || pickerStatus === 'uploading'}
               >
                 {hasSelection ? 'Change Photos' : 'Pick Photos'}
               </Button>
@@ -379,7 +385,7 @@ export function GooglePhotoCollageWidgetSettings({
                   color="red"
                   onClick={() => {
                     clearSelection();
-                    onConfigChange({ savedMediaItems: [] });
+                    onConfigChange({ savedImages: [] });
                   }}
                 >
                   Clear

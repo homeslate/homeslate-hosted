@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { v4 as uuidv4 } from 'uuid';
-import type { DashboardLayout, WidgetDefinition, WidgetConfig } from '../types/widget';
+import type { DashboardLayout, WidgetDefinition, WidgetConfig, StickyNote } from '../types/widget';
 import type { DisplayTheme } from '../types/theme';
 
 export interface Display {
@@ -14,6 +14,7 @@ export interface Display {
   rotationIntervalMs: number;
   theme?: DisplayTheme;
   passcodeEnabled?: boolean; // whether a viewer passcode is set on the server
+  stickyNotesEnabled?: boolean;
 }
 
 export interface RemoteDisplay {
@@ -27,6 +28,7 @@ export interface RemoteDisplay {
     rotationEnabled: boolean;
     rotationIntervalMs: number;
     theme?: DisplayTheme;
+    stickyNotesEnabled?: boolean;
   } | null;
 }
 
@@ -55,7 +57,9 @@ interface DashboardState {
   setRotationEnabled: (enabled: boolean) => void;
   setRotationIntervalMs: (ms: number) => void;
   setDisplayTheme: (displayId: string, theme: DisplayTheme) => void;
+  setLayoutBackground: (layoutId: string, updates: { backgroundImage?: string; backgroundImageSize?: 'cover' | 'contain' | 'tile'; backgroundOverlayOpacity?: number }) => void;
   setPasscodeEnabled: (displayId: string, enabled: boolean) => void;
+  setStickyNotesEnabled: (displayId: string, enabled: boolean) => void;
 
   // Per-display layout/view actions (act on selectedDisplayId)
   createLayout: (name: string) => void;
@@ -72,6 +76,11 @@ interface DashboardState {
   updateWidgetConfig: (widgetId: string, config: Partial<WidgetConfig>) => void;
   updateWidgetLayout: (widgetId: string, layout: Partial<WidgetDefinition['layout']>) => void;
   updateAllWidgetLayouts: (layouts: Array<{ i: string; x: number; y: number; w: number; h: number }>) => void;
+
+  // Sticky note actions (act on selectedDisplayId)
+  addNote: (layoutId: string, note: StickyNote) => void;
+  removeNote: (layoutId: string, noteId: string) => void;
+  updateNote: (layoutId: string, noteId: string, updates: Partial<StickyNote>) => void;
 }
 
 const createDefaultLayout = (): DashboardLayout => ({
@@ -205,6 +214,7 @@ export const useDashboardStore = create<DashboardState>()(
             rotationIntervalMs: config.rotationIntervalMs ?? existing?.rotationIntervalMs ?? 30000,
             theme: config.theme ?? existing?.theme,
             passcodeEnabled: remote.passcode_enabled ?? existing?.passcodeEnabled ?? false,
+            stickyNotesEnabled: config.stickyNotesEnabled ?? existing?.stickyNotesEnabled ?? false,
           };
         });
         // Keep selectedDisplayId valid
@@ -302,11 +312,31 @@ export const useDashboardStore = create<DashboardState>()(
         }));
       },
 
+      setLayoutBackground: (layoutId: string, updates: { backgroundImage?: string; backgroundImageSize?: 'cover' | 'contain' | 'tile'; backgroundOverlayOpacity?: number }) => {
+        const { selectedDisplayId } = get();
+        if (!selectedDisplayId) return;
+        set((state) => ({
+          displays: updateDisplay(state.displays, selectedDisplayId, (d) => ({
+            ...d,
+            layouts: d.layouts.map((l) => (l.id === layoutId ? { ...l, ...updates } : l)),
+          })),
+        }));
+      },
+
       setPasscodeEnabled: (displayId: string, enabled: boolean) => {
         set((state) => ({
           displays: updateDisplay(state.displays, displayId, (d) => ({
             ...d,
             passcodeEnabled: enabled,
+          })),
+        }));
+      },
+
+      setStickyNotesEnabled: (displayId: string, enabled: boolean) => {
+        set((state) => ({
+          displays: updateDisplay(state.displays, displayId, (d) => ({
+            ...d,
+            stickyNotesEnabled: enabled,
           })),
         }));
       },
@@ -522,6 +552,54 @@ export const useDashboardStore = create<DashboardState>()(
                     }),
                   }
                 : layout
+            ),
+          })),
+        }));
+      },
+
+      addNote: (layoutId: string, note: StickyNote) => {
+        const { selectedDisplayId } = get();
+        if (!selectedDisplayId) return;
+        set((state) => ({
+          displays: updateDisplay(state.displays, selectedDisplayId, (d) => ({
+            ...d,
+            layouts: d.layouts.map((l) =>
+              l.id === layoutId ? { ...l, notes: [...(l.notes ?? []), note] } : l
+            ),
+          })),
+        }));
+      },
+
+      removeNote: (layoutId: string, noteId: string) => {
+        const { selectedDisplayId } = get();
+        if (!selectedDisplayId) return;
+        set((state) => ({
+          displays: updateDisplay(state.displays, selectedDisplayId, (d) => ({
+            ...d,
+            layouts: d.layouts.map((l) =>
+              l.id === layoutId
+                ? { ...l, notes: (l.notes ?? []).filter((n) => n.id !== noteId) }
+                : l
+            ),
+          })),
+        }));
+      },
+
+      updateNote: (layoutId: string, noteId: string, updates: Partial<StickyNote>) => {
+        const { selectedDisplayId } = get();
+        if (!selectedDisplayId) return;
+        set((state) => ({
+          displays: updateDisplay(state.displays, selectedDisplayId, (d) => ({
+            ...d,
+            layouts: d.layouts.map((l) =>
+              l.id === layoutId
+                ? {
+                    ...l,
+                    notes: (l.notes ?? []).map((n) =>
+                      n.id === noteId ? { ...n, ...updates } : n
+                    ),
+                  }
+                : l
             ),
           })),
         }));

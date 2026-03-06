@@ -6,12 +6,13 @@ import type { GoogleCalendarConfig } from './GoogleCalendarWidget';
 import type { GoogleCalendarMonthConfig } from './GoogleCalendarMonthWidget';
 import type { GoogleCalendarDayConfig } from './GoogleCalendarDayWidget';
 import type { PhotoConfig } from './PhotoWidget';
-import type { GooglePhotosConfig } from './GooglePhotosWidget';
 import type { GooglePhotoCollageConfig } from './GooglePhotoCollageWidget';
 import type { WeatherConfig } from './WeatherWidget';
 import type { NewsConfig } from './NewsWidget';
 import type { StocksConfig } from './StocksWidget';
 import type { WeekCalendarConfig } from './WeekCalendarWidget';
+import type { TodoConfig } from './TodoWidget';
+import type { SportsConfig } from './SportsWidget';
 import {
   IconClock,
   IconCalendar,
@@ -24,6 +25,8 @@ import {
   IconBrandGoogle,
   IconCalendarWeek,
   IconLayoutGrid,
+  IconCheckbox,
+  IconTrophy,
 } from '@tabler/icons-react';
 
 // Lazy-load widget components so each widget's bundle is only fetched when
@@ -46,9 +49,6 @@ const GoogleCalendarDayWidgetSettings = lazy(() => import('./GoogleCalendarDayWi
 const PhotoWidget = lazy(() => import('./PhotoWidget').then((m) => ({ default: m.PhotoWidget })));
 const PhotoWidgetSettings = lazy(() => import('./PhotoWidget').then((m) => ({ default: m.PhotoWidgetSettings })));
 
-const GooglePhotosWidget = lazy(() => import('./GooglePhotosWidget').then((m) => ({ default: m.GooglePhotosWidget })));
-const GooglePhotosWidgetSettings = lazy(() => import('./GooglePhotosWidget').then((m) => ({ default: m.GooglePhotosWidgetSettings })));
-
 const GooglePhotoCollageWidget = lazy(() => import('./GooglePhotoCollageWidget').then((m) => ({ default: m.GooglePhotoCollageWidget })));
 const GooglePhotoCollageWidgetSettings = lazy(() => import('./GooglePhotoCollageWidget').then((m) => ({ default: m.GooglePhotoCollageWidgetSettings })));
 
@@ -63,6 +63,12 @@ const StocksWidgetSettings = lazy(() => import('./StocksWidget').then((m) => ({ 
 
 const WeekCalendarWidget = lazy(() => import('./WeekCalendarWidget').then((m) => ({ default: m.WeekCalendarWidget })));
 const WeekCalendarWidgetSettings = lazy(() => import('./WeekCalendarWidget').then((m) => ({ default: m.WeekCalendarWidgetSettings })));
+
+const TodoWidget = lazy(() => import('./TodoWidget').then((m) => ({ default: m.TodoWidget })));
+const TodoWidgetSettings = lazy(() => import('./TodoWidget').then((m) => ({ default: m.TodoWidgetSettings })));
+
+const SportsWidget = lazy(() => import('./SportsWidget').then((m) => ({ default: m.SportsWidget })));
+const SportsWidgetSettings = lazy(() => import('./SportsWidget').then((m) => ({ default: m.SportsWidgetSettings })));
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const widgetRegistry = new Map<string, WidgetRegistryEntry<any>>();
@@ -81,6 +87,7 @@ const clockEntry: WidgetRegistryEntry<ClockConfig> = {
     use24Hour: false,
     timezone: 'local',
     transparentBackground: false,
+    textAlign: 'center',
   },
   defaultLayout: {
     w: 3,
@@ -186,11 +193,11 @@ const googleCalendarDayEntry: WidgetRegistryEntry<GoogleCalendarDayConfig> = {
 };
 widgetRegistry.set('google-calendar-day', googleCalendarDayEntry);
 
-// Photo Widget
+// Photo Widget (combined: URL photos, Google Photos, and device uploads)
 const photoEntry: WidgetRegistryEntry<PhotoConfig> = {
   type: 'photo',
   name: 'Photos',
-  description: 'Display a rotating slideshow of photos',
+  description: 'Slideshow with URL, Google Photos, or device uploads',
   icon: IconPhoto,
   component: PhotoWidget,
   settingsComponent: PhotoWidgetSettings,
@@ -210,28 +217,7 @@ const photoEntry: WidgetRegistryEntry<PhotoConfig> = {
 };
 widgetRegistry.set('photo', photoEntry);
 
-// Google Photos Widget
-const googlePhotosEntry: WidgetRegistryEntry<GooglePhotosConfig> = {
-  type: 'google-photos',
-  name: 'Google Photos',
-  description: 'Display a random photo from a Google Photos album',
-  icon: IconBrandGoogle,
-  component: GooglePhotosWidget,
-  settingsComponent: GooglePhotosWidgetSettings,
-  defaultConfig: {
-    albumId: '',
-    showCaption: true,
-    refreshInterval: 60,
-    transparentBackground: false,
-  },
-  defaultLayout: {
-    w: 4,
-    h: 3,
-    minW: 2,
-    minH: 2,
-  },
-};
-widgetRegistry.set('google-photos', googlePhotosEntry);
+
 
 // Google Photo Collage Widget
 const googlePhotoCollageEntry: WidgetRegistryEntry<GooglePhotoCollageConfig> = {
@@ -244,7 +230,7 @@ const googlePhotoCollageEntry: WidgetRegistryEntry<GooglePhotoCollageConfig> = {
   defaultConfig: {
     rotationInterval: 10,
     transparentBackground: false,
-    savedMediaItems: [],
+    savedImages: [],
   },
   defaultLayout: {
     w: 5,
@@ -271,6 +257,8 @@ const weatherEntry: WidgetRegistryEntry<WeatherConfig> = {
     showForecast: true,
     forecastDays: 5,
     transparentBackground: false,
+    showAirQuality: false,
+    textAlign: 'left',
   },
   defaultLayout: {
     w: 3,
@@ -353,6 +341,51 @@ const weekCalendarEntry: WidgetRegistryEntry<WeekCalendarConfig> = {
   },
 };
 widgetRegistry.set('week-calendar', weekCalendarEntry);
+
+// To-Do List Widget
+const todoEntry: WidgetRegistryEntry<TodoConfig> = {
+  type: 'todo',
+  name: 'To-Do List',
+  description: 'Interactive checklist — check items off in kiosk mode',
+  icon: IconCheckbox,
+  component: TodoWidget,
+  settingsComponent: TodoWidgetSettings,
+  defaultConfig: {
+    items: [],
+    hideCompleted: false,
+    transparentBackground: false,
+  },
+  defaultLayout: {
+    w: 3,
+    h: 4,
+    minW: 2,
+    minH: 3,
+  },
+};
+widgetRegistry.set('todo', todoEntry);
+
+// Sports Scores Widget
+const sportsEntry: WidgetRegistryEntry<SportsConfig> = {
+  type: 'sports',
+  name: 'Sports Scores',
+  description: 'Live scores and schedules via ESPN (NHL, NFL, NBA, MLB & more)',
+  icon: IconTrophy,
+  component: SportsWidget,
+  settingsComponent: SportsWidgetSettings,
+  defaultConfig: {
+    leagueId: 'nhl',
+    favoriteTeamIds: [],
+    showAllGames: true,
+    transparentBackground: false,
+  },
+  defaultLayout: {
+    w: 3,
+    h: 4,
+    minW: 2,
+    minH: 3,
+  },
+};
+widgetRegistry.set('sports', sportsEntry);
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const getWidgetTypes = (): WidgetRegistryEntry<any>[] => {

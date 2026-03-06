@@ -17,9 +17,10 @@ function WidgetLoader() {
 interface WidgetWrapperProps {
   widget: WidgetDefinition;
   isEditing: boolean;
+  onConfigChangeOverride?: (widgetId: string, config: Partial<WidgetConfig>) => void;
 }
 
-export function WidgetWrapper({ widget, isEditing }: WidgetWrapperProps) {
+export function WidgetWrapper({ widget, isEditing, onConfigChangeOverride }: WidgetWrapperProps) {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const { updateWidgetConfig, removeWidget } = useDashboardStore();
 
@@ -38,7 +39,11 @@ export function WidgetWrapper({ widget, isEditing }: WidgetWrapperProps) {
   const isTransparent = widget.config.transparentBackground === true;
 
   const handleConfigChange = (config: Partial<WidgetConfig>) => {
-    updateWidgetConfig(widget.id, config);
+    if (onConfigChangeOverride) {
+      onConfigChangeOverride(widget.id, config);
+    } else {
+      updateWidgetConfig(widget.id, config);
+    }
   };
 
   return (

@@ -6,5 +6,6 @@ export { WeatherWidget, WeatherWidgetSettings, type WeatherConfig } from './Weat
 export { NewsWidget, NewsWidgetSettings, type NewsConfig } from './NewsWidget';
 export { StocksWidget, StocksWidgetSettings, type StocksConfig } from './StocksWidget';
 export { GooglePhotoCollageWidget, GooglePhotoCollageWidgetSettings, type GooglePhotoCollageConfig } from './GooglePhotoCollageWidget';
+export { SportsWidget, SportsWidgetSettings, type SportsConfig } from './SportsWidget';
 export { getWidgetTypes, getWidgetByType, registerWidget } from './registry';
 

@@ -1,9 +1,11 @@
-import { useMemo, useEffect, useRef, useState } from 'react';
+import { useMemo, useEffect, useRef, useState, useCallback } from 'react';
 import GridLayout from 'react-grid-layout/legacy';
+import { v4 as uuidv4 } from 'uuid';
 import { useDashboardStore } from '../store/dashboardStore';
 import { WidgetWrapper } from './WidgetWrapper';
+import { StickyNote as StickyNoteWidget } from './StickyNote';
 import { useElementSize } from '@mantine/hooks';
-import type { DashboardLayout } from '../types/widget';
+import type { DashboardLayout, StickyNote } from '../types/widget';
 import 'react-grid-layout/css/styles.css';
 import 'react-resizable/css/styles.css';
 import classes from './Dashboard.module.css';
@@ -12,6 +14,14 @@ interface Props {
   layoutId?: string;           // override which layout to show
   isEditing?: boolean;         // override editable state
   externalLayouts?: DashboardLayout[]; // for DisplayViewer (bypasses store)
+  // Sticky notes (viewer mode pass-through)
+  stickyNotesEnabled?: boolean;
+  notesOverride?: StickyNote[];
+  onAddNote?: (note: StickyNote) => void;
+  onRemoveNote?: (noteId: string) => void;
+  onUpdateNote?: (noteId: string, updates: Partial<StickyNote>) => void;
+  // Widget config overrides (e.g. todo items from display viewer)
+  onWidgetConfigChange?: (widgetId: string, config: Record<string, unknown>) => void;
 }
 
 const MARGIN_X = 16;
@@ -20,9 +30,22 @@ const MAX_ROWS = 12;
 const CONTAINER_PADDING_X = 32; // 1rem left + 1rem right
 const CONTAINER_PADDING_Y = 64; // 1rem top + 3rem bottom
 
-export function Dashboard({ layoutId, isEditing: isEditingProp, externalLayouts }: Props) {
+const NOTE_COLORS: StickyNote['color'][] = ['yellow', 'pink', 'blue', 'green'];
+
+export function Dashboard({
+  layoutId,
+  isEditing: isEditingProp,
+  externalLayouts,
+  stickyNotesEnabled,
+  notesOverride,
+  onAddNote,
+  onRemoveNote,
+  onUpdateNote,
+  onWidgetConfigChange,
+}: Props) {
   const store = useDashboardStore();
   const { ref, width, height } = useElementSize();
+  const overlayRef = useRef<HTMLDivElement>(null);
 
   // Resolve which display/layout to show
   const storeDisplay = store.displays.find((d) => d.id === store.selectedDisplayId);
@@ -46,6 +69,52 @@ export function Dashboard({ layoutId, isEditing: isEditingProp, externalLayouts 
       return () => clearTimeout(t);
     }
   }, [resolvedLayoutId]);
+
+  // Determine if notes are enabled
+  const notesEnabled =
+    stickyNotesEnabled !== undefined
+      ? stickyNotesEnabled
+      : isEditing && (storeDisplay?.stickyNotesEnabled ?? false);
+
+  // Notes data: viewer override takes priority, then layout's stored notes
+  const notes: StickyNote[] = notesOverride ?? activeLayout?.notes ?? [];
+
+  // Editor-mode note mutations via store
+  const handleAddNoteEditor = useCallback(
+    (note: StickyNote) => {
+      if (resolvedLayoutId) store.addNote(resolvedLayoutId, note);
+    },
+    [resolvedLayoutId, store]
+  );
+
+  const handleRemoveNoteEditor = useCallback(
+    (noteId: string) => {
+      if (resolvedLayoutId) store.removeNote(resolvedLayoutId, noteId);
+    },
+    [resolvedLayoutId, store]
+  );
+
+  const handleUpdateNoteEditor = useCallback(
+    (noteId: string, updates: Partial<StickyNote>) => {
+      if (resolvedLayoutId) store.updateNote(resolvedLayoutId, noteId, updates);
+    },
+    [resolvedLayoutId, store]
+  );
+
+  const handleAddNote = useCallback(() => {
+    const note: StickyNote = {
+      id: uuidv4(),
+      text: '',
+      x: 10 + Math.random() * 60,
+      y: 10 + Math.random() * 60,
+      color: NOTE_COLORS[Math.floor(Math.random() * NOTE_COLORS.length)],
+    };
+    if (onAddNote) {
+      onAddNote(note);
+    } else {
+      handleAddNoteEditor(note);
+    }
+  }, [onAddNote, handleAddNoteEditor]);
 
   if (!activeLayout) {
     return (
@@ -126,11 +195,40 @@ export function Dashboard({ layoutId, isEditing: isEditingProp, externalLayouts 
           >
             {activeLayout.widgets.map((widget) => (
               <div key={widget.id} className={classes.widgetContainer}>
-                <WidgetWrapper widget={widget} isEditing={isEditing} />
+                <WidgetWrapper
+                  widget={widget}
+                  isEditing={isEditing}
+                  onConfigChangeOverride={onWidgetConfigChange}
+                />
               </div>
             ))}
           </GridLayout>
         </div>
+      )}
+
+      {notesEnabled && (
+        <>
+          <div className={classes.notesOverlay} ref={overlayRef}>
+            {notes.map((note) => (
+              <StickyNoteWidget
+                key={note.id}
+                note={note}
+                containerRef={overlayRef}
+                onUpdate={(updates) =>
+                  onUpdateNote
+                    ? onUpdateNote(note.id, updates)
+                    : handleUpdateNoteEditor(note.id, updates)
+                }
+                onRemove={() =>
+                  onRemoveNote ? onRemoveNote(note.id) : handleRemoveNoteEditor(note.id)
+                }
+              />
+            ))}
+          </div>
+          <button className={classes.addNoteBtn} onClick={handleAddNote} title="Add sticky note">
+            +
+          </button>
+        </>
       )}
     </div>
   );

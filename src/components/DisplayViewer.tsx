@@ -1,10 +1,11 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import { PinInput, Stack, Text, Button } from '@mantine/core';
 import { IconLock } from '@tabler/icons-react';
 import { useWakeLock } from '../hooks/useWakeLock';
-import type { DashboardLayout } from '../types/widget';
+import type { DashboardLayout, StickyNote, WidgetDefinition } from '../types/widget';
+import type { TodoItem } from '../widgets/TodoWidget';
 import type { DisplayTheme } from '../types/theme';
-import { themeToVars } from '../themes/utils';
+import { themeToVars, getBackgroundStyle } from '../themes/utils';
 import { Dashboard } from './Dashboard';
 import classes from './DisplayViewer.module.css';
 
@@ -19,6 +20,7 @@ interface DisplayConfig {
   rotationEnabled: boolean;
   rotationIntervalMs: number;
   theme?: DisplayTheme;
+  stickyNotesEnabled?: boolean;
 }
 
 interface Props {
@@ -37,6 +39,17 @@ export function DisplayViewer({ displayId }: Props) {
   const [pinVerifying, setPinVerifying] = useState(false);
   const rotationRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const rootRef = useRef<HTMLDivElement>(null);
+
+  // Sticky notes state per layout
+  const [viewerNotesByLayout, setViewerNotesByLayout] = useState<Record<string, StickyNote[]>>({});
+  const pendingWrite = useRef<Record<string, boolean>>({});
+  const writeDebounceRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+
+  // Todo items state per layout:widget (display viewer can add/remove items)
+  const [viewerTodoItemsByKey, setViewerTodoItemsByKey] = useState<Record<string, TodoItem[]>>({});
+  const pendingTodoWrite = useRef<Record<string, boolean>>({});
+  const todoWriteDebounceRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+
   useWakeLock();
 
   // Load and poll config
@@ -70,6 +83,31 @@ export function DisplayViewer({ displayId }: Props) {
               // Otherwise always start on the first visible layout
               return visibleLayouts[0]?.id ?? cfg.layouts[0]?.id ?? null;
             });
+            // Sync notes from server for non-pending layouts
+            setViewerNotesByLayout((prev) => {
+              const next = { ...prev };
+              for (const layout of cfg.layouts) {
+                if (!pendingWrite.current[layout.id]) {
+                  next[layout.id] = layout.notes ?? [];
+                }
+              }
+              return next;
+            });
+            // Sync todo items from server for non-pending widgets
+            setViewerTodoItemsByKey((prev) => {
+              const next = { ...prev };
+              for (const layout of cfg.layouts) {
+                for (const widget of layout.widgets ?? []) {
+                  if (widget.type === 'todo' && widget.config?.items) {
+                    const key = `${layout.id}:${widget.id}`;
+                    if (!pendingTodoWrite.current[key]) {
+                      next[key] = widget.config.items as TodoItem[];
+                    }
+                  }
+                }
+              }
+              return next;
+            });
           }
         })
         .catch(console.error);
@@ -78,6 +116,126 @@ export function DisplayViewer({ displayId }: Props) {
     const interval = setInterval(load, POLL_INTERVAL_MS);
     return () => clearInterval(interval);
   }, [displayId, passcode]);
+
+  // Debounced note write-back
+  const writeNotes = useCallback(
+    (layoutId: string, notes: StickyNote[]) => {
+      if (writeDebounceRef.current[layoutId]) clearTimeout(writeDebounceRef.current[layoutId]);
+      writeDebounceRef.current[layoutId] = setTimeout(() => {
+        fetch(`/api/notes?publicDisplayId=${displayId}&layoutId=${layoutId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ notes }),
+        })
+          .catch(console.error)
+          .finally(() => {
+            pendingWrite.current[layoutId] = false;
+          });
+      }, 1000);
+    },
+    [displayId]
+  );
+
+  const handleAddNote = useCallback(
+    (note: StickyNote) => {
+      const lid = activeLayoutId;
+      if (!lid) return;
+      setViewerNotesByLayout((prev) => {
+        const current = prev[lid] ?? [];
+        const updated = [...current, note];
+        pendingWrite.current[lid] = true;
+        writeNotes(lid, updated);
+        return { ...prev, [lid]: updated };
+      });
+    },
+    [activeLayoutId, writeNotes]
+  );
+
+  const handleRemoveNote = useCallback(
+    (noteId: string) => {
+      const lid = activeLayoutId;
+      if (!lid) return;
+      setViewerNotesByLayout((prev) => {
+        const current = prev[lid] ?? [];
+        const updated = current.filter((n) => n.id !== noteId);
+        pendingWrite.current[lid] = true;
+        writeNotes(lid, updated);
+        return { ...prev, [lid]: updated };
+      });
+    },
+    [activeLayoutId, writeNotes]
+  );
+
+  const handleUpdateNote = useCallback(
+    (noteId: string, updates: Partial<StickyNote>) => {
+      const lid = activeLayoutId;
+      if (!lid) return;
+      setViewerNotesByLayout((prev) => {
+        const current = prev[lid] ?? [];
+        const updated = current.map((n) => (n.id === noteId ? { ...n, ...updates } : n));
+        pendingWrite.current[lid] = true;
+        writeNotes(lid, updated);
+        return { ...prev, [lid]: updated };
+      });
+    },
+    [activeLayoutId, writeNotes]
+  );
+
+  // Debounced todo write-back
+  const writeTodos = useCallback(
+    (layoutId: string, widgetId: string, items: TodoItem[]) => {
+      const key = `${layoutId}:${widgetId}`;
+      if (todoWriteDebounceRef.current[key]) clearTimeout(todoWriteDebounceRef.current[key]);
+      todoWriteDebounceRef.current[key] = setTimeout(() => {
+        fetch(
+          `/api/todos?publicDisplayId=${displayId}&layoutId=${layoutId}&widgetId=${widgetId}`,
+          {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ items }),
+          }
+        )
+          .catch(console.error)
+          .finally(() => {
+            pendingTodoWrite.current[key] = false;
+          });
+      }, 500);
+    },
+    [displayId]
+  );
+
+  const handleTodoWidgetChange = useCallback(
+    (widgetId: string, config: Record<string, unknown>) => {
+      const lid = activeLayoutId;
+      if (!lid || !config.items) return;
+      const key = `${lid}:${widgetId}`;
+      const items = config.items as TodoItem[];
+      setViewerTodoItemsByKey((prev) => {
+        pendingTodoWrite.current[key] = true;
+        writeTodos(lid, widgetId, items);
+        return { ...prev, [key]: items };
+      });
+    },
+    [activeLayoutId, writeTodos]
+  );
+
+  // Merge todo overrides into layouts for display
+  const mergedLayouts = useMemo(() => {
+    if (!config?.layouts) return [];
+    return config.layouts.map((layout) => ({
+      ...layout,
+      widgets: (layout.widgets ?? []).map((widget) => {
+        if (widget.type !== 'todo') return widget;
+        const key = `${layout.id}:${widget.id}`;
+        const override = viewerTodoItemsByKey[key];
+        if (!override) return widget;
+        return {
+          ...widget,
+          config: { ...widget.config, items: override },
+        } as WidgetDefinition;
+      }),
+    }));
+  }, [config?.layouts, viewerTodoItemsByKey]);
 
   // Auto-rotation
   const navigate = useCallback((direction: 'next' | 'prev') => {
@@ -230,18 +388,26 @@ export function DisplayViewer({ displayId }: Props) {
   const showDots = layouts.length > 1;
 
   const themeVars = config?.theme ? themeToVars(config.theme) : {};
+  const activeLayout = config?.layouts.find((l) => l.id === activeLayoutId);
+  const bgStyle = activeLayout ? getBackgroundStyle(activeLayout) : {};
 
   return (
     <div
       ref={rootRef}
       className={classes.root}
-      style={themeVars as React.CSSProperties}
+      style={{ ...themeVars, ...bgStyle } as React.CSSProperties}
     >
       {/* Render the dashboard read-only using local state, not the store */}
       {config && (
         <ViewerDashboard
-          layouts={config.layouts}
+          layouts={mergedLayouts}
           activeLayoutId={activeLayoutId}
+          stickyNotesEnabled={config.stickyNotesEnabled}
+          notesOverride={activeLayoutId ? viewerNotesByLayout[activeLayoutId] : undefined}
+          onAddNote={handleAddNote}
+          onRemoveNote={handleRemoveNote}
+          onUpdateNote={handleUpdateNote}
+          onWidgetConfigChange={handleTodoWidgetChange}
         />
       )}
       {showDots && (
@@ -276,9 +442,33 @@ export function DisplayViewer({ displayId }: Props) {
 function ViewerDashboard({
   layouts,
   activeLayoutId,
+  stickyNotesEnabled,
+  notesOverride,
+  onAddNote,
+  onRemoveNote,
+  onUpdateNote,
+  onWidgetConfigChange,
 }: {
   layouts: DashboardLayout[];
   activeLayoutId: string | null;
+  stickyNotesEnabled?: boolean;
+  notesOverride?: StickyNote[];
+  onAddNote?: (note: StickyNote) => void;
+  onRemoveNote?: (noteId: string) => void;
+  onUpdateNote?: (noteId: string, updates: Partial<StickyNote>) => void;
+  onWidgetConfigChange?: (widgetId: string, config: Record<string, unknown>) => void;
 }) {
-  return <Dashboard layoutId={activeLayoutId ?? undefined} isEditing={false} externalLayouts={layouts} />;
+  return (
+    <Dashboard
+      layoutId={activeLayoutId ?? undefined}
+      isEditing={false}
+      externalLayouts={layouts}
+      stickyNotesEnabled={stickyNotesEnabled}
+      notesOverride={notesOverride}
+      onAddNote={onAddNote}
+      onRemoveNote={onRemoveNote}
+      onUpdateNote={onUpdateNote}
+      onWidgetConfigChange={onWidgetConfigChange}
+    />
+  );
 }

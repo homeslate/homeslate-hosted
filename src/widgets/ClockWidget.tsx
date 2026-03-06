@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Box, Text, Stack, Switch, Select, Group } from '@mantine/core';
-import type { WidgetProps, WidgetConfig } from '../types/widget';
+import type { WidgetProps, WidgetConfig, TextAlign } from '../types/widget';
 import classes from './ClockWidget.module.css';
 
 export interface ClockConfig extends WidgetConfig {
@@ -9,6 +9,7 @@ export interface ClockConfig extends WidgetConfig {
   use24Hour: boolean;
   timezone: string;
   transparentBackground: boolean;
+  textAlign: TextAlign;
 }
 
 export function ClockWidget({ widget }: WidgetProps<ClockConfig>) {
@@ -16,15 +17,15 @@ export function ClockWidget({ widget }: WidgetProps<ClockConfig>) {
   const [fontSize, setFontSize] = useState(24);
   const [dateSize, setDateSize] = useState(12);
   const containerRef = useRef<HTMLDivElement>(null);
-  const { showSeconds, showDate, use24Hour, timezone, transparentBackground } = widget.config;
+  const { showSeconds, showDate, use24Hour, timezone, transparentBackground, textAlign = 'center' } = widget.config;
 
   const updateSizes = useCallback(() => {
     const el = containerRef.current;
     if (!el) return;
     const { width, height } = el.getBoundingClientRect();
     const base = Math.min(width, height);
-    setFontSize(Math.max(14, Math.min(160, base * 0.14)));
-    setDateSize(Math.max(9, Math.min(48, base * 0.045)));
+    setFontSize(Math.max(24, Math.min(160, base * 0.24)));
+    setDateSize(Math.max(10, Math.min(48, base * 0.07)));
   }, []);
 
   useEffect(() => {
@@ -68,12 +69,15 @@ export function ClockWidget({ widget }: WidgetProps<ClockConfig>) {
     return time.toLocaleDateString(undefined, options);
   };
 
+  const alignMap = { left: 'flex-start', center: 'center', right: 'flex-end' } as const;
+  const align = alignMap[textAlign];
+
   return (
     <Box
       ref={containerRef}
       className={`${classes.container} ${transparentBackground ? classes.transparent : ''}`}
     >
-      <Stack gap={0} align="center" justify="center" h="100%">
+      <Stack gap={0} align={align} justify="center" h="100%" style={{ textAlign, width: '100%' }}>
         <Text className={classes.time} style={{ fontSize: `${fontSize}px` }}>
           {formatTime()}
         </Text>
@@ -88,7 +92,7 @@ export function ClockWidget({ widget }: WidgetProps<ClockConfig>) {
 }
 
 export function ClockWidgetSettings({ widget, onConfigChange }: WidgetProps<ClockConfig>) {
-  const { showSeconds, showDate, use24Hour, timezone } = widget.config;
+  const { showSeconds, showDate, use24Hour, timezone, textAlign = 'center' } = widget.config;
 
   const timezones = [
     { value: 'local', label: 'Local Time' },
@@ -129,6 +133,16 @@ export function ClockWidgetSettings({ widget, onConfigChange }: WidgetProps<Cloc
         data={timezones}
         value={timezone}
         onChange={(value) => onConfigChange({ timezone: value || 'local' })}
+      />
+      <Select
+        label="Text Alignment"
+        data={[
+          { value: 'left', label: 'Left' },
+          { value: 'center', label: 'Center' },
+          { value: 'right', label: 'Right' },
+        ]}
+        value={textAlign}
+        onChange={(value) => onConfigChange({ textAlign: (value as TextAlign) || 'center' })}
       />
     </Stack>
   );

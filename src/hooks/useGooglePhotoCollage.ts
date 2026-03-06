@@ -5,24 +5,26 @@ import {
   getPickerSession,
   listPickedMediaItems,
   deletePickerSession,
-  fetchAuthedImageUrl,
+  storeImage,
+  loadStoredImage,
   imageItems,
   type PickerSession,
   type PickedMediaItem,
+  type StoredImage,
 } from '../services/googlePhotos';
 
 export type CollagePickerStatus =
-  | 'idle'      // no photos selected yet
+  | 'idle'      // no photos stored
   | 'pending'   // picker session open, waiting for user
-  | 'loading'   // fetching items / loading initial images
-  | 'ready'     // displaying photos
+  | 'uploading' // fetching picked items and uploading to Blobs
+  | 'ready'     // displaying stored photos
   | 'error';
 
 export interface CollagePhoto {
   objectUrl: string;
   filename: string;
   createTime?: string;
-  /** index into the imageItems array this slot is showing */
+  /** index into storedImages this slot is showing */
   itemIndex: number;
 }
 
@@ -31,15 +33,16 @@ interface UseGooglePhotoCollageOptions {
   slotCount: number;
   /** ms between individual photo rotations */
   rotationInterval?: number;
-  savedMediaItems?: PickedMediaItem[];
+  savedImages?: StoredImage[];
 }
 
 interface UseGooglePhotoCollageResult {
   isAuthenticated: boolean;
   pickerStatus: CollagePickerStatus;
+  uploadProgress: { done: number; total: number } | null;
   error: string | null;
   pickerUri: string | null;
-  mediaItems: PickedMediaItem[];
+  storedImages: StoredImage[];
   /** one entry per visible slot; null while initially loading */
   slots: (CollagePhoto | null)[];
   /** which slot index is currently transitioning out */
@@ -48,13 +51,9 @@ interface UseGooglePhotoCollageResult {
   clearSelection: () => void;
 }
 
-// How many images to keep pre-fetched beyond the visible slots.
+// How many images to keep pre-loaded beyond the visible slots.
 const PREFETCH_AHEAD = 3;
 const DEFAULT_POLL_INTERVAL_MS = 5000;
-
-function fetchThumbnail(baseUrl: string, token: string): Promise<string> {
-  return fetchAuthedImageUrl(baseUrl, token, 'w800-h600');
-}
 
 function pickRandomIndex(count: number, exclude: Set<number>): number | null {
   const available: number[] = [];
@@ -68,16 +67,17 @@ function pickRandomIndex(count: number, exclude: Set<number>): number | null {
 export function useGooglePhotoCollage({
   slotCount,
   rotationInterval = 10_000,
-  savedMediaItems = [],
+  savedImages = [],
 }: UseGooglePhotoCollageOptions): UseGooglePhotoCollageResult {
   const { accessToken, isAuthenticated } = useAuth();
 
   const [pickerStatus, setPickerStatus] = useState<CollagePickerStatus>(
-    savedMediaItems.length > 0 ? 'loading' : 'idle'
+    savedImages.length > 0 ? 'ready' : 'idle'
   );
+  const [uploadProgress, setUploadProgress] = useState<{ done: number; total: number } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pickerUri, setPickerUri] = useState<string | null>(null);
-  const [mediaItems, setMediaItems] = useState<PickedMediaItem[]>(savedMediaItems);
+  const [storedImages, setStoredImages] = useState<StoredImage[]>(savedImages);
   const [slots, setSlots] = useState<(CollagePhoto | null)[]>(
     Array(slotCount).fill(null)
   );
@@ -87,18 +87,16 @@ export function useGooglePhotoCollage({
   const pollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const rotationTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // ── Pre-fetch cache ───────────────────────────────────────────────────────
-  // Maps item index → blob URL for images that have been pre-fetched but are
-  // not yet displayed. When a slot rotates we pull from here instantly, then
-  // immediately kick off a background fetch for the next item to replace it.
+  // Pre-fetch cache: Maps item index → blob URL
   const prefetchCacheRef = useRef<Map<number, string>>(new Map());
-  // Tracks in-flight fetches so we don't double-fetch the same item.
   const prefetchingRef = useRef<Set<number>>(new Set());
 
   // Per-slot blob URLs (for revocation when a slot is replaced).
   const blobUrlsRef = useRef<(string | null)[]>(Array(slotCount).fill(null));
   // Which item index each slot is currently showing.
   const slotItemIndexRef = useRef<(number | null)[]>(Array(slotCount).fill(null));
+  // Last slotCount we filled (for re-filling when widget resizes and adds slots).
+  const lastFilledSlotCountRef = useRef<number | null>(null);
 
   // ── Cache helpers ─────────────────────────────────────────────────────────
 
@@ -125,17 +123,10 @@ export function useGooglePhotoCollage({
 
   // ── Pre-fetch logic ───────────────────────────────────────────────────────
 
-  /**
-   * Fetch `count` images that are not currently displayed and not already
-   * cached, storing blob URLs in prefetchCacheRef. Runs entirely in the
-   * background — never blocks the render path.
-   */
   const prefetchNext = useCallback(
-    (items: PickedMediaItem[], token: string, count: number) => {
-      const images = imageItems(items);
+    (images: StoredImage[], count: number) => {
       if (images.length === 0) return;
 
-      // Indices currently shown on screen or already cached/fetching.
       const occupied = new Set<number>([
         ...slotItemIndexRef.current.filter((i): i is number => i !== null),
         ...prefetchCacheRef.current.keys(),
@@ -143,7 +134,6 @@ export function useGooglePhotoCollage({
       ]);
 
       let fetched = 0;
-      // Walk items in a random order to avoid always pre-fetching the same ones.
       const shuffled = [...Array(images.length).keys()].sort(() => Math.random() - 0.5);
 
       for (const idx of shuffled) {
@@ -153,10 +143,9 @@ export function useGooglePhotoCollage({
         prefetchingRef.current.add(idx);
         fetched++;
 
-        void fetchThumbnail(images[idx].mediaFile.baseUrl, token)
+        void loadStoredImage(images[idx].key)
           .then((url) => {
             prefetchingRef.current.delete(idx);
-            // Only store if not already evicted (e.g. clearSelection called).
             prefetchCacheRef.current.set(idx, url);
           })
           .catch(() => {
@@ -170,17 +159,14 @@ export function useGooglePhotoCollage({
   // ── Assign a slot from cache (instant) or fetch (fallback) ───────────────
 
   const loadItemIntoSlot = useCallback(
-    async (slotIdx: number, items: PickedMediaItem[], token: string) => {
-      const images = imageItems(items);
+    async (slotIdx: number, images: StoredImage[]) => {
       if (images.length === 0) return;
 
-      // Prefer an item that's already in the pre-fetch cache.
       const currentIdx = slotItemIndexRef.current[slotIdx];
       const inUse = new Set<number>(
         slotItemIndexRef.current.filter((i): i is number => i !== null)
       );
 
-      // Try to pop a cached item that isn't already on screen.
       let chosenIdx: number | null = null;
       let objectUrl: string | null = null;
 
@@ -194,11 +180,10 @@ export function useGooglePhotoCollage({
       }
 
       if (chosenIdx === null || objectUrl === null) {
-        // Cache miss — fall back to a live fetch.
         const exclude = new Set(inUse);
         if (currentIdx !== null) exclude.add(currentIdx);
         chosenIdx = pickRandomIndex(images.length, exclude) ?? 0;
-        objectUrl = await fetchThumbnail(images[chosenIdx].mediaFile.baseUrl, token);
+        objectUrl = await loadStoredImage(images[chosenIdx].key);
       }
 
       revokeBlobAtSlot(slotIdx);
@@ -210,33 +195,27 @@ export function useGooglePhotoCollage({
         const next = [...prev];
         next[slotIdx] = {
           objectUrl: objectUrl!,
-          filename: item.mediaFile.filename,
+          filename: item.filename,
           createTime: item.createTime,
           itemIndex: chosenIdx!,
         };
         return next;
       });
 
-      // Immediately top up the cache to replace the slot we just consumed.
-      prefetchNext(items, token, 1);
+      prefetchNext(images, 1);
     },
     [revokeBlobAtSlot, prefetchNext]
   );
 
-  // ── Fill all slots in parallel, then start pre-fetching ──────────────────
+  // ── Fill all slots in parallel ────────────────────────────────────────────
 
   const fillAllSlots = useCallback(
-    async (items: PickedMediaItem[], token: string, count: number) => {
-      const images = imageItems(items);
+    async (images: StoredImage[], count: number) => {
       if (images.length === 0) return;
-
-      // Load all visible slots in parallel for fast initial render.
       await Promise.all(
-        Array.from({ length: count }, (_, i) => loadItemIntoSlot(i, items, token))
+        Array.from({ length: count }, (_, i) => loadItemIntoSlot(i, images))
       );
-
-      // Pre-fetch the next batch in the background.
-      prefetchNext(items, token, PREFETCH_AHEAD);
+      prefetchNext(images, PREFETCH_AHEAD);
     },
     [loadItemIntoSlot, prefetchNext]
   );
@@ -250,13 +229,36 @@ export function useGooglePhotoCollage({
     }
   }, []);
 
+  /**
+   * After the user picks photos, upload them all to Netlify Blobs and return
+   * StoredImage references.
+   */
+  const uploadPickedItems = useCallback(
+    async (items: PickedMediaItem[], token: string): Promise<StoredImage[]> => {
+      const images = imageItems(items);
+      const results: StoredImage[] = [];
+      setUploadProgress({ done: 0, total: images.length });
+
+      for (const item of images) {
+        const key = await storeImage(item.mediaFile.baseUrl, token, 'w800-h600');
+        results.push({ key, filename: item.mediaFile.filename, createTime: item.createTime });
+        setUploadProgress((prev) => prev ? { ...prev, done: prev.done + 1 } : null);
+      }
+
+      setUploadProgress(null);
+      return results;
+    },
+    []
+  );
+
   const fetchItemsAndFinish = useCallback(
     async (session: PickerSession, token: string) => {
-      setPickerStatus('loading');
+      setPickerStatus('uploading');
       try {
         const items = await listPickedMediaItems(token, session.id);
-        setMediaItems(items);
-        await fillAllSlots(items, token, slotCount);
+        const stored = await uploadPickedItems(items, token);
+        setStoredImages(stored);
+        await fillAllSlots(stored, slotCount);
         setPickerStatus('ready');
         setPickerUri(null);
         void deletePickerSession(token, session.id);
@@ -266,7 +268,7 @@ export function useGooglePhotoCollage({
         setPickerStatus('error');
       }
     },
-    [fillAllSlots, slotCount]
+    [uploadPickedItems, fillAllSlots, slotCount]
   );
 
   const pollSession = useCallback(
@@ -331,41 +333,44 @@ export function useGooglePhotoCollage({
       void deletePickerSession(accessToken, sessionRef.current.id);
       sessionRef.current = null;
     }
+    lastFilledSlotCountRef.current = null;
     slotItemIndexRef.current = Array(slotCount).fill(null);
-    setMediaItems([]);
+    setStoredImages([]);
     setSlots(Array(slotCount).fill(null));
     setTransitioningSlot(null);
     setPickerUri(null);
     setPickerStatus('idle');
+    setUploadProgress(null);
     setError(null);
   }, [accessToken, stopPolling, revokeAllBlobs, evictCache, slotCount]);
 
-  // ── Load saved media items on mount ──────────────────────────────────────
-
+  // ── Load saved images when we have images and null slots ────────────────────
+  // Runs on mount and when slotCount increases (e.g. after ResizeObserver updates
+  // dimensions). The initial dimensions are 400×300 → 2 slots, but the widget
+  // often resizes to show many more. Without this, newly added slots stay blank.
   useEffect(() => {
-    if (savedMediaItems.length > 0 && accessToken && slots.every((s) => s === null)) {
-      void fillAllSlots(savedMediaItems, accessToken, slotCount).then(() => {
-        setPickerStatus('ready');
-      });
-    }
-    // Only run when accessToken becomes available
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [accessToken]);
+    const images = storedImages.length > 0 ? storedImages : savedImages;
+    if (images.length === 0 || pickerStatus !== 'ready') return;
+    if (lastFilledSlotCountRef.current === slotCount) return;
+    lastFilledSlotCountRef.current = slotCount;
+    void fillAllSlots(images, slotCount).catch(() => {
+      setError('Failed to load stored photos');
+      setPickerStatus('error');
+    });
+  }, [savedImages, storedImages, pickerStatus, slotCount, fillAllSlots]);
 
-  // ── Auto-rotation: swap one random slot per tick from cache ───────────────
+  // ── Auto-rotation ─────────────────────────────────────────────────────────
 
   useEffect(() => {
     if (rotationTimerRef.current) clearInterval(rotationTimerRef.current);
 
-    const items = imageItems(mediaItems);
-    if (pickerStatus === 'ready' && items.length > 1 && accessToken) {
+    if (pickerStatus === 'ready' && storedImages.length > 1) {
       rotationTimerRef.current = setInterval(() => {
         const slotIdx = Math.floor(Math.random() * slotCount);
         setTransitioningSlot(slotIdx);
 
-        // After fade-out (400 ms), swap in the pre-fetched image instantly.
         setTimeout(() => {
-          void loadItemIntoSlot(slotIdx, mediaItems, accessToken!).then(() => {
+          void loadItemIntoSlot(slotIdx, storedImages).then(() => {
             setTransitioningSlot(null);
           });
         }, 400);
@@ -375,7 +380,7 @@ export function useGooglePhotoCollage({
     return () => {
       if (rotationTimerRef.current) clearInterval(rotationTimerRef.current);
     };
-  }, [pickerStatus, mediaItems, rotationInterval, accessToken, slotCount, loadItemIntoSlot]);
+  }, [pickerStatus, storedImages, rotationInterval, slotCount, loadItemIntoSlot]);
 
   // ── Re-sync slot count if slotCount changes ───────────────────────────────
 
@@ -403,20 +408,23 @@ export function useGooglePhotoCollage({
     };
   }, [stopPolling, revokeAllBlobs, evictCache]);
 
-  // ── Reset when signed out ─────────────────────────────────────────────────
+  // ── Reset picker state on sign-out (images still load from Blobs) ─────────
 
   useEffect(() => {
     if (!isAuthenticated) {
-      clearSelection();
+      stopPolling();
+      setPickerUri(null);
+      if (sessionRef.current) sessionRef.current = null;
     }
-  }, [isAuthenticated, clearSelection]);
+  }, [isAuthenticated, stopPolling]);
 
   return {
     isAuthenticated,
     pickerStatus,
+    uploadProgress,
     error,
     pickerUri,
-    mediaItems,
+    storedImages,
     slots,
     transitioningSlot,
     startPicker,

@@ -1,5 +1,7 @@
 import type { ComponentType } from 'react';
 
+export type TextAlign = 'left' | 'center' | 'right';
+
 export interface WidgetConfig {
   [key: string]: unknown;
 }
@@ -45,6 +47,14 @@ export interface WidgetRegistryEntry<T extends WidgetConfig = WidgetConfig> {
   };
 }
 
+export interface StickyNote {
+  id: string;
+  text: string;
+  x: number; // % of container width
+  y: number; // % of container height
+  color: string; // preset name ('yellow'|'pink'|'blue'|'green') or hex (#rrggbb)
+}
+
 export interface DashboardLayout {
   id: string;
   name: string;
@@ -52,5 +62,9 @@ export interface DashboardLayout {
   columns: number;
   rowHeight: number;
   hidden?: boolean;
+  backgroundImage?: string;
+  backgroundImageSize?: 'cover' | 'contain' | 'tile';
+  backgroundOverlayOpacity?: number;
+  notes?: StickyNote[];
 }
 

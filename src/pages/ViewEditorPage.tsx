@@ -12,7 +12,7 @@ import {
 import { IconArrowLeft, IconDeviceTv, IconLogout, IconCloudCheck } from '@tabler/icons-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useDashboardStore } from '../store/dashboardStore';
-import { useTheme, themeToVars } from '../contexts/ThemeContext';
+import { useTheme, themeToVars, getBackgroundStyle } from '../contexts/ThemeContext';
 import { Dashboard } from '../components/Dashboard';
 import { WidgetPanel } from '../components/WidgetPanel';
 import classes from './ViewEditorPage.module.css';
@@ -40,15 +40,19 @@ export function ViewEditorPage() {
       const d = state.displays.find((d) => d.id === selectedDisplayId);
       const prev = prevState.displays.find((d) => d.id === selectedDisplayId);
       if (!d || !prev) return;
-      if (d.layouts !== prev.layouts || d.theme !== prev.theme) {
-        const { layouts, activeLayoutId, rotationEnabled, rotationIntervalMs, theme: displayTheme } = d;
+      if (
+        d.layouts !== prev.layouts ||
+        d.theme !== prev.theme ||
+        d.stickyNotesEnabled !== prev.stickyNotesEnabled
+      ) {
+        const { layouts, activeLayoutId, rotationEnabled, rotationIntervalMs, theme: displayTheme, stickyNotesEnabled } = d;
         fetch(`/api/config?displayId=${selectedDisplayId}`, {
           method: 'PUT',
           headers: {
             Authorization: `Bearer ${accessToken}`,
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ layouts, activeLayoutId, rotationEnabled, rotationIntervalMs, theme: displayTheme }),
+          body: JSON.stringify({ layouts, activeLayoutId, rotationEnabled, rotationIntervalMs, theme: displayTheme, stickyNotesEnabled }),
         }).catch(console.error);
       }
     });
@@ -113,7 +117,7 @@ export function ViewEditorPage() {
 
       <div className={classes.body}>
         <WidgetPanel />
-        <main className={classes.main} style={themeToVars(theme) as React.CSSProperties}>
+        <main className={classes.main} style={{ ...themeToVars(theme), ...getBackgroundStyle(view) } as React.CSSProperties}>
           <Dashboard layoutId={selectedViewId ?? undefined} isEditing={true} />
         </main>
       </div>

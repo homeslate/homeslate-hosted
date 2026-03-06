@@ -97,3 +97,50 @@
   backdrop-filter: blur(4px);
 }
 
+/* ── Thumbnail grid (settings) ──────────────────────────────────────────────── */
+
+.thumbWrapper {
+  position: relative;
+  border-radius: var(--mantine-radius-sm);
+  overflow: hidden;
+  background: var(--mantine-color-dark-6);
+}
+
+.thumb {
+  display: block;
+  width: 100%;
+}
+
+.thumbPlaceholder {
+  height: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--mantine-color-dark-5);
+  border-radius: var(--mantine-radius-sm);
+}
+
+.thumbRemove {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+  z-index: 2;
+}
+
+.thumbWrapper:hover .thumbRemove {
+  opacity: 1;
+}
+
+.thumbCaption {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 0.25rem 0.375rem;
+  background: rgba(0, 0, 0, 0.55);
+  color: white;
+  font-size: 0.65rem;
+  line-height: 1.3;
+}

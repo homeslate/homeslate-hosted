@@ -1,3 +1,4 @@
+import type { CSSProperties } from 'react';
 import type { DisplayTheme } from '../types/theme';
 
 export function hexToRgb(hex: string): { r: number; g: number; b: number } | null {
@@ -9,6 +10,27 @@ export function hexToRgb(hex: string): { r: number; g: number; b: number } | nul
         b: parseInt(result[3], 16),
       }
     : null;
+}
+
+interface BackgroundImageConfig {
+  backgroundImage?: string;
+  backgroundImageSize?: 'cover' | 'contain' | 'tile';
+  backgroundOverlayOpacity?: number;
+}
+
+/**
+ * Returns inline background style when a background image is set on a view layout.
+ * Layers a semi-transparent dark overlay on top of the image so text stays readable.
+ * Returns an empty object when there is no background image (CSS class handles it).
+ */
+export function getBackgroundStyle(config: BackgroundImageConfig): CSSProperties {
+  if (!config.backgroundImage) return {};
+  const opacity = config.backgroundOverlayOpacity ?? 0.5;
+  const size = config.backgroundImageSize === 'tile' ? 'auto' : (config.backgroundImageSize ?? 'cover');
+  const repeat = config.backgroundImageSize === 'tile' ? 'repeat' : 'no-repeat';
+  return {
+    background: `linear-gradient(rgba(0,0,0,${opacity}), rgba(0,0,0,${opacity})), url(${config.backgroundImage}) center/${size} ${repeat}`,
+  };
 }
 
 /** Convert a DisplayTheme to CSS custom properties */

@@ -43,6 +43,18 @@ export interface GooglePhoto {
   height?: number;
 }
 
+/**
+ * A stored image reference — the blob key returned by /api/photo-store.
+ * Once stored, images are served from Netlify Blobs indefinitely with no
+ * dependency on Google Photos baseUrls (which expire after 60 minutes).
+ */
+export interface StoredImage {
+  /** Netlify Blobs key, derived from SHA-256(baseUrl|size). */
+  key: string;
+  filename: string;
+  createTime?: string;
+}
+
 // ─── Sessions ─────────────────────────────────────────────────────────────────
 
 export async function createPickerSession(token: string): Promise<PickerSession> {
@@ -127,32 +139,6 @@ export function isImageItem(item: PickedMediaItem): boolean {
   return item.mediaFile.mimeType.startsWith('image/');
 }
 
-/**
- * Fetches an authenticated Google Photos image via the server-side proxy and
- * returns a blob object URL safe for use in <img> src or CSS background-image.
- * The caller is responsible for calling URL.revokeObjectURL() when the URL is
- * no longer needed.
- *
- * The proxy (/api/photo-proxy) fetches lh3.googleusercontent.com server-side,
- * avoiding the CORS block that occurs when the browser sends an Authorization
- * header directly to Google's image CDN.
- */
-export async function fetchAuthedImageUrl(
-  baseUrl: string,
-  token: string,
-  size = 'w1920-h1080'
-): Promise<string> {
-  const proxyUrl = `/api/photo-proxy?url=${encodeURIComponent(baseUrl)}&size=${size}`;
-  const response = await fetch(proxyUrl, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  if (!response.ok) {
-    throw new Error(`Failed to fetch image: ${response.status}`);
-  }
-  const blob = await response.blob();
-  return URL.createObjectURL(blob);
-}
-
 export function imageItems(items: PickedMediaItem[]): PickedMediaItem[] {
   return items.filter(isImageItem);
 }
@@ -161,4 +147,52 @@ export function pickRandomItem(items: PickedMediaItem[]): PickedMediaItem | null
   const images = imageItems(items);
   if (images.length === 0) return null;
   return images[Math.floor(Math.random() * images.length)];
+}
+
+// ─── Blob storage ─────────────────────────────────────────────────────────────
+
+/**
+ * Upload a Google Photos image to Netlify Blobs via the authenticated
+ * photo-store endpoint. Returns a blob key that never expires.
+ *
+ * If the image was already uploaded the server returns the existing key
+ * immediately (the call is idempotent).
+ */
+export async function storeImage(
+  baseUrl: string,
+  token: string,
+  size = 'w800-h600'
+): Promise<string> {
+  const response = await fetch('/api/photo-store', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ baseUrl, size }),
+  });
+
+  if (!response.ok) {
+    const text = await response.text().catch(() => '');
+    throw new Error(`Failed to store image: ${response.status} ${text}`);
+  }
+
+  const data = await response.json() as { key: string };
+  return data.key;
+}
+
+/**
+ * Fetch a previously stored image from Netlify Blobs and return a blob
+ * object URL safe for use in <img> src or CSS background-image.
+ *
+ * The caller is responsible for calling URL.revokeObjectURL() when done.
+ * No authentication is required — the image is served publicly by key.
+ */
+export async function loadStoredImage(key: string): Promise<string> {
+  const response = await fetch(`/api/photo-proxy?key=${encodeURIComponent(key)}`);
+  if (!response.ok) {
+    throw new Error(`Failed to load image: ${response.status}`);
+  }
+  const blob = await response.blob();
+  return URL.createObjectURL(blob);
 }

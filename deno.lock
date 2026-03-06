@@ -11,12 +11,16 @@
   "workspace": {
     "packageJson": {
       "dependencies": [
+        "npm:@dnd-kit/core@^6.3.1",
+        "npm:@dnd-kit/sortable@10",
+        "npm:@dnd-kit/utilities@^3.2.2",
         "npm:@emotion/react@^11.14.0",
         "npm:@eslint/js@^9.39.1",
         "npm:@mantine/core@^8.3.10",
         "npm:@mantine/dates@^8.3.10",
         "npm:@mantine/hooks@^8.3.10",
         "npm:@neondatabase/serverless@^1.0.2",
+        "npm:@netlify/blobs@^10.7.0",
         "npm:@netlify/functions@^5.1.2",
         "npm:@tabler/icons-react@^3.35.0",
         "npm:@types/node@^24.10.1",
@@ -33,6 +37,7 @@
         "npm:postcss-preset-mantine@^1.18.0",
         "npm:postcss-simple-vars@^7.0.1",
         "npm:postcss@^8.5.6",
+        "npm:qrcode.react@^4.2.0",
         "npm:react-dom@^19.2.0",
         "npm:react-grid-layout@2",
         "npm:react@^19.2.0",

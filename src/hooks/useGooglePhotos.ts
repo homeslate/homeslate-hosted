@@ -5,38 +5,40 @@ import {
   getPickerSession,
   listPickedMediaItems,
   deletePickerSession,
-  fetchAuthedImageUrl,
+  storeImage,
+  loadStoredImage,
   imageItems,
-  pickRandomItem,
   type PickerSession,
   type PickedMediaItem,
+  type StoredImage,
 } from '../services/googlePhotos';
 
 export type PickerStatus =
-  | 'idle'      // no active session, no photos
-  | 'pending'   // session created, waiting for user to pick
-  | 'loading'   // mediaItemsSet=true, fetching items / loading image
-  | 'ready'     // displaying a photo
+  | 'idle'      // no photos stored
+  | 'pending'   // picker session open, waiting for user to pick
+  | 'uploading' // fetching picked items and uploading to Blobs
+  | 'ready'     // displaying stored photos
   | 'error';
 
-export interface GooglePhoto {
-  objectUrl: string; // blob URL — authenticated, safe for img/background-image
+export interface CurrentPhoto {
+  objectUrl: string; // blob URL — revoked when next photo loads
   filename: string;
   createTime?: string;
 }
 
 interface UseGooglePhotosOptions {
   refreshInterval?: number;       // ms between auto photo changes
-  savedMediaItems?: PickedMediaItem[];
+  savedImages?: StoredImage[];    // pre-stored images from widget config
 }
 
 interface UseGooglePhotosResult {
   isAuthenticated: boolean;
   pickerStatus: PickerStatus;
+  uploadProgress: { done: number; total: number } | null;
   error: string | null;
   pickerUri: string | null;
-  mediaItems: PickedMediaItem[];
-  currentPhoto: GooglePhoto | null;
+  storedImages: StoredImage[];
+  currentPhoto: CurrentPhoto | null;
   startPicker: () => Promise<void>;
   nextPhoto: () => void;
   clearSelection: () => void;
@@ -46,22 +48,22 @@ const DEFAULT_POLL_INTERVAL_MS = 5000;
 
 export function useGooglePhotos({
   refreshInterval = 5 * 60 * 1000,
-  savedMediaItems = [],
+  savedImages = [],
 }: UseGooglePhotosOptions = {}): UseGooglePhotosResult {
   const { accessToken, isAuthenticated } = useAuth();
 
   const [pickerStatus, setPickerStatus] = useState<PickerStatus>(
-    savedMediaItems.length > 0 ? 'loading' : 'idle'
+    savedImages.length > 0 ? 'ready' : 'idle'
   );
+  const [uploadProgress, setUploadProgress] = useState<{ done: number; total: number } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pickerUri, setPickerUri] = useState<string | null>(null);
-  const [mediaItems, setMediaItems] = useState<PickedMediaItem[]>(savedMediaItems);
-  const [currentPhoto, setCurrentPhoto] = useState<GooglePhoto | null>(null);
+  const [storedImages, setStoredImages] = useState<StoredImage[]>(savedImages);
+  const [currentPhoto, setCurrentPhoto] = useState<CurrentPhoto | null>(null);
 
   const sessionRef = useRef<PickerSession | null>(null);
   const pollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const photoTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  // Track the current blob URL so we can revoke it when it changes
   const currentBlobUrlRef = useRef<string | null>(null);
 
   // ── Blob URL helpers ─────────────────────────────────────────────────────
@@ -73,28 +75,18 @@ export function useGooglePhotos({
     }
   }, []);
 
-  const loadPhoto = useCallback(
-    async (item: PickedMediaItem, token: string) => {
-      revokeCurrent();
-      const objectUrl = await fetchAuthedImageUrl(item.mediaFile.baseUrl, token);
-      currentBlobUrlRef.current = objectUrl;
-      setCurrentPhoto({
-        objectUrl,
-        filename: item.mediaFile.filename,
-        createTime: item.createTime,
-      });
-    },
-    [revokeCurrent]
-  );
+  const loadPhoto = useCallback(async (image: StoredImage) => {
+    revokeCurrent();
+    const objectUrl = await loadStoredImage(image.key);
+    currentBlobUrlRef.current = objectUrl;
+    setCurrentPhoto({ objectUrl, filename: image.filename, createTime: image.createTime });
+  }, [revokeCurrent]);
 
-  const loadRandomPhoto = useCallback(
-    async (items: PickedMediaItem[], token: string) => {
-      const item = pickRandomItem(items);
-      if (!item) return;
-      await loadPhoto(item, token);
-    },
-    [loadPhoto]
-  );
+  const loadRandomPhoto = useCallback(async (images: StoredImage[]) => {
+    if (images.length === 0) return;
+    const item = images[Math.floor(Math.random() * images.length)];
+    await loadPhoto(item);
+  }, [loadPhoto]);
 
   // ── Polling helpers ──────────────────────────────────────────────────────
 
@@ -105,15 +97,39 @@ export function useGooglePhotos({
     }
   }, []);
 
+  /**
+   * After the user picks photos, upload them all to Netlify Blobs and return
+   * StoredImage references. Shows progress as images are uploaded.
+   */
+  const uploadPickedItems = useCallback(
+    async (items: PickedMediaItem[], token: string): Promise<StoredImage[]> => {
+      const images = imageItems(items);
+      const results: StoredImage[] = [];
+      setUploadProgress({ done: 0, total: images.length });
+
+      for (const item of images) {
+        const key = await storeImage(item.mediaFile.baseUrl, token, 'w1920-h1080');
+        results.push({ key, filename: item.mediaFile.filename, createTime: item.createTime });
+        setUploadProgress((prev) => prev ? { ...prev, done: prev.done + 1 } : null);
+      }
+
+      setUploadProgress(null);
+      return results;
+    },
+    []
+  );
+
   const fetchItemsAndFinish = useCallback(
     async (session: PickerSession, token: string) => {
-      setPickerStatus('loading');
+      setPickerStatus('uploading');
       try {
         const items = await listPickedMediaItems(token, session.id);
-        setMediaItems(items);
-        await loadRandomPhoto(items, token);
+        const stored = await uploadPickedItems(items, token);
+        setStoredImages(stored);
+        await loadRandomPhoto(stored);
         setPickerStatus('ready');
         setPickerUri(null);
+        // Delete the session now that we've permanently stored the images
         void deletePickerSession(token, session.id);
         sessionRef.current = null;
       } catch (err) {
@@ -121,7 +137,7 @@ export function useGooglePhotos({
         setPickerStatus('error');
       }
     },
-    [loadRandomPhoto]
+    [uploadPickedItems, loadRandomPhoto]
   );
 
   const pollSession = useCallback(
@@ -178,9 +194,9 @@ export function useGooglePhotos({
   }, [accessToken, pollSession]);
 
   const nextPhoto = useCallback(() => {
-    if (!accessToken || mediaItems.length === 0) return;
-    void loadRandomPhoto(mediaItems, accessToken);
-  }, [accessToken, mediaItems, loadRandomPhoto]);
+    if (storedImages.length === 0) return;
+    void loadRandomPhoto(storedImages);
+  }, [storedImages, loadRandomPhoto]);
 
   const clearSelection = useCallback(() => {
     stopPolling();
@@ -189,38 +205,40 @@ export function useGooglePhotos({
       void deletePickerSession(accessToken, sessionRef.current.id);
       sessionRef.current = null;
     }
-    setMediaItems([]);
+    setStoredImages([]);
     setCurrentPhoto(null);
     setPickerUri(null);
     setPickerStatus('idle');
+    setUploadProgress(null);
     setError(null);
   }, [accessToken, stopPolling, revokeCurrent]);
 
-  // ── Load saved media items on mount ───────────────────────────────────────
+  // ── Load saved images on mount ────────────────────────────────────────────
 
   useEffect(() => {
-    if (savedMediaItems.length > 0 && accessToken && !currentPhoto) {
-      void loadRandomPhoto(savedMediaItems, accessToken).then(() => {
-        setPickerStatus('ready');
+    if (savedImages.length > 0 && !currentPhoto) {
+      void loadRandomPhoto(savedImages).catch(() => {
+        setError('Failed to load stored photos');
+        setPickerStatus('error');
       });
     }
-  // Only run on mount / when accessToken first becomes available
+  // Only run on mount
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [accessToken]);
+  }, []);
 
   // ── Auto-rotate photos ────────────────────────────────────────────────────
 
   useEffect(() => {
     if (photoTimerRef.current) clearInterval(photoTimerRef.current);
-    if (pickerStatus === 'ready' && imageItems(mediaItems).length > 1 && accessToken) {
+    if (pickerStatus === 'ready' && storedImages.length > 1) {
       photoTimerRef.current = setInterval(() => {
-        void loadRandomPhoto(mediaItems, accessToken);
+        void loadRandomPhoto(storedImages);
       }, refreshInterval);
     }
     return () => {
       if (photoTimerRef.current) clearInterval(photoTimerRef.current);
     };
-  }, [pickerStatus, mediaItems, refreshInterval, accessToken, loadRandomPhoto]);
+  }, [pickerStatus, storedImages, refreshInterval, loadRandomPhoto]);
 
   // ── Cleanup on unmount ─────────────────────────────────────────────────────
 
@@ -233,19 +251,25 @@ export function useGooglePhotos({
   }, [stopPolling, revokeCurrent]);
 
   // ── Reset when user signs out ──────────────────────────────────────────────
-
+  // Note: stored images are still served from Blobs without auth, so we only
+  // reset the picker state, not the displayed photo.
   useEffect(() => {
     if (!isAuthenticated) {
-      clearSelection();
+      stopPolling();
+      setPickerUri(null);
+      if (sessionRef.current) {
+        sessionRef.current = null;
+      }
     }
-  }, [isAuthenticated, clearSelection]);
+  }, [isAuthenticated, stopPolling]);
 
   return {
     isAuthenticated,
     pickerStatus,
+    uploadProgress,
     error,
     pickerUri,
-    mediaItems,
+    storedImages,
     currentPhoto,
     startPicker,
     nextPhoto,

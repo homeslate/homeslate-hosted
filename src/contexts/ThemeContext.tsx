@@ -2,7 +2,7 @@ import { createContext, useContext } from 'react';
 import type { DisplayTheme } from '../types/theme';
 import { defaultTheme } from '../themes';
 import { useDashboardStore } from '../store/dashboardStore';
-import { themeToVars } from '../themes/utils';
+import { themeToVars, getBackgroundStyle } from '../themes/utils';
 
 interface ThemeContextValue {
   theme: DisplayTheme;
@@ -26,4 +26,4 @@ export function useTheme() {
   return useContext(ThemeContext);
 }
 
-export { themeToVars };
+export { themeToVars, getBackgroundStyle };
