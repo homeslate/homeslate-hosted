@@ -9,10 +9,11 @@ import {
   Breadcrumbs,
   Anchor,
 } from '@mantine/core';
-import { IconArrowLeft, IconDeviceTv, IconLogout, IconCloudCheck } from '@tabler/icons-react';
+import { IconArrowLeft, IconDeviceTv, IconLogout, IconCloudCheck, IconSun, IconMoon } from '@tabler/icons-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useDashboardStore } from '../store/dashboardStore';
 import { useTheme, themeToVars, getBackgroundStyle } from '../contexts/ThemeContext';
+import type { ColorMode } from '../types/theme';
 import { Dashboard } from '../components/Dashboard';
 import { WidgetPanel } from '../components/WidgetPanel';
 import classes from './ViewEditorPage.module.css';
@@ -26,8 +27,9 @@ export function ViewEditorPage() {
     selectDisplay,
     selectView,
     openPreview,
+    setColorMode,
   } = useDashboardStore();
-  const { theme } = useTheme();
+  const { theme, colorMode } = useTheme();
   const display = displays.find((d) => d.id === selectedDisplayId);
   const view = display?.layouts.find((l) => l.id === selectedViewId);
 
@@ -71,7 +73,7 @@ export function ViewEditorPage() {
   ];
 
   return (
-    <div className={classes.root} style={themeToVars(theme) as React.CSSProperties}>
+    <div className={classes.root} style={themeToVars(theme, colorMode) as React.CSSProperties}>
       <header className={classes.header}>
         <Group gap="sm">
           <Tooltip label="Back to display">
@@ -84,6 +86,17 @@ export function ViewEditorPage() {
         <Group gap="sm">
           <Tooltip label="Auto-save enabled">
             <IconCloudCheck size={18} opacity={0.5} />
+          </Tooltip>
+          <Tooltip label={colorMode === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}>
+            <ActionIcon
+              variant="subtle"
+              onClick={() => {
+                const next: ColorMode = colorMode === 'dark' ? 'light' : 'dark';
+                setColorMode(display.id, next);
+              }}
+            >
+              {colorMode === 'dark' ? <IconSun size={18} /> : <IconMoon size={18} />}
+            </ActionIcon>
           </Tooltip>
             <Tooltip label="Preview display">
               <ActionIcon
@@ -117,7 +130,7 @@ export function ViewEditorPage() {
 
       <div className={classes.body}>
         <WidgetPanel />
-        <main className={classes.main} style={{ ...themeToVars(theme), ...getBackgroundStyle(view) } as React.CSSProperties}>
+        <main className={classes.main} style={{ ...themeToVars(theme, colorMode), ...getBackgroundStyle(view) } as React.CSSProperties}>
           <Dashboard layoutId={selectedViewId ?? undefined} isEditing={true} />
         </main>
       </div>

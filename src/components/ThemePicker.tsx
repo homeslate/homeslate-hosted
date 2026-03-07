@@ -10,11 +10,13 @@ import {
   Accordion,
   SimpleGrid,
   Tooltip,
+  SegmentedControl,
+  Divider,
 } from '@mantine/core';
 import { IconCheck, IconPalette } from '@tabler/icons-react';
 import { PRESET_THEMES, FONT_OPTIONS } from '../themes/presets';
 import { defaultTheme } from '../themes';
-import type { DisplayTheme } from '../types/theme';
+import type { DisplayTheme, ThemeModeColors } from '../types/theme';
 import classes from './ThemePicker.module.css';
 
 interface ThemePickerProps {
@@ -22,9 +24,22 @@ interface ThemePickerProps {
   onChange: (theme: DisplayTheme) => void;
 }
 
+/** Derive a ThemeModeColors snapshot from the top-level theme fields (used as fallback) */
+function modeColorsFromTheme(theme: DisplayTheme): ThemeModeColors {
+  return {
+    background: theme.background,
+    surfaceBg: theme.surfaceBg,
+    surfaceBorder: theme.surfaceBorder,
+    textPrimary: theme.textPrimary,
+    textMuted: theme.textMuted,
+    glowColor: theme.glowColor,
+  };
+}
+
 export function ThemePicker({ value, onChange }: ThemePickerProps) {
   const current = value ?? defaultTheme;
   const [customizing, setCustomizing] = useState(false);
+  const [editingMode, setEditingMode] = useState<'dark' | 'light'>('dark');
 
   const isPreset = PRESET_THEMES.some((p) => p.id === current.id);
 
@@ -33,9 +48,28 @@ export function ThemePicker({ value, onChange }: ThemePickerProps) {
     setCustomizing(false);
   };
 
+  /** Update a top-level (mode-agnostic) field */
   const updateField = <K extends keyof DisplayTheme>(key: K, val: DisplayTheme[K]) => {
     onChange({ ...current, id: 'custom', name: 'Custom', [key]: val });
   };
+
+  /** Update a color field in the currently-edited mode's color block */
+  const updateModeColor = (key: keyof ThemeModeColors, val: string) => {
+    const themeWithId = { ...current, id: 'custom', name: 'Custom' };
+    if (editingMode === 'dark') {
+      const existing = current.darkColors ?? modeColorsFromTheme(current);
+      onChange({ ...themeWithId, darkColors: { ...existing, [key]: val } });
+    } else {
+      const existing = current.lightColors ?? modeColorsFromTheme(current);
+      onChange({ ...themeWithId, lightColors: { ...existing, [key]: val } });
+    }
+  };
+
+  /** Get the colors currently being edited for the selected mode */
+  const modeColors: ThemeModeColors =
+    editingMode === 'dark'
+      ? (current.darkColors ?? modeColorsFromTheme(current))
+      : (current.lightColors ?? modeColorsFromTheme(current));
 
   return (
     <Stack gap="md">
@@ -76,7 +110,7 @@ export function ThemePicker({ value, onChange }: ThemePickerProps) {
         value={customizing ? 'custom' : null}
         onChange={(v) => setCustomizing(v === 'custom')}
         styles={{
-          item: { background: 'var(--mantine-color-dark-7)', border: '1px solid var(--mantine-color-dark-5)' },
+          item: { background: 'var(--mantine-color-default)', border: '1px solid var(--mantine-color-default-border)' },
           label: { padding: '0.5rem 0' },
         }}
       >
@@ -86,15 +120,7 @@ export function ThemePicker({ value, onChange }: ThemePickerProps) {
           </Accordion.Control>
           <Accordion.Panel>
             <Stack gap="md">
-              <ColorInput
-                label="Background"
-                description="CSS background value - can be a gradient or solid color"
-                value={current.background}
-                onChange={(v) => updateField('background', v)}
-                size="sm"
-                placeholder="Enter CSS background value"
-              />
-
+              {/* Shared accent colors */}
               <Group grow>
                 <ColorInput
                   label="Primary accent"
@@ -111,42 +137,6 @@ export function ThemePicker({ value, onChange }: ThemePickerProps) {
                   format="hex"
                   size="sm"
                   swatches={PRESET_THEMES.map((p) => p.accentSecondary)}
-                />
-              </Group>
-
-              <Group grow>
-                <ColorInput
-                  label="Primary text"
-                  value={current.textPrimary}
-                  onChange={(v) => updateField('textPrimary', v)}
-                  format="hex"
-                  size="sm"
-                  swatches={PRESET_THEMES.map((p) => p.textPrimary)}
-                />
-                <ColorInput
-                  label="Muted text"
-                  value={current.textMuted}
-                  onChange={(v) => updateField('textMuted', v)}
-                  format="hex"
-                  size="sm"
-                  swatches={PRESET_THEMES.map((p) => p.textMuted)}
-                />
-              </Group>
-
-              <Group grow>
-                <ColorInput
-                  label="Widget background"
-                  value={current.surfaceBg}
-                  onChange={(v) => updateField('surfaceBg', v)}
-                  format="rgba"
-                  size="sm"
-                />
-                <ColorInput
-                  label="Widget border"
-                  value={current.surfaceBorder}
-                  onChange={(v) => updateField('surfaceBorder', v)}
-                  format="rgba"
-                  size="sm"
                 />
               </Group>
 
@@ -174,24 +164,94 @@ export function ThemePicker({ value, onChange }: ThemePickerProps) {
                 />
               </Group>
 
+              <Divider label="Mode colors" labelPosition="center" />
+
+              {/* Mode selector */}
+              <SegmentedControl
+                fullWidth
+                size="xs"
+                value={editingMode}
+                onChange={(v) => setEditingMode(v as 'dark' | 'light')}
+                data={[
+                  { label: 'Dark mode', value: 'dark' },
+                  { label: 'Light mode', value: 'light' },
+                ]}
+              />
+
+              <Text size="xs" c="dimmed">
+                These colors apply when the display is in {editingMode} mode.
+              </Text>
+
+              <ColorInput
+                label="Background"
+                description="CSS background value — can be a gradient or solid color"
+                value={modeColors.background}
+                onChange={(v) => updateModeColor('background', v)}
+                size="sm"
+                placeholder="Enter CSS background value"
+              />
+
+              <Group grow>
+                <ColorInput
+                  label="Primary text"
+                  value={modeColors.textPrimary}
+                  onChange={(v) => updateModeColor('textPrimary', v)}
+                  format="hex"
+                  size="sm"
+                  swatches={PRESET_THEMES.map((p) => p.textPrimary)}
+                />
+                <ColorInput
+                  label="Muted text"
+                  value={modeColors.textMuted}
+                  onChange={(v) => updateModeColor('textMuted', v)}
+                  format="hex"
+                  size="sm"
+                  swatches={PRESET_THEMES.map((p) => p.textMuted)}
+                />
+              </Group>
+
+              <Group grow>
+                <ColorInput
+                  label="Widget background"
+                  value={modeColors.surfaceBg}
+                  onChange={(v) => updateModeColor('surfaceBg', v)}
+                  format="rgba"
+                  size="sm"
+                />
+                <ColorInput
+                  label="Widget border"
+                  value={modeColors.surfaceBorder}
+                  onChange={(v) => updateModeColor('surfaceBorder', v)}
+                  format="rgba"
+                  size="sm"
+                />
+              </Group>
+
               {current.glowEnabled && (
                 <ColorInput
                   label="Glow color"
-                  value={current.glowColor}
-                  onChange={(v) => updateField('glowColor', v)}
+                  value={modeColors.glowColor}
+                  onChange={(v) => updateModeColor('glowColor', v)}
                   format="rgba"
                   size="sm"
                 />
               )}
 
+              <Divider />
+
               <Group justify="space-between">
                 <Stack gap={2}>
-                  <Text size="sm" fw={500}>Dark mode</Text>
-                  <Text size="xs" c="dimmed">Use dark color scheme for UI elements</Text>
+                  <Text size="sm" fw={500}>Default mode</Text>
+                  <Text size="xs" c="dimmed">Which mode this theme starts in</Text>
                 </Stack>
-                <Switch
-                  checked={current.isDark}
-                  onChange={(e) => updateField('isDark', e.currentTarget.checked)}
+                <SegmentedControl
+                  size="xs"
+                  value={current.isDark ? 'dark' : 'light'}
+                  onChange={(v) => updateField('isDark', v === 'dark')}
+                  data={[
+                    { label: 'Dark', value: 'dark' },
+                    { label: 'Light', value: 'light' },
+                  ]}
                 />
               </Group>
             </Stack>

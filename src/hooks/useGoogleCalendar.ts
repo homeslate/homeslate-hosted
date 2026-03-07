@@ -10,6 +10,10 @@ import {
   type ParsedCalendarEvent,
   type CalendarEventInput,
 } from '../services/googleCalendar';
+import {
+  useCalendarCacheStore,
+  calendarCacheKey,
+} from '../store/calendarCacheStore';
 
 interface UseGoogleCalendarOptions {
   // clientId is kept in the type for config backward-compatibility but is no
@@ -38,53 +42,76 @@ export function useGoogleCalendar({
   refreshInterval = 5 * 60 * 1000,
 }: UseGoogleCalendarOptions): UseGoogleCalendarResult {
   const { accessToken, isAuthenticated } = useAuth();
-  const [isLoading, setIsLoading] = useState(false);
+  const { getEntry, setEntry } = useCalendarCacheStore();
+  const cacheKey = calendarCacheKey(selectedCalendarIds, daysAhead);
+
+  // Seed local state from cache immediately so there's no loading flash on remount.
+  const cached = getEntry(cacheKey);
+  const [isLoading, setIsLoading] = useState(!cached);
   const [error, setError] = useState<string | null>(null);
-  const [calendars, setCalendars] = useState<GoogleCalendar[]>([]);
-  const [events, setEvents] = useState<ParsedCalendarEvent[]>([]);
+  const [calendars, setCalendars] = useState<GoogleCalendar[]>(cached?.calendars ?? []);
+  const [events, setEvents] = useState<ParsedCalendarEvent[]>(cached?.events ?? []);
 
   const fetchCalendars = useCallback(async () => {
     if (!accessToken) return;
     try {
-      setCalendars(await fetchCalendarList(accessToken));
+      const result = await fetchCalendarList(accessToken);
+      setCalendars(result);
+      // Update the calendars portion of the cache entry if one exists.
+      const existing = getEntry(cacheKey);
+      if (existing) {
+        setEntry(cacheKey, { ...existing, calendars: result });
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch calendars');
     }
-  }, [accessToken]);
+  }, [accessToken, cacheKey, getEntry, setEntry]);
 
-  const fetchEvents = useCallback(async () => {
+  const fetchEvents = useCallback(async (force = false) => {
     if (!accessToken || selectedCalendarIds.length === 0) {
       setEvents([]);
       return;
     }
+    // Skip the network call if the cache is still fresh and this isn't a forced refresh.
+    if (!force) {
+      const existing = getEntry(cacheKey);
+      if (existing && Date.now() - existing.fetchedAt < refreshInterval) {
+        setCalendars(existing.calendars);
+        setEvents(existing.events);
+        setIsLoading(false);
+        return;
+      }
+    }
     setIsLoading(true);
     setError(null);
     try {
-      setEvents(await fetchAllCalendarEvents(accessToken, selectedCalendarIds, daysAhead));
+      const [calendarList, eventList] = await Promise.all([
+        fetchCalendarList(accessToken),
+        fetchAllCalendarEvents(accessToken, selectedCalendarIds, daysAhead),
+      ]);
+      setCalendars(calendarList);
+      setEvents(eventList);
+      setEntry(cacheKey, { calendars: calendarList, events: eventList, fetchedAt: Date.now() });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch events');
     } finally {
       setIsLoading(false);
     }
-  }, [accessToken, selectedCalendarIds, daysAhead]);
+  }, [accessToken, selectedCalendarIds, daysAhead, cacheKey, refreshInterval, getEntry, setEntry]);
 
   useEffect(() => {
-    if (isAuthenticated) fetchCalendars();
-  }, [isAuthenticated, fetchCalendars]);
-
-  useEffect(() => {
-    if (isAuthenticated && selectedCalendarIds.length > 0) fetchEvents();
+    if (isAuthenticated && selectedCalendarIds.length > 0) void fetchEvents();
   }, [isAuthenticated, selectedCalendarIds, fetchEvents]);
 
   useEffect(() => {
     if (!isAuthenticated || selectedCalendarIds.length === 0) return;
-    const interval = setInterval(fetchEvents, refreshInterval);
+    const interval = setInterval(() => void fetchEvents(true), refreshInterval);
     return () => clearInterval(interval);
   }, [isAuthenticated, selectedCalendarIds, fetchEvents, refreshInterval]);
 
   const refresh = useCallback(() => {
-    fetchCalendars();
-    fetchEvents();
+    void fetchCalendars();
+    void fetchEvents(true);
   }, [fetchCalendars, fetchEvents]);
 
   const addEvent = useCallback(

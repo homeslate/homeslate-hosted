@@ -1,17 +1,20 @@
 .root {
-  min-height: 100vh;
-  background: var(--mantine-color-dark-8);
+  height: 100dvh;
+  min-height: 0;
+  background: var(--mantine-color-body);
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 
 .header {
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 0.75rem 1.5rem;
-  background: var(--mantine-color-dark-7);
-  border-bottom: 1px solid var(--mantine-color-dark-5);
+  background: var(--mantine-color-default);
+  border-bottom: 1px solid var(--mantine-color-default-border);
   height: 56px;
 }
 
@@ -20,15 +23,17 @@
 }
 
 .title {
-  color: var(--mantine-color-gray-1);
+  color: var(--mantine-color-text);
 }
 
 .main {
   flex: 1;
+  min-height: 0;
   padding: 2rem 1.5rem;
   max-width: 1200px;
   width: 100%;
   margin: 0 auto;
+  overflow-y: auto;
 }
 
 .empty {
@@ -37,12 +42,12 @@
   align-items: center;
   justify-content: center;
   padding: 4rem 0;
-  color: var(--mantine-color-dark-3);
+  color: var(--mantine-color-dimmed);
 }
 
 .card {
-  background: var(--mantine-color-dark-7);
-  border: 1px solid var(--mantine-color-dark-5);
+  background: var(--mantine-color-default);
+  border: 1px solid var(--mantine-color-default-border);
   transition: border-color 0.15s ease;
 }
 
@@ -56,5 +61,5 @@
 }
 
 .cardTitle {
-  color: var(--mantine-color-gray-1);
+  color: var(--mantine-color-text);
 }

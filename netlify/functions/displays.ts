@@ -42,7 +42,32 @@ export const handler: Handler = async (event) => {
     // column already exists or DDL not supported — ignore
   }
 
-  // GET /api/displays — list user's displays with embedded configs
+  // Ensure collaborator/invite tables exist (idempotent)
+  try {
+    await sql`
+      CREATE TABLE IF NOT EXISTS display_collaborators (
+        id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        display_id  UUID NOT NULL REFERENCES displays(id) ON DELETE CASCADE,
+        user_id     UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        created_at  TIMESTAMP NOT NULL DEFAULT NOW(),
+        UNIQUE (display_id, user_id)
+      )
+    `;
+    await sql`
+      CREATE TABLE IF NOT EXISTS display_invites (
+        id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        display_id  UUID NOT NULL REFERENCES displays(id) ON DELETE CASCADE,
+        invited_email TEXT NOT NULL,
+        invited_by  UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        created_at  TIMESTAMP NOT NULL DEFAULT NOW(),
+        UNIQUE (display_id, invited_email)
+      )
+    `;
+  } catch {
+    // tables already exist — ignore
+  }
+
+  // GET /api/displays — list user's owned displays + displays shared with them
   if (event.httpMethod === 'GET') {
     try {
       const rows = await sql`
@@ -53,12 +78,31 @@ export const handler: Handler = async (event) => {
           d.created_at,
           (d.passcode_hash IS NOT NULL) AS passcode_enabled,
           dc.config,
-          dc.updated_at AS config_updated_at
+          dc.updated_at AS config_updated_at,
+          (d.user_id = owner_u.id) AS is_owner
         FROM displays d
-        JOIN users u ON u.id = d.user_id
+        JOIN users owner_u ON owner_u.id = d.user_id
+        LEFT JOIN display_configs dc ON dc.display_id = d.id
+        WHERE owner_u.google_id = ${googleId}
+
+        UNION ALL
+
+        SELECT
+          d.id,
+          d.display_id,
+          d.name,
+          d.created_at,
+          (d.passcode_hash IS NOT NULL) AS passcode_enabled,
+          dc.config,
+          dc.updated_at AS config_updated_at,
+          false AS is_owner
+        FROM display_collaborators col
+        JOIN users u ON u.id = col.user_id
+        JOIN displays d ON d.id = col.display_id
         LEFT JOIN display_configs dc ON dc.display_id = d.id
         WHERE u.google_id = ${googleId}
-        ORDER BY d.created_at ASC
+
+        ORDER BY created_at ASC
       `;
       return { statusCode: 200, headers: CORS, body: JSON.stringify(rows) };
     } catch (err) {
@@ -104,26 +148,29 @@ export const handler: Handler = async (event) => {
       }
 
       // Build update: name only, passcode only, or both
+      // Allow owner OR collaborator to perform the update
+      const accessFilter = sql`(
+        d.user_id = (SELECT id FROM users WHERE google_id = ${googleId})
+        OR EXISTS (
+          SELECT 1 FROM display_collaborators dc2
+          JOIN users u2 ON u2.id = dc2.user_id
+          WHERE dc2.display_id = d.id AND u2.google_id = ${googleId}
+        )
+      )`;
       let rows;
       if (body.name?.trim() && 'passcode' in body) {
         const newHash = body.passcode !== null ? hashPin(body.passcode!) : null;
         rows = await sql`
           UPDATE displays d
           SET name = ${body.name.trim()}, passcode_hash = ${newHash}
-          FROM users u
-          WHERE d.id = ${id}::uuid
-            AND d.user_id = u.id
-            AND u.google_id = ${googleId}
+          WHERE d.id = ${id}::uuid AND ${accessFilter}
           RETURNING d.id, d.display_id, d.name, d.created_at, (d.passcode_hash IS NOT NULL) AS passcode_enabled
         `;
       } else if (body.name?.trim()) {
         rows = await sql`
           UPDATE displays d
           SET name = ${body.name.trim()}
-          FROM users u
-          WHERE d.id = ${id}::uuid
-            AND d.user_id = u.id
-            AND u.google_id = ${googleId}
+          WHERE d.id = ${id}::uuid AND ${accessFilter}
           RETURNING d.id, d.display_id, d.name, d.created_at, (d.passcode_hash IS NOT NULL) AS passcode_enabled
         `;
       } else {
@@ -131,10 +178,7 @@ export const handler: Handler = async (event) => {
         rows = await sql`
           UPDATE displays d
           SET passcode_hash = ${newHash}
-          FROM users u
-          WHERE d.id = ${id}::uuid
-            AND d.user_id = u.id
-            AND u.google_id = ${googleId}
+          WHERE d.id = ${id}::uuid AND ${accessFilter}
           RETURNING d.id, d.display_id, d.name, d.created_at, (d.passcode_hash IS NOT NULL) AS passcode_enabled
         `;
       }
@@ -155,7 +199,7 @@ export const handler: Handler = async (event) => {
       const id = event.queryStringParameters?.id;
       if (!id) return { statusCode: 400, headers: CORS, body: JSON.stringify({ error: 'Missing id' }) };
 
-      // Don't delete if it's the user's last display
+      // Don't delete if it's the user's last OWNED display
       const countRows = await sql`
         SELECT COUNT(*) AS cnt FROM displays d
         JOIN users u ON u.id = d.user_id
@@ -165,6 +209,7 @@ export const handler: Handler = async (event) => {
         return { statusCode: 409, headers: CORS, body: JSON.stringify({ error: 'Cannot delete last display' }) };
       }
 
+      // Only owner can delete
       await sql`
         DELETE FROM displays d
         USING users u

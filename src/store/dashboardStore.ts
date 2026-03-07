@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { v4 as uuidv4 } from 'uuid';
 import type { DashboardLayout, WidgetDefinition, WidgetConfig, StickyNote } from '../types/widget';
-import type { DisplayTheme } from '../types/theme';
+import type { ColorMode, DisplayTheme } from '../types/theme';
 
 export interface Display {
   id: string;        // displays.id (server UUID, primary key)
@@ -13,8 +13,11 @@ export interface Display {
   rotationEnabled: boolean;
   rotationIntervalMs: number;
   theme?: DisplayTheme;
+  /** Active color mode for the display. Defaults to the theme's isDark value when absent. */
+  colorMode?: ColorMode;
   passcodeEnabled?: boolean; // whether a viewer passcode is set on the server
   stickyNotesEnabled?: boolean;
+  isOwner?: boolean; // false when this is a display shared with the user by someone else
 }
 
 export interface RemoteDisplay {
@@ -22,12 +25,14 @@ export interface RemoteDisplay {
   display_id: string;
   name: string;
   passcode_enabled?: boolean;
+  is_owner?: boolean;
   config: {
     layouts: DashboardLayout[];
     activeLayoutId: string | null;
     rotationEnabled: boolean;
     rotationIntervalMs: number;
     theme?: DisplayTheme;
+    colorMode?: ColorMode;
     stickyNotesEnabled?: boolean;
   } | null;
 }
@@ -57,6 +62,7 @@ interface DashboardState {
   setRotationEnabled: (enabled: boolean) => void;
   setRotationIntervalMs: (ms: number) => void;
   setDisplayTheme: (displayId: string, theme: DisplayTheme) => void;
+  setColorMode: (displayId: string, mode: ColorMode) => void;
   setLayoutBackground: (layoutId: string, updates: { backgroundImage?: string; backgroundImageSize?: 'cover' | 'contain' | 'tile'; backgroundOverlayOpacity?: number }) => void;
   setPasscodeEnabled: (displayId: string, enabled: boolean) => void;
   setStickyNotesEnabled: (displayId: string, enabled: boolean) => void;
@@ -213,8 +219,10 @@ export const useDashboardStore = create<DashboardState>()(
             rotationEnabled: config.rotationEnabled ?? existing?.rotationEnabled ?? false,
             rotationIntervalMs: config.rotationIntervalMs ?? existing?.rotationIntervalMs ?? 30000,
             theme: config.theme ?? existing?.theme,
+            colorMode: config.colorMode ?? existing?.colorMode,
             passcodeEnabled: remote.passcode_enabled ?? existing?.passcodeEnabled ?? false,
             stickyNotesEnabled: config.stickyNotesEnabled ?? existing?.stickyNotesEnabled ?? false,
+            isOwner: remote.is_owner ?? existing?.isOwner ?? true,
           };
         });
         // Keep selectedDisplayId valid
@@ -309,6 +317,12 @@ export const useDashboardStore = create<DashboardState>()(
       setDisplayTheme: (displayId: string, theme: DisplayTheme) => {
         set((state) => ({
           displays: updateDisplay(state.displays, displayId, (d) => ({ ...d, theme })),
+        }));
+      },
+
+      setColorMode: (displayId: string, mode: ColorMode) => {
+        set((state) => ({
+          displays: updateDisplay(state.displays, displayId, (d) => ({ ...d, colorMode: mode })),
         }));
       },
 
@@ -607,7 +621,7 @@ export const useDashboardStore = create<DashboardState>()(
     }),
     {
       name: 'kitchen-display-storage',
-      version: 3,
+      version: 4,
       partialize: (state) => ({
         displays: state.displays,
         selectedDisplayId: state.selectedDisplayId,
@@ -615,7 +629,8 @@ export const useDashboardStore = create<DashboardState>()(
         // previewDisplayId is intentionally excluded — it's ephemeral UI state
       }),
       migrate: (persistedState: unknown, version: number) => {
-        if (version === 3) return persistedState;
+        if (version === 4) return persistedState;
+        if (version === 3) return persistedState; // colorMode field added (optional, no migration needed)
         if (version === 0 || version === 1) {
           // Migrate from old flat shape: {layouts, activeLayoutId, rotationEnabled, rotationIntervalMs, isEditing}
           const old = persistedState as {

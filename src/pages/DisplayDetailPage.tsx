@@ -33,6 +33,9 @@ import {
   IconGripVertical,
   IconEye,
   IconEyeOff,
+  IconUserPlus,
+  IconSun,
+  IconMoon,
 } from '@tabler/icons-react';
 import {
   DndContext,
@@ -50,10 +53,11 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { ShareDisplayModal } from '../components/ShareDisplayModal';
+import { InviteModal } from '../components/InviteModal';
 import { useAuth } from '../contexts/AuthContext';
 import { useDashboardStore } from '../store/dashboardStore';
 import { ThemePicker } from '../components/ThemePicker';
-import type { DisplayTheme } from '../types/theme';
+import type { ColorMode, DisplayTheme } from '../types/theme';
 import type { DashboardLayout } from '../types/widget';
 import classes from './DisplayDetailPage.module.css';
 
@@ -225,14 +229,19 @@ export function DisplayDetailPage() {
     setRotationEnabled,
     setRotationIntervalMs,
     setDisplayTheme,
+    setColorMode,
     setPasscodeEnabled,
     setStickyNotesEnabled,
     openPreview,
   } = useDashboardStore();
   const display = displays.find((d) => d.id === selectedDisplayId);
+  // Effective color mode for this display
+  const colorMode: ColorMode =
+    display?.colorMode ?? (display?.theme?.isDark === false ? 'light' : 'dark');
   const [editingName, setEditingName] = useState(false);
   const [nameValue, setNameValue] = useState(display?.name ?? '');
   const [shareOpen, setShareOpen] = useState(false);
+  const [inviteOpen, setInviteOpen] = useState(false);
   const [pinInput, setPinInput] = useState('');
   const [pinError, setPinError] = useState<string | null>(null);
   const [pinSaving, setPinSaving] = useState(false);
@@ -251,7 +260,7 @@ export function DisplayDetailPage() {
 
   const saveConfig = (overrides: Partial<typeof display> = {}) => {
     if (!accessToken) return;
-    const { layouts, activeLayoutId, rotationEnabled, rotationIntervalMs, theme: displayTheme, stickyNotesEnabled } = {
+    const { layouts, activeLayoutId, rotationEnabled, rotationIntervalMs, theme: displayTheme, colorMode: savedColorMode, stickyNotesEnabled } = {
       ...display,
       ...overrides,
     };
@@ -261,7 +270,7 @@ export function DisplayDetailPage() {
         Authorization: `Bearer ${accessToken}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ layouts, activeLayoutId, rotationEnabled, rotationIntervalMs, theme: displayTheme, stickyNotesEnabled }),
+      body: JSON.stringify({ layouts, activeLayoutId, rotationEnabled, rotationIntervalMs, theme: displayTheme, colorMode: savedColorMode, stickyNotesEnabled }),
     }).catch(console.error);
   };
 
@@ -364,6 +373,15 @@ export function DisplayDetailPage() {
       displayId={display.displayId}
       displayName={display.name}
     />
+    {(display.isOwner ?? true) && accessToken && (
+      <InviteModal
+        opened={inviteOpen}
+        onClose={() => setInviteOpen(false)}
+        displayId={display.id}
+        displayName={display.name}
+        accessToken={accessToken}
+      />
+    )}
 
     {/* Alert: cannot delete last view */}
     <Modal
@@ -479,9 +497,28 @@ export function DisplayDetailPage() {
           )}
         </Group>
         <Group gap="sm">
+          {(display.isOwner ?? true) && (
+            <Tooltip label="Invite collaborators">
+              <ActionIcon variant="subtle" onClick={() => setInviteOpen(true)}>
+                <IconUserPlus size={18} />
+              </ActionIcon>
+            </Tooltip>
+          )}
           <Tooltip label="Share / QR code">
             <ActionIcon variant="subtle" onClick={() => setShareOpen(true)}>
               <IconShare size={18} />
+            </ActionIcon>
+          </Tooltip>
+          <Tooltip label={colorMode === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}>
+            <ActionIcon
+              variant="subtle"
+              onClick={() => {
+                const next: ColorMode = colorMode === 'dark' ? 'light' : 'dark';
+                setColorMode(display.id, next);
+                saveConfig({ colorMode: next });
+              }}
+            >
+              {colorMode === 'dark' ? <IconSun size={18} /> : <IconMoon size={18} />}
             </ActionIcon>
           </Tooltip>
           <Tooltip label="Preview display">

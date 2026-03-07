@@ -1,7 +1,7 @@
 .root {
   width: 100vw;
   height: 100dvh;
-  background: var(--theme-bg, var(--mantine-color-dark-9));
+  background: var(--theme-bg, var(--mantine-color-body));
   overflow: hidden;
   position: relative;
   display: flex;
@@ -15,11 +15,11 @@
 .pinScreen {
   width: 100vw;
   height: 100vh;
-  background: var(--mantine-color-dark-9);
+  background: var(--mantine-color-body);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: white;
+  color: var(--mantine-color-text);
 }
 
 .root > :not(.dots) {
@@ -67,13 +67,46 @@
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.25);
+  background: var(--theme-text-muted, rgba(128, 128, 128, 0.5));
+  opacity: 0.4;
   border: none;
   cursor: pointer;
   padding: 0;
-  transition: background 0.2s ease;
+  transition: background 0.2s ease, opacity 0.2s ease;
 }
 
 .dotActive {
-  background: rgba(255, 255, 255, 0.85);
+  background: var(--theme-text, white);
+  opacity: 0.85;
+}
+
+/* ── Light/dark mode toggle ── */
+
+.colorModeToggle {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 20;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+/* Show on hover (desktop) */
+.root:hover .colorModeToggle {
+  opacity: 1;
+}
+
+/* Always show briefly after a touch interaction — achieved via active state */
+.root:focus-within .colorModeToggle,
+.colorModeToggle:focus-within {
+  opacity: 1;
+}
+
+.colorModeBtn {
+  color: var(--theme-text, white);
+  background: var(--theme-surface-bg, rgba(0, 0, 0, 0.4));
+  border: 1px solid var(--theme-surface-border, rgba(255, 255, 255, 0.15));
+  border-radius: 50%;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 }

@@ -59,14 +59,26 @@ html, body, #root {
 }
 
 body {
-  background: #0a0a0f;
-  background-image: 
-    radial-gradient(ellipse at 20% 20%, rgba(99, 102, 241, 0.15) 0%, transparent 50%),
-    radial-gradient(ellipse at 80% 80%, rgba(168, 85, 247, 0.1) 0%, transparent 50%),
-    radial-gradient(ellipse at 50% 50%, rgba(16, 185, 129, 0.05) 0%, transparent 50%);
+  /* Use the active theme background so the body matches the display — the
+     ThemeProvider injects --theme-bg as an inline style on the page root,
+     but the body itself needs a sensible fallback. */
+  background: var(--theme-bg, #0a0a0f);
   background-attachment: fixed;
   /* Prevent body-level overscroll glow/bounce on Android. */
   overscroll-behavior: none;
+}
+
+/* Light-mode scrollbar tones */
+[data-mantine-color-scheme='light'] ::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+[data-mantine-color-scheme='light'] ::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.15);
+}
+
+[data-mantine-color-scheme='light'] ::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.25);
 }
 
 .app {

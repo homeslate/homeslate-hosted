@@ -19,6 +19,7 @@ import {
   IconLogout,
   IconPlus,
   IconShare,
+  IconUsers,
 } from '@tabler/icons-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useDashboardStore } from '../store/dashboardStore';
@@ -139,9 +140,21 @@ export function DisplayListPage() {
                 >
                   <Stack gap={6}>
                     <Text fw={600} size="lg" className={classes.cardTitle}>{display.name}</Text>
-                    <Badge variant="light" color="indigo" size="sm" w="fit-content">
-                      {display.layouts.length} {display.layouts.length === 1 ? 'view' : 'views'}
-                    </Badge>
+                    <Group gap="xs">
+                      <Badge variant="light" color="indigo" size="sm" w="fit-content">
+                        {display.layouts.length} {display.layouts.length === 1 ? 'view' : 'views'}
+                      </Badge>
+                      {display.isOwner === false && (
+                        <Badge
+                          variant="light"
+                          color="teal"
+                          size="sm"
+                          leftSection={<IconUsers size={10} />}
+                        >
+                          shared with you
+                        </Badge>
+                      )}
+                    </Group>
                   </Stack>
                 </UnstyledButton>
                 <Group mt="md" justify="flex-end">

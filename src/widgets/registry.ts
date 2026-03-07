@@ -222,15 +222,15 @@ widgetRegistry.set('photo', photoEntry);
 // Google Photo Collage Widget
 const googlePhotoCollageEntry: WidgetRegistryEntry<GooglePhotoCollageConfig> = {
   type: 'google-photo-collage',
-  name: 'Google Photos Collage',
-  description: 'Display a masonry collage of Google Photos that rotates one photo at a time',
+  name: 'Photo Collage',
+  description: 'Masonry collage from URL, device uploads, or Google Photos — rotates one photo at a time',
   icon: IconLayoutGrid,
   component: GooglePhotoCollageWidget,
   settingsComponent: GooglePhotoCollageWidgetSettings,
   defaultConfig: {
     rotationInterval: 10,
     transparentBackground: false,
-    savedImages: [],
+    photos: [],
   },
   defaultLayout: {
     w: 5,

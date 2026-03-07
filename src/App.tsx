@@ -55,10 +55,12 @@ const mantineTheme = createTheme({
   },
 });
 
-function useCurrentDisplayTheme() {
+function useCurrentDisplayColorScheme(): 'light' | 'dark' {
   const { selectedDisplayId, displays } = useDashboardStore();
   const display = displays.find((d) => d.id === selectedDisplayId);
-  return display?.theme;
+  // colorMode overrides the theme's isDark default
+  if (display?.colorMode) return display.colorMode;
+  return display?.theme?.isDark === false ? 'light' : 'dark';
 }
 
 // If the URL has ?display=<uuid>, persist it so it survives OAuth redirects.
@@ -119,11 +121,10 @@ function AppInner() {
 }
 
 function App() {
-  const displayTheme = useCurrentDisplayTheme();
-  const colorScheme = displayTheme?.isDark === false ? 'light' : 'dark';
+  const colorScheme = useCurrentDisplayColorScheme();
 
   return (
-    <MantineProvider theme={mantineTheme} defaultColorScheme={colorScheme}>
+    <MantineProvider theme={mantineTheme} forceColorScheme={colorScheme}>
       <AuthProvider>
         <ThemeProvider>
           <AppInner />

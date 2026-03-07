@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
-import { PinInput, Stack, Text, Button } from '@mantine/core';
-import { IconLock } from '@tabler/icons-react';
+import { PinInput, Stack, Text, Button, ActionIcon, Tooltip } from '@mantine/core';
+import { IconLock, IconSun, IconMoon } from '@tabler/icons-react';
 import { useWakeLock } from '../hooks/useWakeLock';
 import type { DashboardLayout, StickyNote, WidgetDefinition } from '../types/widget';
 import type { TodoItem } from '../widgets/TodoWidget';
-import type { DisplayTheme } from '../types/theme';
+import type { ColorMode, DisplayTheme } from '../types/theme';
 import { themeToVars, getBackgroundStyle } from '../themes/utils';
 import { Dashboard } from './Dashboard';
 import classes from './DisplayViewer.module.css';
@@ -20,6 +20,7 @@ interface DisplayConfig {
   rotationEnabled: boolean;
   rotationIntervalMs: number;
   theme?: DisplayTheme;
+  colorMode?: ColorMode;
   stickyNotesEnabled?: boolean;
 }
 
@@ -32,6 +33,8 @@ const POLL_INTERVAL_MS = 30_000;
 export function DisplayViewer({ displayId }: Props) {
   const [config, setConfig] = useState<DisplayConfig | null>(null);
   const [activeLayoutId, setActiveLayoutId] = useState<string | null>(null);
+  // localColorMode is null when following the config value; set to override locally
+  const [localColorMode, setLocalColorMode] = useState<ColorMode | null>(null);
   const [passcodeRequired, setPasscodeRequired] = useState(false);
   const [passcode, setPasscode] = useState<string | null>(null);
   const [pinInput, setPinInput] = useState('');
@@ -387,7 +390,12 @@ export function DisplayViewer({ displayId }: Props) {
   const layouts = allLayouts.filter((l) => !l.hidden);
   const showDots = layouts.length > 1;
 
-  const themeVars = config?.theme ? themeToVars(config.theme) : {};
+  // Effective color mode: local toggle > config's colorMode > theme default
+  const effectiveColorMode: ColorMode =
+    localColorMode ??
+    config?.colorMode ??
+    (config?.theme?.isDark === false ? 'light' : 'dark');
+  const themeVars = config?.theme ? themeToVars(config.theme, effectiveColorMode) : {};
   const activeLayout = config?.layouts.find((l) => l.id === activeLayoutId);
   const bgStyle = activeLayout ? getBackgroundStyle(activeLayout) : {};
 
@@ -433,6 +441,26 @@ export function DisplayViewer({ displayId }: Props) {
             ))}
           </div>
         </>
+      )}
+      {/* Light/dark mode toggle — shown in the top-right corner */}
+      {config && (
+        <div className={classes.colorModeToggle}>
+          <Tooltip
+            label={effectiveColorMode === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+            position="left"
+            withArrow
+          >
+            <ActionIcon
+              variant="subtle"
+              size="md"
+              className={classes.colorModeBtn}
+              onClick={() => setLocalColorMode(effectiveColorMode === 'dark' ? 'light' : 'dark')}
+              aria-label="Toggle light/dark mode"
+            >
+              {effectiveColorMode === 'dark' ? <IconSun size={16} /> : <IconMoon size={16} />}
+            </ActionIcon>
+          </Tooltip>
+        </div>
       )}
     </div>
   );

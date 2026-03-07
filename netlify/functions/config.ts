@@ -32,11 +32,17 @@ export const handler: Handler = async (event) => {
       const config = JSON.parse(event.body ?? '{}');
       const sql = neon(process.env.DATABASE_URL!);
 
-      // Verify the display belongs to the authenticated user
+      // Verify the display belongs to the authenticated user OR they are a collaborator
       const check = await sql`
         SELECT d.id FROM displays d
         JOIN users u ON u.id = d.user_id
         WHERE d.id = ${displayId}::uuid AND u.google_id = ${googleId}
+        UNION ALL
+        SELECT d.id FROM display_collaborators dc
+        JOIN users u ON u.id = dc.user_id
+        JOIN displays d ON d.id = dc.display_id
+        WHERE d.id = ${displayId}::uuid AND u.google_id = ${googleId}
+        LIMIT 1
       `;
       if (check.length === 0) {
         return { statusCode: 403, headers: CORS, body: JSON.stringify({ error: 'Forbidden' }) };

@@ -1,6 +1,6 @@
 .root {
   min-height: 100vh;
-  background: var(--mantine-color-dark-8);
+  background: var(--mantine-color-body);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -14,8 +14,8 @@
 .card {
   width: 100%;
   max-width: 380px;
-  background: var(--mantine-color-dark-7);
-  border: 1px solid var(--mantine-color-dark-5);
+  background: var(--mantine-color-default);
+  border: 1px solid var(--mantine-color-default-border);
 }
 
 .iconWrap {
@@ -30,5 +30,5 @@
 }
 
 .title {
-  color: var(--mantine-color-gray-1);
+  color: var(--mantine-color-text);
 }

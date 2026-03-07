@@ -284,6 +284,14 @@ function PhotoThumbGrid({ photos, onRemove }: PhotoThumbGridProps) {
 
 // ─── Settings component ───────────────────────────────────────────────────────
 
+const INTERVAL_PRESETS = [
+  { value: 5, label: '5s' },
+  { value: 10, label: '10s' },
+  { value: 30, label: '30s' },
+  { value: 60, label: '1m' },
+  { value: 300, label: '5m' },
+];
+
 export function PhotoWidgetSettings({ widget, onConfigChange }: WidgetProps<PhotoConfig>) {
   const { photos, interval, transition, showCaption } = widget.config;
 
@@ -530,13 +538,44 @@ export function PhotoWidgetSettings({ widget, onConfigChange }: WidgetProps<Phot
       {/* Slideshow settings */}
       <Stack gap="sm" mt="xs">
         <Text size="sm" fw={500}>Slideshow</Text>
-        <NumberInput
-          label="Interval (seconds)"
-          min={3}
-          max={120}
-          value={interval}
-          onChange={(value) => onConfigChange({ interval: Number(value) || 10 })}
-        />
+        <Stack gap="xs">
+          <Text size="xs" c="dimmed">Interval</Text>
+          <Group gap="xs" wrap="wrap">
+            {INTERVAL_PRESETS.map(({ value, label }) => (
+              <Button
+                key={value}
+                size="xs"
+                variant={interval === value ? 'filled' : 'default'}
+                onClick={() => onConfigChange({ interval: value })}
+              >
+                {label}
+              </Button>
+            ))}
+            <Button
+              size="xs"
+              variant={!INTERVAL_PRESETS.some((p) => p.value === interval) ? 'filled' : 'default'}
+              onClick={() => {
+                if (INTERVAL_PRESETS.some((p) => p.value === interval)) {
+                  onConfigChange({ interval: 20 });
+                }
+              }}
+            >
+              Custom
+            </Button>
+          </Group>
+          {!INTERVAL_PRESETS.some((p) => p.value === interval) && (
+            <NumberInput
+              placeholder="Seconds"
+              min={3}
+              max={86400}
+              value={interval}
+              onChange={(value) => onConfigChange({ interval: Number(value) || 10 })}
+              size="sm"
+              w={160}
+              suffix=" s"
+            />
+          )}
+        </Stack>
         <Select
           label="Transition Effect"
           data={[

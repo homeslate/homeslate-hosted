@@ -22,12 +22,12 @@
 }
 
 .presetCard:hover .presetSwatch {
-  border-color: rgba(255, 255, 255, 0.2);
+  border-color: var(--mantine-color-default-border);
 }
 
 .selected .presetSwatch {
-  border-color: white;
-  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.4);
+  border-color: var(--mantine-color-indigo-5);
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.4);
 }
 
 .presetAccent {
@@ -47,8 +47,8 @@
   width: 18px;
   height: 18px;
   border-radius: 50%;
-  background: white;
-  color: #1a1b1e;
+  background: var(--mantine-color-indigo-5);
+  color: white;
   display: flex;
   align-items: center;
   justify-content: center;

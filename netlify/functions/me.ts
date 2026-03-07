@@ -63,6 +63,28 @@ export const handler: Handler = async (event) => {
       `;
     }
 
+    // Redeem any pending invites for this email (idempotent)
+    try {
+      const pendingInvites = await sql`
+        SELECT display_id FROM display_invites
+        WHERE LOWER(invited_email) = LOWER(${email})
+      `;
+      for (const invite of pendingInvites as { display_id: string }[]) {
+        await sql`
+          INSERT INTO display_collaborators (display_id, user_id)
+          VALUES (${invite.display_id}::uuid, ${user.id}::uuid)
+          ON CONFLICT (display_id, user_id) DO NOTHING
+        `;
+        await sql`
+          DELETE FROM display_invites
+          WHERE display_id = ${invite.display_id}::uuid
+            AND LOWER(invited_email) = LOWER(${email})
+        `;
+      }
+    } catch {
+      // If invite tables don't exist yet, skip gracefully
+    }
+
     return { statusCode: 200, headers: CORS, body: JSON.stringify(user) };
   } catch (err) {
     console.error('Auth error:', err);
