@@ -63,7 +63,7 @@ interface DashboardState {
   setRotationIntervalMs: (ms: number) => void;
   setDisplayTheme: (displayId: string, theme: DisplayTheme) => void;
   setColorMode: (displayId: string, mode: ColorMode) => void;
-  setLayoutBackground: (layoutId: string, updates: { backgroundImage?: string; backgroundImageSize?: 'cover' | 'contain' | 'tile'; backgroundOverlayOpacity?: number }) => void;
+  setLayoutBackground: (layoutId: string, updates: Partial<Pick<import('../types/widget').DashboardLayout, 'backgroundImage' | 'backgroundImageSize' | 'backgroundOverlayOpacity' | 'backgroundPhotos' | 'backgroundInterval'>>) => void;
   setPasscodeEnabled: (displayId: string, enabled: boolean) => void;
   setStickyNotesEnabled: (displayId: string, enabled: boolean) => void;
 
@@ -73,6 +73,7 @@ interface DashboardState {
   renameLayout: (id: string, name: string) => void;
   reorderLayouts: (orderedIds: string[]) => void;
   toggleLayoutHidden: (id: string) => void;
+  setLayoutIcon: (id: string, icon: string | undefined) => void;
   setActiveLayout: (id: string) => void;
   navigateToView: (direction: 'next' | 'prev') => void;
 
@@ -326,7 +327,7 @@ export const useDashboardStore = create<DashboardState>()(
         }));
       },
 
-      setLayoutBackground: (layoutId: string, updates: { backgroundImage?: string; backgroundImageSize?: 'cover' | 'contain' | 'tile'; backgroundOverlayOpacity?: number }) => {
+      setLayoutBackground: (layoutId: string, updates: Partial<Pick<import('../types/widget').DashboardLayout, 'backgroundImage' | 'backgroundImageSize' | 'backgroundOverlayOpacity' | 'backgroundPhotos' | 'backgroundInterval'>>) => {
         const { selectedDisplayId } = get();
         if (!selectedDisplayId) return;
         set((state) => ({
@@ -419,6 +420,17 @@ export const useDashboardStore = create<DashboardState>()(
           displays: updateDisplay(state.displays, selectedDisplayId, (d) => ({
             ...d,
             layouts: d.layouts.map((l) => (l.id === id ? { ...l, hidden: !l.hidden } : l)),
+          })),
+        }));
+      },
+
+      setLayoutIcon: (id: string, icon: string | undefined) => {
+        const { selectedDisplayId } = get();
+        if (!selectedDisplayId) return;
+        set((state) => ({
+          displays: updateDisplay(state.displays, selectedDisplayId, (d) => ({
+            ...d,
+            layouts: d.layouts.map((l) => (l.id === id ? { ...l, icon } : l)),
           })),
         }));
       },

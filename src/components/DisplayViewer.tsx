@@ -1,11 +1,13 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import { PinInput, Stack, Text, Button, ActionIcon, Tooltip } from '@mantine/core';
+import * as TablerIcons from '@tabler/icons-react';
 import { IconLock, IconSun, IconMoon } from '@tabler/icons-react';
 import { useWakeLock } from '../hooks/useWakeLock';
 import type { DashboardLayout, StickyNote, WidgetDefinition } from '../types/widget';
 import type { TodoItem } from '../widgets/TodoWidget';
 import type { ColorMode, DisplayTheme } from '../types/theme';
-import { themeToVars, getBackgroundStyle } from '../themes/utils';
+import { themeToVars } from '../themes/utils';
+import { BackgroundSlideshow } from './BackgroundSlideshow';
 import { Dashboard } from './Dashboard';
 import classes from './DisplayViewer.module.css';
 
@@ -397,14 +399,14 @@ export function DisplayViewer({ displayId }: Props) {
     (config?.theme?.isDark === false ? 'light' : 'dark');
   const themeVars = config?.theme ? themeToVars(config.theme, effectiveColorMode) : {};
   const activeLayout = config?.layouts.find((l) => l.id === activeLayoutId);
-  const bgStyle = activeLayout ? getBackgroundStyle(activeLayout) : {};
 
   return (
     <div
       ref={rootRef}
       className={classes.root}
-      style={{ ...themeVars, ...bgStyle } as React.CSSProperties}
+      style={themeVars as React.CSSProperties}
     >
+      {activeLayout && <BackgroundSlideshow layout={activeLayout} />}
       {/* Render the dashboard read-only using local state, not the store */}
       {config && (
         <ViewerDashboard
@@ -431,14 +433,29 @@ export function DisplayViewer({ displayId }: Props) {
             aria-label="Next view"
           />
           <div className={classes.dots}>
-            {layouts.map((l) => (
-              <button
-                key={l.id}
-                className={`${classes.dot} ${l.id === activeLayoutId ? classes.dotActive : ''}`}
-                onClick={() => setActiveLayoutId(l.id)}
-                aria-label={`Switch to ${l.name}`}
-              />
-            ))}
+            {layouts.map((l) => {
+              const IconComp = l.icon
+                ? (TablerIcons as Record<string, unknown>)[l.icon] as React.ComponentType<{ size?: number; stroke?: number }> | undefined
+                : undefined;
+              const isActive = l.id === activeLayoutId;
+              return IconComp ? (
+                <button
+                  key={l.id}
+                  className={`${classes.iconIndicator} ${isActive ? classes.iconIndicatorActive : ''}`}
+                  onClick={() => { setActiveLayoutId(l.id); resetRotation(); }}
+                  aria-label={`Switch to ${l.name}`}
+                >
+                  <IconComp size={20} stroke={isActive ? 2 : 1.5} />
+                </button>
+              ) : (
+                <button
+                  key={l.id}
+                  className={`${classes.dot} ${isActive ? classes.dotActive : ''}`}
+                  onClick={() => { setActiveLayoutId(l.id); resetRotation(); }}
+                  aria-label={`Switch to ${l.name}`}
+                />
+              );
+            })}
           </div>
         </>
       )}

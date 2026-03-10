@@ -17,6 +17,7 @@ const SCOPES =
 const TOKEN_KEY = 'gcal_access_token';
 const TOKEN_EXPIRY_KEY = 'gcal_token_expiry';
 const USER_KEY = 'auth_user';
+const REFRESH_TOKEN_KEY = 'gcal_refresh_token';
 
 export interface AuthUser {
   id: string;
@@ -86,26 +87,52 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  /**
-   * Request a new access token silently (no consent prompt).
-   * GIS will use a hidden iframe / existing Google session — no user interaction.
-   */
-  const silentRefresh = useCallback(() => {
-    if (!tokenClientRef.current) return;
-    tokenClientRef.current.callback = (response: {
-      access_token: string;
-      expires_in: number;
-      error?: string;
-    }) => {
-      if (response.error) {
-        console.warn('Silent token refresh failed:', response.error);
-        return;
+  const refreshAccessToken = useCallback(async (): Promise<string | null> => {
+    const refreshToken = localStorage.getItem(REFRESH_TOKEN_KEY);
+    if (!refreshToken) return null;
+    
+    try {
+      const res = await fetch('/api/refresh-token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refresh_token: refreshToken }),
+      });
+      if (!res.ok) {
+        console.warn('Token refresh failed:', res.status);
+        return null;
       }
-      storeToken(response.access_token, response.expires_in ?? 3600);
-    };
-    // prompt: '' → silent refresh, no consent UI shown
-    tokenClientRef.current.requestAccessToken({ prompt: '' });
+      const data = await res.json() as { access_token: string; expires_in: number };
+      storeToken(data.access_token, data.expires_in);
+      return data.access_token;
+    } catch (err) {
+      console.warn('Token refresh error:', err);
+      return null;
+    }
   }, [storeToken]);
+
+  /**
+   * Request a new access token using server-side refresh.
+   * This works without requiring Google Identity Services or browser session.
+   */
+  const silentRefresh = useCallback(async () => {
+    const newToken = await refreshAccessToken();
+    if (!newToken) {
+      console.warn('Server-side token refresh failed, will try GIS fallback');
+      if (!tokenClientRef.current) return;
+      tokenClientRef.current.callback = (response: {
+        access_token: string;
+        expires_in: number;
+        error?: string;
+      }) => {
+        if (response.error) {
+          console.warn('GIS silent token refresh failed:', response.error);
+          return;
+        }
+        storeToken(response.access_token, response.expires_in ?? 3600);
+      };
+      tokenClientRef.current.requestAccessToken({ prompt: '' });
+    }
+  }, [refreshAccessToken, storeToken]);
 
   // Load Google Identity Services and initialise the token client
   useEffect(() => {
@@ -117,6 +144,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       ).google.accounts.oauth2.initTokenClient({
         client_id: clientId,
         scope: SCOPES,
+        // @ts-expect-error - access_type is a valid Google OAuth option
+        access_type: 'offline',
         callback: () => {}, // replaced per-request in signIn() / silentRefresh()
       });
 
@@ -164,12 +193,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(TOKEN_EXPIRY_KEY);
     localStorage.removeItem(USER_KEY);
+    localStorage.removeItem(REFRESH_TOKEN_KEY);
   }, []);
 
   const fetchAndStoreUser = useCallback(
-    async (token: string): Promise<AuthUser> => {
+    async (token: string, refreshToken?: string): Promise<AuthUser> => {
       const res = await fetch('/api/me', {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: { 
+          Authorization: `Bearer ${token}`,
+          ...(refreshToken ? { 'X-Refresh-Token': refreshToken } : {}),
+        },
       });
       if (!res.ok) throw new Error('Failed to fetch user');
       const data = await res.json() as {
@@ -192,9 +225,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 
   // On mount: if we have a stored token but no user, re-validate it
+  // If token is expired, try to refresh it first
   useEffect(() => {
     if (accessToken && !user) {
-      fetchAndStoreUser(accessToken).catch(clearSession);
+      const expiry = localStorage.getItem(TOKEN_EXPIRY_KEY);
+      const isExpired = !expiry || Date.now() >= parseInt(expiry, 10);
+      
+      if (isExpired) {
+        refreshAccessToken()
+          .then((newToken) => {
+            if (newToken) {
+              return fetchAndStoreUser(newToken);
+            }
+            throw new Error('Token refresh failed');
+          })
+          .catch(clearSession);
+      } else {
+        fetchAndStoreUser(accessToken).catch(clearSession);
+      }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -204,6 +252,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIsLoading(true);
     tokenClientRef.current.callback = async (response: {
       access_token: string;
+      refresh_token?: string;
       expires_in: number;
       error?: string;
     }) => {
@@ -212,9 +261,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return;
       }
       const token = response.access_token;
+      if (response.refresh_token) {
+        localStorage.setItem(REFRESH_TOKEN_KEY, response.refresh_token);
+      }
       storeToken(token, response.expires_in ?? 3600);
       try {
-        await fetchAndStoreUser(token);
+        await fetchAndStoreUser(token, response.refresh_token);
       } catch (err) {
         console.error('Failed to fetch user after sign-in:', err);
       } finally {

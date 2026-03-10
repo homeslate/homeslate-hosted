@@ -1,4 +1,5 @@
 import type { ComponentType } from 'react';
+import type { Photo } from '../widgets/PhotoWidget';
 
 export type TextAlign = 'left' | 'center' | 'right';
 
@@ -58,13 +59,20 @@ export interface StickyNote {
 export interface DashboardLayout {
   id: string;
   name: string;
+  /** Optional Tabler icon name (e.g. "IconHome") used as the view indicator on the display. Falls back to a dot when not set. */
+  icon?: string;
   widgets: WidgetDefinition[];
   columns: number;
   rowHeight: number;
   hidden?: boolean;
+  /** Single background image URL (legacy / single-photo mode). When backgroundPhotos has entries, this is unused. */
   backgroundImage?: string;
   backgroundImageSize?: 'cover' | 'contain' | 'tile';
   backgroundOverlayOpacity?: number;
+  /** Multiple background photos for slideshow mode */
+  backgroundPhotos?: Photo[];
+  /** Seconds between background photo transitions */
+  backgroundInterval?: number;
   notes?: StickyNote[];
 }
 

@@ -39,16 +39,40 @@ export const handler: Handler = async (event) => {
 
     const sql = neon(process.env.DATABASE_URL!);
 
+    const refreshToken = event.headers['x-refresh-token'];
+
+    if (refreshToken) {
+      try {
+        await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS refresh_token TEXT`;
+      } catch {
+        // Column might already exist, ignore error
+      }
+    }
+
     // Upsert user (no display_id column anymore)
-    const rows = await sql`
-      INSERT INTO users (google_id, email, name, picture)
-      VALUES (${googleId}, ${email}, ${name}, ${picture})
-      ON CONFLICT (google_id) DO UPDATE SET
-        email = EXCLUDED.email,
-        name = EXCLUDED.name,
-        picture = EXCLUDED.picture
-      RETURNING id, email, name, picture
-    `;
+    let rows;
+    if (refreshToken) {
+      rows = await sql`
+        INSERT INTO users (google_id, email, name, picture, refresh_token)
+        VALUES (${googleId}, ${email}, ${name}, ${picture}, ${refreshToken})
+        ON CONFLICT (google_id) DO UPDATE SET
+          email = EXCLUDED.email,
+          name = EXCLUDED.name,
+          picture = EXCLUDED.picture,
+          refresh_token = COALESCE(NULLIF(EXCLUDED.refresh_token, ''), users.refresh_token)
+        RETURNING id, email, name, picture
+      `;
+    } else {
+      rows = await sql`
+        INSERT INTO users (google_id, email, name, picture)
+        VALUES (${googleId}, ${email}, ${name}, ${picture})
+        ON CONFLICT (google_id) DO UPDATE SET
+          email = EXCLUDED.email,
+          name = EXCLUDED.name,
+          picture = EXCLUDED.picture
+        RETURNING id, email, name, picture
+      `;
+    }
 
     const user = rows[0] as { id: string; email: string; name: string; picture: string };
 

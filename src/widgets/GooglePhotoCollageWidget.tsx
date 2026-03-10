@@ -378,7 +378,6 @@ const ROTATION_PRESETS = [
   { value: 30, label: '30s' },
   { value: 60, label: '1m' },
   { value: 300, label: '5m' },
-  { value: 600, label: '10m' },
 ];
 const ROTATION_PRESET_VALUES = ROTATION_PRESETS.map((p) => p.value);
 

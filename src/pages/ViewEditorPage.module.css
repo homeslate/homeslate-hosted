@@ -30,4 +30,5 @@
   overflow: hidden;
   min-width: 0;
   background: var(--theme-bg);
+  position: relative;
 }

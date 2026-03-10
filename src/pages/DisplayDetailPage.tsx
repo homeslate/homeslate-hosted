@@ -18,6 +18,7 @@ import {
   PinInput,
   Modal,
 } from '@mantine/core';
+import * as TablerIcons from '@tabler/icons-react';
 import {
   IconArrowLeft,
   IconPlus,
@@ -36,7 +37,9 @@ import {
   IconUserPlus,
   IconSun,
   IconMoon,
+  IconMoodSmile,
 } from '@tabler/icons-react';
+import { IconPickerModal } from '../components/IconPickerModal';
 import {
   DndContext,
   closestCenter,
@@ -78,15 +81,21 @@ interface ViewCardProps {
   onDelete: () => void;
   onRename: (name: string) => void;
   onToggleHidden: () => void;
+  onSetIcon: (icon: string | undefined) => void;
 }
 
-function SortableViewCard({ layout, onSelect, onDelete, onRename, onToggleHidden }: ViewCardProps) {
+function SortableViewCard({ layout, onSelect, onDelete, onRename, onToggleHidden, onSetIcon }: ViewCardProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: layout.id,
   });
   const [editing, setEditing] = useState(false);
   const [nameValue, setNameValue] = useState(layout.name);
+  const [iconPickerOpen, setIconPickerOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  const CurrentIcon = layout.icon
+    ? (TablerIcons as Record<string, unknown>)[layout.icon] as React.ComponentType<{ size?: number; stroke?: number }> | null
+    : null;
 
   const style: React.CSSProperties = {
     transform: CSS.Transform.toString(transform),
@@ -179,6 +188,16 @@ function SortableViewCard({ layout, onSelect, onDelete, onRename, onToggleHidden
         {/* Actions */}
         {!editing && (
           <Group gap={4} wrap="nowrap" style={{ flexShrink: 0 }}>
+            <Tooltip label={layout.icon ? 'Change view icon' : 'Set view icon'}>
+              <ActionIcon
+                variant={layout.icon ? 'light' : 'subtle'}
+                color={layout.icon ? 'blue' : 'gray'}
+                size="sm"
+                onClick={(e) => { e.stopPropagation(); setIconPickerOpen(true); }}
+              >
+                {CurrentIcon ? <CurrentIcon size={14} stroke={1.5} /> : <IconMoodSmile size={14} />}
+              </ActionIcon>
+            </Tooltip>
             <Tooltip label="Rename view">
               <ActionIcon variant="subtle" size="sm" onClick={startEditing}>
                 <IconEdit size={14} />
@@ -207,6 +226,12 @@ function SortableViewCard({ layout, onSelect, onDelete, onRename, onToggleHidden
           </Group>
         )}
       </Group>
+      <IconPickerModal
+        opened={iconPickerOpen}
+        onClose={() => setIconPickerOpen(false)}
+        currentIcon={layout.icon}
+        onSelect={onSetIcon}
+      />
     </Paper>
   );
 }
@@ -226,6 +251,7 @@ export function DisplayDetailPage() {
     renameLayout,
     reorderLayouts,
     toggleLayoutHidden,
+    setLayoutIcon,
     setRotationEnabled,
     setRotationIntervalMs,
     setDisplayTheme,
@@ -571,6 +597,7 @@ export function DisplayDetailPage() {
                     onDelete={() => handleDeleteView(layout.id)}
                     onRename={(name) => handleRenameView(layout.id, name)}
                     onToggleHidden={() => handleToggleHidden(layout.id)}
+                    onSetIcon={(icon) => setLayoutIcon(layout.id, icon)}
                   />
                 ))}
               </Stack>

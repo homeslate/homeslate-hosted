@@ -11,6 +11,7 @@ interface UseScoresOptions {
 interface UseScoresResult {
   games: SportGame[];
   allTeams: SportsTeam[];
+  leagueLogo?: string;
   isLoading: boolean;
   error: string | null;
   refresh: () => void;
@@ -28,6 +29,7 @@ export function useScores({
 }: UseScoresOptions): UseScoresResult {
   const [games, setGames] = useState<SportGame[]>([]);
   const [allTeams, setAllTeams] = useState<SportsTeam[]>([]);
+  const [leagueLogo, setLeagueLogo] = useState<string | undefined>(undefined);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -40,7 +42,8 @@ export function useScores({
     setError(null);
 
     try {
-      const { games: fetchedGames, teams } = await fetchScoreboard(leagueId);
+      const { games: fetchedGames, teams, leagueLogo: logo } = await fetchScoreboard(leagueId);
+      setLeagueLogo(logo);
 
       // Filter by favorite teams if specified
       const filtered =
@@ -76,5 +79,5 @@ export function useScores({
     return () => clearInterval(interval);
   }, [fetchData, refreshInterval, leagueId]);
 
-  return { games, allTeams, isLoading, error, refresh: fetchData };
+  return { games, allTeams, leagueLogo, isLoading, error, refresh: fetchData };
 }

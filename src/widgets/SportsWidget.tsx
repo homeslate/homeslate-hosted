@@ -141,7 +141,7 @@ export function SportsWidget({ widget }: WidgetProps<SportsConfig>) {
     [showAllGames, favoriteTeamIds]
   );
 
-  const { games, isLoading, error, refresh } = useScores({
+  const { games, leagueLogo, isLoading, error, refresh } = useScores({
     leagueId,
     favoriteTeamIds: teamFilter,
   });
@@ -192,7 +192,15 @@ export function SportsWidget({ widget }: WidgetProps<SportsConfig>) {
       {/* Header */}
       <div className={classes.header}>
         <Text className={classes.title}>
-          <IconTrophy size={16} />
+          {leagueLogo ? (
+            <img
+              src={leagueLogo}
+              alt={leagueName}
+              className={classes.leagueLogo}
+            />
+          ) : (
+            <IconTrophy size={16} />
+          )}
           {leagueName}
         </Text>
         <Group gap="xs">

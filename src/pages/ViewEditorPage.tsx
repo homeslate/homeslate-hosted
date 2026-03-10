@@ -12,7 +12,8 @@ import {
 import { IconArrowLeft, IconDeviceTv, IconLogout, IconCloudCheck, IconSun, IconMoon } from '@tabler/icons-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useDashboardStore } from '../store/dashboardStore';
-import { useTheme, themeToVars, getBackgroundStyle } from '../contexts/ThemeContext';
+import { useTheme, themeToVars } from '../contexts/ThemeContext';
+import { BackgroundSlideshow } from '../components/BackgroundSlideshow';
 import type { ColorMode } from '../types/theme';
 import { Dashboard } from '../components/Dashboard';
 import { WidgetPanel } from '../components/WidgetPanel';
@@ -130,7 +131,8 @@ export function ViewEditorPage() {
 
       <div className={classes.body}>
         <WidgetPanel />
-        <main className={classes.main} style={{ ...themeToVars(theme, colorMode), ...getBackgroundStyle(view) } as React.CSSProperties}>
+        <main className={classes.main} style={themeToVars(theme, colorMode) as React.CSSProperties}>
+          <BackgroundSlideshow layout={view} />
           <Dashboard layoutId={selectedViewId ?? undefined} isEditing={true} />
         </main>
       </div>

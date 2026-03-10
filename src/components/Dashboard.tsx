@@ -117,11 +117,7 @@ export function Dashboard({
   }, [onAddNote, handleAddNoteEditor]);
 
   if (!activeLayout) {
-    return (
-      <div className={classes.empty}>
-        <p>No layout selected</p>
-      </div>
-    );
+    return <div className={classes.empty} />;
   }
 
   const COLS = activeLayout.columns;
@@ -167,10 +163,7 @@ export function Dashboard({
   return (
     <div ref={ref} className={`${classes.container} ${isFading ? classes.fadeIn : ''}`}>
       {activeLayout.widgets.length === 0 ? (
-        <div className={classes.empty}>
-          <h2>Empty View</h2>
-          <p>Click a widget in the left panel to add it here</p>
-        </div>
+        <div className={classes.empty} />
       ) : (
         <div
           className={classes.gridWrapper}

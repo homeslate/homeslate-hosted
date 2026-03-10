@@ -59,7 +59,7 @@ export interface SportGame {
 const ESPN_BASE = 'https://site.api.espn.com/apis/site/v2/sports';
 
 // Simple in-memory cache keyed by leagueId
-const scoreboardCache = new Map<string, { data: SportGame[]; timestamp: number; teams: SportsTeam[] }>();
+const scoreboardCache = new Map<string, { data: SportGame[]; timestamp: number; teams: SportsTeam[]; leagueLogo?: string }>();
 const CACHE_DURATION = 2 * 60 * 1000; // 2 minutes
 
 function buildScoreboardUrl(leagueId: string, sport: string): string {
@@ -111,13 +111,13 @@ function parseGame(event: any): SportGame {
   };
 }
 
-export async function fetchScoreboard(leagueId: string): Promise<{ games: SportGame[]; teams: SportsTeam[] }> {
+export async function fetchScoreboard(leagueId: string): Promise<{ games: SportGame[]; teams: SportsTeam[]; leagueLogo?: string }> {
   const league = LEAGUES.find((l) => l.id === leagueId);
   if (!league) throw new Error(`Unknown league: ${leagueId}`);
 
   const cached = scoreboardCache.get(leagueId);
   if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
-    return { games: cached.data, teams: cached.teams };
+    return { games: cached.data, teams: cached.teams, leagueLogo: cached.leagueLogo };
   }
 
   const url = buildScoreboardUrl(leagueId, league.sport);
@@ -127,6 +127,13 @@ export async function fetchScoreboard(leagueId: string): Promise<{ games: SportG
   const data = await response.json();
 
   const games: SportGame[] = (data.events ?? []).map(parseGame);
+
+  // Extract league logo from response (prefer dark variant for display on dark backgrounds)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const logos: any[] = data.leagues?.[0]?.logos ?? [];
+  const darkLogo = logos.find((l: any) => l.rel?.includes('dark'))?.href;
+  const defaultLogo = logos.find((l: any) => l.rel?.includes('default'))?.href ?? logos[0]?.href;
+  const leagueLogo: string | undefined = darkLogo ?? defaultLogo;
 
   // Collect unique teams from this scoreboard response
   const teamMap = new Map<string, SportsTeam>();
@@ -141,8 +148,8 @@ export async function fetchScoreboard(leagueId: string): Promise<{ games: SportG
     a.displayName.localeCompare(b.displayName)
   );
 
-  scoreboardCache.set(leagueId, { data: games, timestamp: Date.now(), teams });
-  return { games, teams };
+  scoreboardCache.set(leagueId, { data: games, timestamp: Date.now(), teams, leagueLogo });
+  return { games, teams, leagueLogo };
 }
 
 // ---------------------------------------------------------------------------
