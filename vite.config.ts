@@ -3,6 +3,20 @@ import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 
 export default defineConfig(({ command }) => ({
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'vendor-react': ['react', 'react-dom'],
+          'vendor-mantine': ['@mantine/core', '@mantine/hooks', '@mantine/dates'],
+          'vendor-icons': ['@tabler/icons-react'],
+          'vendor-dnd': ['@dnd-kit/core', '@dnd-kit/sortable', '@dnd-kit/utilities'],
+          'vendor-grid': ['react-grid-layout'],
+        },
+      },
+    },
+    chunkSizeWarningLimit: 600,
+  },
   server: {
     host: true,
     port: 5173,
@@ -56,6 +70,8 @@ export default defineConfig(({ command }) => ({
         ],
       },
       workbox: {
+        // Main chunk can exceed 2 MiB; allow up to 4 MiB for precache
+        maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
         // Pre-cache all built assets
         globPatterns: ['**/*.{js,css,html,ico,png,svg,webp,woff,woff2}'],
         runtimeCaching: [
