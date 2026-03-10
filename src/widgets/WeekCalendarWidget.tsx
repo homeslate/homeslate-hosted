@@ -3,7 +3,8 @@ import {
   Text, Stack, Select, Group, MultiSelect, Paper, Button, NumberInput, Badge,
   Modal, TextInput, Textarea, Switch, Alert, ActionIcon, ScrollArea,
 } from '@mantine/core';
-import { IconBrandGoogle, IconCalendarWeek, IconPlus, IconCheck } from '@tabler/icons-react';
+import { IconBrandGoogle, IconPlus, IconCheck } from '@tabler/icons-react';
+import { GoogleCalendarEmptyState } from '../components/GoogleCalendarEmptyState';
 import dayjs from 'dayjs';
 import type { WidgetProps, WidgetConfig } from '../types/widget';
 import { useGoogleCalendar } from '../hooks/useGoogleCalendar';
@@ -293,18 +294,16 @@ export function WeekCalendarWidget({ widget }: WidgetProps<WeekCalendarConfig>) 
 
   if (!isAuthenticated) {
     return (
-      <div className={classes.emptyState}>
-        <IconBrandGoogle size={36} opacity={0.3} />
-        <Text size="sm" c="dimmed">Sign in using the header to view your calendar</Text>
+      <div className={`${classes.container} ${transparentBackground ? classes.transparent : ''}`}>
+        <GoogleCalendarEmptyState variant="signIn" className={classes.emptyState} />
       </div>
     );
   }
 
   if (selectedCalendarIds.length === 0) {
     return (
-      <div className={classes.emptyState}>
-        <IconCalendarWeek size={36} opacity={0.3} />
-        <Text size="sm" c="dimmed">Select calendars in widget settings</Text>
+      <div className={`${classes.container} ${transparentBackground ? classes.transparent : ''}`}>
+        <GoogleCalendarEmptyState variant="noCalendars" className={classes.emptyState} />
       </div>
     );
   }

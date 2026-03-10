@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Group,
   Text,
@@ -21,12 +22,11 @@ import classes from './ViewEditorPage.module.css';
 
 export function ViewEditorPage() {
   const { user, accessToken, signOut } = useAuth();
+  const navigate = useNavigate();
   const {
     displays,
     selectedDisplayId,
     selectedViewId,
-    selectDisplay,
-    selectView,
     openPreview,
     setColorMode,
   } = useDashboardStore();
@@ -67,7 +67,7 @@ export function ViewEditorPage() {
   if (!display || !view) return null;
 
   const breadcrumbs = [
-    <Anchor key="display" size="sm" onClick={() => selectDisplay(selectedDisplayId)} style={{ cursor: 'pointer' }}>
+    <Anchor key="display" size="sm" onClick={() => navigate(`/displays/${display.id}`)} style={{ cursor: 'pointer' }}>
       {display.name}
     </Anchor>,
     <Text key="view" size="sm" c="dimmed">{view.name}</Text>,
@@ -78,7 +78,7 @@ export function ViewEditorPage() {
       <header className={classes.header}>
         <Group gap="sm">
           <Tooltip label="Back to display">
-            <ActionIcon variant="subtle" onClick={() => selectView(null)}>
+            <ActionIcon variant="subtle" onClick={() => navigate(`/displays/${display.id}`)}>
               <IconArrowLeft size={18} />
             </ActionIcon>
           </Tooltip>

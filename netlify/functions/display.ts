@@ -1,6 +1,7 @@
 import type { Handler } from '@netlify/functions';
-import { neon } from '@neondatabase/serverless';
 import { createHash } from 'crypto';
+import { eq } from 'drizzle-orm';
+import { getDb, displayConfigs, displays } from '../../src/db';
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -25,16 +26,20 @@ export const handler: Handler = async (event) => {
     return { statusCode: 400, headers: CORS, body: JSON.stringify({ error: 'Missing display id' }) };
   }
 
-  const sql = neon(process.env.DATABASE_URL!);
-  try {
-    const rows = await sql`
-      SELECT dc.config, dc.updated_at, d.passcode_hash
-      FROM display_configs dc
-      JOIN displays d ON d.id = dc.display_id
-      WHERE d.display_id = ${displayId}::uuid
-    `;
+  const db = getDb();
 
-    if (rows.length === 0) {
+  try {
+    const [row] = await db
+      .select({
+        config: displayConfigs.config,
+        updatedAt: displayConfigs.updatedAt,
+        passcodeHash: displays.passcodeHash,
+      })
+      .from(displayConfigs)
+      .innerJoin(displays, eq(displays.id, displayConfigs.displayId))
+      .where(eq(displays.displayId, displayId));
+
+    if (!row) {
       return {
         statusCode: 200,
         headers: CORS,
@@ -42,11 +47,11 @@ export const handler: Handler = async (event) => {
       };
     }
 
-    const row = rows[0] as { config: unknown; updated_at: string; passcode_hash: string | null };
+    const { config, updatedAt, passcodeHash } = row;
 
-    if (row.passcode_hash) {
+    if (passcodeHash) {
       const provided = event.queryStringParameters?.passcode;
-      if (!provided || hashPin(provided) !== row.passcode_hash) {
+      if (!provided || hashPin(provided) !== passcodeHash) {
         return {
           statusCode: 401,
           headers: CORS,
@@ -58,7 +63,7 @@ export const handler: Handler = async (event) => {
     return {
       statusCode: 200,
       headers: CORS,
-      body: JSON.stringify({ config: row.config, updated_at: row.updated_at }),
+      body: JSON.stringify({ config, updated_at: updatedAt }),
     };
   } catch (err) {
     console.error('Display fetch error:', err);

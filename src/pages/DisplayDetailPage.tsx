@@ -1,4 +1,5 @@
 import { useState, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Group,
   Text,
@@ -240,11 +241,10 @@ function SortableViewCard({ layout, onSelect, onDelete, onRename, onToggleHidden
 
 export function DisplayDetailPage() {
   const { user, accessToken, signOut } = useAuth();
+  const navigate = useNavigate();
   const {
     displays,
     selectedDisplayId,
-    selectDisplay,
-    selectView,
     renameDisplay,
     createLayout,
     deleteLayout,
@@ -487,7 +487,7 @@ export function DisplayDetailPage() {
       <header className={classes.header}>
         <Group gap="sm">
           <Tooltip label="Back to displays">
-            <ActionIcon variant="subtle" onClick={() => selectDisplay(null)}>
+            <ActionIcon variant="subtle" onClick={() => navigate('/displays')}>
               <IconArrowLeft size={18} />
             </ActionIcon>
           </Tooltip>
@@ -593,7 +593,7 @@ export function DisplayDetailPage() {
                   <SortableViewCard
                     key={layout.id}
                     layout={layout}
-                    onSelect={() => selectView(layout.id)}
+                    onSelect={() => navigate(`/displays/${display.id}/views/${layout.id}`)}
                     onDelete={() => handleDeleteView(layout.id)}
                     onRename={(name) => handleRenameView(layout.id, name)}
                     onToggleHidden={() => handleToggleHidden(layout.id)}

@@ -28,6 +28,7 @@ import {
   IconPlus,
   IconCheck,
 } from '@tabler/icons-react';
+import { GoogleCalendarEmptyState } from '../components/GoogleCalendarEmptyState';
 import type { WidgetProps, WidgetConfig } from '../types/widget';
 import { useGoogleCalendar } from '../hooks/useGoogleCalendar';
 import { useAuth } from '../contexts/AuthContext';
@@ -211,12 +212,7 @@ export function GoogleCalendarMonthWidget({ widget }: WidgetProps<GoogleCalendar
   if (!isAuthenticated) {
     return (
       <Box className={`${classes.container} ${transparentBackground ? classes.transparent : ''}`}>
-        <div className={classes.empty}>
-          <IconBrandGoogle size={40} opacity={0.3} />
-          <Text size="sm" c="dimmed" ta="center">
-            Sign in using the header to view your calendar
-          </Text>
-        </div>
+        <GoogleCalendarEmptyState variant="signIn" className={classes.empty} />
       </Box>
     );
   }
@@ -224,12 +220,7 @@ export function GoogleCalendarMonthWidget({ widget }: WidgetProps<GoogleCalendar
   if (selectedCalendarIds.length === 0) {
     return (
       <Box className={`${classes.container} ${transparentBackground ? classes.transparent : ''}`}>
-        <div className={classes.empty}>
-          <IconCalendarEvent size={40} opacity={0.3} />
-          <Text size="sm" c="dimmed" ta="center">
-            Select calendars in widget settings
-          </Text>
-        </div>
+        <GoogleCalendarEmptyState variant="noCalendars" className={classes.empty} />
       </Box>
     );
   }
@@ -305,7 +296,7 @@ export function GoogleCalendarMonthWidget({ widget }: WidgetProps<GoogleCalendar
           </ActionIcon>
         </div>
         {selectedDateEvents.length === 0 ? (
-          <Text size="xs" c="dimmed" ta="center" py="sm">
+          <Text size="sm" c="dimmed" ta="center" py="xl">
             No events
           </Text>
         ) : (

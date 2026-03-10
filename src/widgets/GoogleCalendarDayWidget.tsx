@@ -34,6 +34,7 @@ import {
   IconX,
   IconPlus,
 } from '@tabler/icons-react';
+import { GoogleCalendarEmptyState } from '../components/GoogleCalendarEmptyState';
 import type { WidgetProps, WidgetConfig } from '../types/widget';
 import { useGoogleCalendar } from '../hooks/useGoogleCalendar';
 import { useAuth } from '../contexts/AuthContext';
@@ -296,13 +297,7 @@ export function GoogleCalendarDayWidget({ widget }: WidgetProps<GoogleCalendarDa
   if (!isAuthenticated) {
     return (
       <Box className={`${classes.container} ${transparentBackground ? classes.transparent : ''}`}>
-        <div className={classes.empty}>
-          <IconBrandGoogle size={48} className={classes.googleIcon} />
-          <Text size="lg" fw={500} mb="xs">Google Calendar</Text>
-          <Text size="sm" c="dimmed" ta="center">
-            Sign in using the button in the header to view your calendar
-          </Text>
-        </div>
+        <GoogleCalendarEmptyState variant="signIn" className={classes.empty} />
       </Box>
     );
   }
@@ -310,11 +305,7 @@ export function GoogleCalendarDayWidget({ widget }: WidgetProps<GoogleCalendarDa
   if (selectedCalendarIds.length === 0) {
     return (
       <Box className={`${classes.container} ${transparentBackground ? classes.transparent : ''}`}>
-        <div className={classes.empty}>
-          <IconCalendarEvent size={48} className={classes.emptyIcon} />
-          <Text size="lg" fw={500}>No Calendars Selected</Text>
-          <Text size="sm" c="dimmed" ta="center">Select calendars in widget settings</Text>
-        </div>
+        <GoogleCalendarEmptyState variant="noCalendars" className={classes.empty} />
       </Box>
     );
   }

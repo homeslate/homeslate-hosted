@@ -1,5 +1,6 @@
 import type { Handler } from '@netlify/functions';
-import { neon } from '@neondatabase/serverless';
+import { and, eq, sql } from 'drizzle-orm';
+import { getDb, users, displays, displayCollaborators, displayInvites } from '../../src/db';
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -37,73 +38,79 @@ export const handler: Handler = async (event) => {
     });
     const { name, picture } = await userInfoRes.json() as { name: string; picture: string };
 
-    const sql = neon(process.env.DATABASE_URL!);
+    const db = getDb();
 
     const refreshToken = event.headers['x-refresh-token'];
 
+    // Idempotent migration: ensure refresh_token column exists
     if (refreshToken) {
       try {
-        await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS refresh_token TEXT`;
+        await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS refresh_token TEXT`);
       } catch {
         // Column might already exist, ignore error
       }
     }
 
-    // Upsert user (no display_id column anymore)
-    let rows;
-    if (refreshToken) {
-      rows = await sql`
-        INSERT INTO users (google_id, email, name, picture, refresh_token)
-        VALUES (${googleId}, ${email}, ${name}, ${picture}, ${refreshToken})
-        ON CONFLICT (google_id) DO UPDATE SET
-          email = EXCLUDED.email,
-          name = EXCLUDED.name,
-          picture = EXCLUDED.picture,
-          refresh_token = COALESCE(NULLIF(EXCLUDED.refresh_token, ''), users.refresh_token)
-        RETURNING id, email, name, picture
-      `;
-    } else {
-      rows = await sql`
-        INSERT INTO users (google_id, email, name, picture)
-        VALUES (${googleId}, ${email}, ${name}, ${picture})
-        ON CONFLICT (google_id) DO UPDATE SET
-          email = EXCLUDED.email,
-          name = EXCLUDED.name,
-          picture = EXCLUDED.picture
-        RETURNING id, email, name, picture
-      `;
+    // Upsert user
+    const values = { googleId, email, name, picture };
+    const insertValues = refreshToken ? { ...values, refreshToken } : values;
+
+    const [user] = await db
+      .insert(users)
+      .values(insertValues)
+      .onConflictDoUpdate({
+        target: users.googleId,
+        set: refreshToken
+          ? {
+              email: sql`excluded.email`,
+              name: sql`excluded.name`,
+              picture: sql`excluded.picture`,
+              refreshToken: sql`COALESCE(NULLIF(excluded.refresh_token, ''), ${users.refreshToken})`,
+            }
+          : {
+              email: sql`excluded.email`,
+              name: sql`excluded.name`,
+              picture: sql`excluded.picture`,
+            },
+      })
+      .returning({ id: users.id, email: users.email, name: users.name, picture: users.picture });
+
+    if (!user) {
+      throw new Error('Failed to upsert user');
     }
 
-    const user = rows[0] as { id: string; email: string; name: string; picture: string };
-
     // Ensure user has at least one display
-    const displayCheck = await sql`
-      SELECT id FROM displays WHERE user_id = ${user.id} LIMIT 1
-    `;
-    if (displayCheck.length === 0) {
-      await sql`
-        INSERT INTO displays (user_id, name)
-        VALUES (${user.id}, 'Kitchen Display')
-      `;
+    const [existingDisplay] = await db
+      .select({ id: displays.id })
+      .from(displays)
+      .where(eq(displays.userId, user.id))
+      .limit(1);
+
+    if (!existingDisplay) {
+      await db.insert(displays).values({ userId: user.id, name: 'Kitchen Display' });
     }
 
     // Redeem any pending invites for this email (idempotent)
     try {
-      const pendingInvites = await sql`
-        SELECT display_id FROM display_invites
-        WHERE LOWER(invited_email) = LOWER(${email})
-      `;
-      for (const invite of pendingInvites as { display_id: string }[]) {
-        await sql`
-          INSERT INTO display_collaborators (display_id, user_id)
-          VALUES (${invite.display_id}::uuid, ${user.id}::uuid)
-          ON CONFLICT (display_id, user_id) DO NOTHING
-        `;
-        await sql`
-          DELETE FROM display_invites
-          WHERE display_id = ${invite.display_id}::uuid
-            AND LOWER(invited_email) = LOWER(${email})
-        `;
+      const pendingInvites = await db
+        .select({ displayId: displayInvites.displayId })
+        .from(displayInvites)
+        .where(sql`LOWER(${displayInvites.invitedEmail}) = LOWER(${email})`);
+
+      for (const invite of pendingInvites) {
+        await db
+          .insert(displayCollaborators)
+          .values({ displayId: invite.displayId, userId: user.id })
+          .onConflictDoNothing({ target: [displayCollaborators.displayId, displayCollaborators.userId] });
+
+        await db
+          .delete(displayInvites)
+          .where(
+            and(
+              eq(displayInvites.displayId, invite.displayId),
+              sql`LOWER(${displayInvites.invitedEmail}) = LOWER(${email})`
+            )
+          );
       }
     } catch {
       // If invite tables don't exist yet, skip gracefully

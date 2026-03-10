@@ -33,6 +33,8 @@ interface AuthContextValue {
   isAuthenticated: boolean;
   signIn: () => void;
   signOut: () => void;
+  /** Refresh the access token using the stored refresh token. Returns new token or null. */
+  refreshAccessToken: () => Promise<string | null>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -292,6 +294,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isAuthenticated: !!user && !!accessToken,
         signIn,
         signOut,
+        refreshAccessToken,
       }}
     >
       {children}

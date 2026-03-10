@@ -1,6 +1,13 @@
 import type { Handler } from '@netlify/functions';
-import { neon } from '@neondatabase/serverless';
 import { createHash } from 'crypto';
+import { eq, sql } from 'drizzle-orm';
+import {
+  getDb,
+  users,
+  displays,
+  displayConfigs,
+  displayCollaborators,
+} from '../../src/db';
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -27,7 +34,7 @@ export const handler: Handler = async (event) => {
     return { statusCode: 204, headers: CORS, body: '' };
   }
 
-  const sql = neon(process.env.DATABASE_URL!);
+  const db = getDb();
   let googleId: string;
   try {
     googleId = await getGoogleId(event.headers['authorization']);
@@ -37,14 +44,14 @@ export const handler: Handler = async (event) => {
 
   // Ensure passcode_hash column exists (idempotent migration)
   try {
-    await sql`ALTER TABLE displays ADD COLUMN IF NOT EXISTS passcode_hash TEXT`;
+    await db.execute(sql`ALTER TABLE displays ADD COLUMN IF NOT EXISTS passcode_hash TEXT`);
   } catch {
     // column already exists or DDL not supported — ignore
   }
 
   // Ensure collaborator/invite tables exist (idempotent)
   try {
-    await sql`
+    await db.execute(sql`
       CREATE TABLE IF NOT EXISTS display_collaborators (
         id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
         display_id  UUID NOT NULL REFERENCES displays(id) ON DELETE CASCADE,
@@ -52,8 +59,8 @@ export const handler: Handler = async (event) => {
         created_at  TIMESTAMP NOT NULL DEFAULT NOW(),
         UNIQUE (display_id, user_id)
       )
-    `;
-    await sql`
+    `);
+    await db.execute(sql`
       CREATE TABLE IF NOT EXISTS display_invites (
         id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
         display_id  UUID NOT NULL REFERENCES displays(id) ON DELETE CASCADE,
@@ -62,7 +69,7 @@ export const handler: Handler = async (event) => {
         created_at  TIMESTAMP NOT NULL DEFAULT NOW(),
         UNIQUE (display_id, invited_email)
       )
-    `;
+    `);
   } catch {
     // tables already exist — ignore
   }
@@ -70,41 +77,57 @@ export const handler: Handler = async (event) => {
   // GET /api/displays — list user's owned displays + displays shared with them
   if (event.httpMethod === 'GET') {
     try {
-      const rows = await sql`
-        SELECT
-          d.id,
-          d.display_id,
-          d.name,
-          d.created_at,
-          (d.passcode_hash IS NOT NULL) AS passcode_enabled,
-          dc.config,
-          dc.updated_at AS config_updated_at,
-          (d.user_id = owner_u.id) AS is_owner
-        FROM displays d
-        JOIN users owner_u ON owner_u.id = d.user_id
-        LEFT JOIN display_configs dc ON dc.display_id = d.id
-        WHERE owner_u.google_id = ${googleId}
+      const ownerRows = await db
+        .select({
+          id: displays.id,
+          displayId: displays.displayId,
+          name: displays.name,
+          createdAt: displays.createdAt,
+          passcodeEnabled: sql<boolean>`(${displays.passcodeHash} IS NOT NULL)`.as('passcode_enabled'),
+          config: displayConfigs.config,
+          configUpdatedAt: displayConfigs.updatedAt,
+          isOwner: sql<boolean>`true`.as('is_owner'),
+        })
+        .from(displays)
+        .innerJoin(users, eq(users.id, displays.userId))
+        .leftJoin(displayConfigs, eq(displayConfigs.displayId, displays.id))
+        .where(eq(users.googleId, googleId));
 
-        UNION ALL
+      const collabRows = await db
+        .select({
+          id: displays.id,
+          displayId: displays.displayId,
+          name: displays.name,
+          createdAt: displays.createdAt,
+          passcodeEnabled: sql<boolean>`(${displays.passcodeHash} IS NOT NULL)`.as('passcode_enabled'),
+          config: displayConfigs.config,
+          configUpdatedAt: displayConfigs.updatedAt,
+          isOwner: sql<boolean>`false`.as('is_owner'),
+        })
+        .from(displayCollaborators)
+        .innerJoin(users, eq(users.id, displayCollaborators.userId))
+        .innerJoin(displays, eq(displays.id, displayCollaborators.displayId))
+        .leftJoin(displayConfigs, eq(displayConfigs.displayId, displays.id))
+        .where(eq(users.googleId, googleId));
 
-        SELECT
-          d.id,
-          d.display_id,
-          d.name,
-          d.created_at,
-          (d.passcode_hash IS NOT NULL) AS passcode_enabled,
-          dc.config,
-          dc.updated_at AS config_updated_at,
-          false AS is_owner
-        FROM display_collaborators col
-        JOIN users u ON u.id = col.user_id
-        JOIN displays d ON d.id = col.display_id
-        LEFT JOIN display_configs dc ON dc.display_id = d.id
-        WHERE u.google_id = ${googleId}
+      const rows = [...ownerRows, ...collabRows].sort(
+        (a, b) =>
+          (a.createdAt instanceof Date ? a.createdAt.getTime() : 0) -
+          (b.createdAt instanceof Date ? b.createdAt.getTime() : 0)
+      );
 
-        ORDER BY created_at ASC
-      `;
-      return { statusCode: 200, headers: CORS, body: JSON.stringify(rows) };
+      const formatted = rows.map((r) => ({
+        id: r.id,
+        display_id: r.displayId,
+        name: r.name,
+        created_at: r.createdAt,
+        passcode_enabled: r.passcodeEnabled,
+        config: r.config,
+        config_updated_at: r.configUpdatedAt,
+        is_owner: r.isOwner,
+      }));
+
+      return { statusCode: 200, headers: CORS, body: JSON.stringify(formatted) };
     } catch (err) {
       console.error('Displays fetch error:', err);
       return { statusCode: 500, headers: CORS, body: JSON.stringify({ error: 'Server error' }) };
@@ -116,12 +139,35 @@ export const handler: Handler = async (event) => {
     try {
       const { name } = JSON.parse(event.body ?? '{}') as { name?: string };
       const displayName = name?.trim() || 'Kitchen Display';
-      const rows = await sql`
-        INSERT INTO displays (user_id, name)
-        SELECT id, ${displayName} FROM users WHERE google_id = ${googleId}
-        RETURNING id, display_id, name, created_at
-      `;
-      return { statusCode: 201, headers: CORS, body: JSON.stringify(rows[0]) };
+
+      const [user] = await db
+        .select({ id: users.id })
+        .from(users)
+        .where(eq(users.googleId, googleId));
+
+      if (!user) {
+        return { statusCode: 401, headers: CORS, body: JSON.stringify({ error: 'User not found' }) };
+      }
+
+      const [created] = await db
+        .insert(displays)
+        .values({ userId: user.id, name: displayName })
+        .returning({ id: displays.id, displayId: displays.displayId, name: displays.name, createdAt: displays.createdAt });
+
+      if (!created) {
+        return { statusCode: 500, headers: CORS, body: JSON.stringify({ error: 'Failed to create' }) };
+      }
+
+      return {
+        statusCode: 201,
+        headers: CORS,
+        body: JSON.stringify({
+          id: created.id,
+          display_id: created.displayId,
+          name: created.name,
+          created_at: created.createdAt,
+        }),
+      };
     } catch (err) {
       console.error('Display create error:', err);
       return { statusCode: 500, headers: CORS, body: JSON.stringify({ error: 'Failed to create' }) };
@@ -135,58 +181,57 @@ export const handler: Handler = async (event) => {
       if (!id) return { statusCode: 400, headers: CORS, body: JSON.stringify({ error: 'Missing id' }) };
       const body = JSON.parse(event.body ?? '{}') as { name?: string; passcode?: string | null };
 
-      // Validate: must have at least one field to update
       if (!body.name?.trim() && !('passcode' in body)) {
         return { statusCode: 400, headers: CORS, body: JSON.stringify({ error: 'Nothing to update' }) };
       }
 
-      // Validate passcode format if provided (4 digits or null to clear)
       if ('passcode' in body && body.passcode !== null) {
         if (!/^\d{4}$/.test(body.passcode ?? '')) {
           return { statusCode: 400, headers: CORS, body: JSON.stringify({ error: 'Passcode must be 4 digits' }) };
         }
       }
 
-      // Build update: name only, passcode only, or both
-      // Allow owner OR collaborator to perform the update
       const accessFilter = sql`(
-        d.user_id = (SELECT id FROM users WHERE google_id = ${googleId})
+        ${displays.userId} = (SELECT id FROM users WHERE google_id = ${googleId})
         OR EXISTS (
           SELECT 1 FROM display_collaborators dc2
           JOIN users u2 ON u2.id = dc2.user_id
-          WHERE dc2.display_id = d.id AND u2.google_id = ${googleId}
+          WHERE dc2.display_id = ${displays.id} AND u2.google_id = ${googleId}
         )
       )`;
-      let rows;
-      if (body.name?.trim() && 'passcode' in body) {
-        const newHash = body.passcode !== null ? hashPin(body.passcode!) : null;
-        rows = await sql`
-          UPDATE displays d
-          SET name = ${body.name.trim()}, passcode_hash = ${newHash}
-          WHERE d.id = ${id}::uuid AND ${accessFilter}
-          RETURNING d.id, d.display_id, d.name, d.created_at, (d.passcode_hash IS NOT NULL) AS passcode_enabled
-        `;
-      } else if (body.name?.trim()) {
-        rows = await sql`
-          UPDATE displays d
-          SET name = ${body.name.trim()}
-          WHERE d.id = ${id}::uuid AND ${accessFilter}
-          RETURNING d.id, d.display_id, d.name, d.created_at, (d.passcode_hash IS NOT NULL) AS passcode_enabled
-        `;
-      } else {
-        const newHash = body.passcode !== null ? hashPin(body.passcode!) : null;
-        rows = await sql`
-          UPDATE displays d
-          SET passcode_hash = ${newHash}
-          WHERE d.id = ${id}::uuid AND ${accessFilter}
-          RETURNING d.id, d.display_id, d.name, d.created_at, (d.passcode_hash IS NOT NULL) AS passcode_enabled
-        `;
-      }
+
+      const updateSet: { name?: string; passcodeHash?: string | null } = {};
+      if (body.name?.trim()) updateSet.name = body.name.trim();
+      if ('passcode' in body) updateSet.passcodeHash = body.passcode !== null ? hashPin(body.passcode!) : null;
+
+      const rows = await db
+        .update(displays)
+        .set(updateSet)
+        .where(sql`${displays.id} = ${id}::uuid AND ${accessFilter}`)
+        .returning({
+          id: displays.id,
+          displayId: displays.displayId,
+          name: displays.name,
+          createdAt: displays.createdAt,
+          passcodeEnabled: sql<boolean>`(${displays.passcodeHash} IS NOT NULL)`.as('passcode_enabled'),
+        });
 
       if (rows.length === 0) {
         return { statusCode: 404, headers: CORS, body: JSON.stringify({ error: 'Not found' }) };
       }
-      return { statusCode: 200, headers: CORS, body: JSON.stringify(rows[0]) };
+
+      const r = rows[0];
+      return {
+        statusCode: 200,
+        headers: CORS,
+        body: JSON.stringify({
+          id: r.id,
+          display_id: r.displayId,
+          name: r.name,
+          created_at: r.createdAt,
+          passcode_enabled: r.passcodeEnabled,
+        }),
+      };
     } catch (err) {
       console.error('Display patch error:', err);
       return { statusCode: 500, headers: CORS, body: JSON.stringify({ error: 'Failed to update' }) };
@@ -199,24 +244,23 @@ export const handler: Handler = async (event) => {
       const id = event.queryStringParameters?.id;
       if (!id) return { statusCode: 400, headers: CORS, body: JSON.stringify({ error: 'Missing id' }) };
 
-      // Don't delete if it's the user's last OWNED display
-      const countRows = await sql`
-        SELECT COUNT(*) AS cnt FROM displays d
-        JOIN users u ON u.id = d.user_id
-        WHERE u.google_id = ${googleId}
-      `;
-      if (Number((countRows[0] as { cnt: string }).cnt) <= 1) {
+      const countRows = await db
+        .select({ cnt: sql<number>`count(*)` })
+        .from(displays)
+        .innerJoin(users, eq(users.id, displays.userId))
+        .where(eq(users.googleId, googleId));
+
+      const cnt = Number(countRows[0]?.cnt ?? 0);
+      if (cnt <= 1) {
         return { statusCode: 409, headers: CORS, body: JSON.stringify({ error: 'Cannot delete last display' }) };
       }
 
-      // Only owner can delete
-      await sql`
-        DELETE FROM displays d
-        USING users u
-        WHERE d.id = ${id}::uuid
-          AND d.user_id = u.id
-          AND u.google_id = ${googleId}
-      `;
+      await db
+        .delete(displays)
+        .where(
+          sql`${displays.id} = ${id}::uuid AND ${displays.userId} IN (SELECT id FROM users WHERE google_id = ${googleId})`
+        );
+
       return { statusCode: 200, headers: CORS, body: JSON.stringify({ ok: true }) };
     } catch (err) {
       console.error('Display delete error:', err);

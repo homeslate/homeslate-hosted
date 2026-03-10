@@ -1,12 +1,14 @@
 import { MantineProvider, createTheme, ActionIcon, Tooltip, Loader, Center } from '@mantine/core';
 import { IconX } from '@tabler/icons-react';
 import { lazy, Suspense } from 'react';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useWakeLock } from './hooks/useWakeLock';
 import { useConfigSync } from './hooks/useConfigSync';
 import { AuthProvider } from './contexts/AuthContext';
 import { useAuth } from './contexts/AuthContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { useDashboardStore } from './store/dashboardStore';
+import { ManagementLayout } from './components/ManagementLayout';
 import '@mantine/core/styles.css';
 import '@mantine/dates/styles.css';
 import './App.css';
@@ -75,7 +77,7 @@ if (_initialDisplayParam) {
 
 function AppInner() {
   const { isAuthenticated } = useAuth();
-  const { selectedDisplayId, selectedViewId, previewDisplayId, closePreview } = useDashboardStore();
+  const { previewDisplayId, closePreview } = useDashboardStore();
   useWakeLock();
   useConfigSync();
 
@@ -115,9 +117,17 @@ function AppInner() {
     );
   }
 
-  if (!selectedDisplayId) return <Suspense fallback={<PageLoader />}><DisplayListPage /></Suspense>;
-  if (!selectedViewId) return <Suspense fallback={<PageLoader />}><DisplayDetailPage /></Suspense>;
-  return <Suspense fallback={<PageLoader />}><ViewEditorPage /></Suspense>;
+  return (
+    <Routes>
+      <Route path="/" element={<Navigate to="/displays" replace />} />
+      <Route path="/displays" element={<ManagementLayout />}>
+        <Route index element={<Suspense fallback={<PageLoader />}><DisplayListPage /></Suspense>} />
+        <Route path=":displayId" element={<Suspense fallback={<PageLoader />}><DisplayDetailPage /></Suspense>} />
+        <Route path=":displayId/views/:viewId" element={<Suspense fallback={<PageLoader />}><ViewEditorPage /></Suspense>} />
+      </Route>
+      <Route path="*" element={<Navigate to="/displays" replace />} />
+    </Routes>
+  );
 }
 
 function App() {
@@ -127,7 +137,9 @@ function App() {
     <MantineProvider theme={mantineTheme} forceColorScheme={colorScheme}>
       <AuthProvider>
         <ThemeProvider>
-          <AppInner />
+          <BrowserRouter>
+            <AppInner />
+          </BrowserRouter>
         </ThemeProvider>
       </AuthProvider>
     </MantineProvider>

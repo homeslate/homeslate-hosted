@@ -1,5 +1,12 @@
 import type { Handler } from '@netlify/functions';
-import { neon } from '@neondatabase/serverless';
+import { and, asc, eq, sql } from 'drizzle-orm';
+import {
+  getDb,
+  users,
+  displays,
+  displayCollaborators,
+  displayInvites,
+} from '../../src/db';
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -17,14 +24,12 @@ async function getGoogleId(authHeader: string | undefined): Promise<string> {
   return data.sub;
 }
 
-
-
 export const handler: Handler = async (event) => {
   if (event.httpMethod === 'OPTIONS') {
     return { statusCode: 204, headers: CORS, body: '' };
   }
 
-  const sql = neon(process.env.DATABASE_URL!);
+  const db = getDb();
 
   let googleId: string;
   try {
@@ -34,7 +39,7 @@ export const handler: Handler = async (event) => {
   }
 
   try {
-    await sql`
+    await db.execute(sql`
       CREATE TABLE IF NOT EXISTS display_collaborators (
         id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
         display_id  UUID NOT NULL REFERENCES displays(id) ON DELETE CASCADE,
@@ -42,8 +47,8 @@ export const handler: Handler = async (event) => {
         created_at  TIMESTAMP NOT NULL DEFAULT NOW(),
         UNIQUE (display_id, user_id)
       )
-    `;
-    await sql`
+    `);
+    await db.execute(sql`
       CREATE TABLE IF NOT EXISTS display_invites (
         id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
         display_id  UUID NOT NULL REFERENCES displays(id) ON DELETE CASCADE,
@@ -52,7 +57,7 @@ export const handler: Handler = async (event) => {
         created_at  TIMESTAMP NOT NULL DEFAULT NOW(),
         UNIQUE (display_id, invited_email)
       )
-    `;
+    `);
   } catch (err) {
     console.error('Migration error:', err);
     return { statusCode: 500, headers: CORS, body: JSON.stringify({ error: 'DB setup failed' }) };
@@ -65,41 +70,59 @@ export const handler: Handler = async (event) => {
       return { statusCode: 400, headers: CORS, body: JSON.stringify({ error: 'Missing displayId' }) };
     }
 
-    // Verify requester owns or collaborates on the display
-    const access = await sql`
-      SELECT 1 FROM displays d
-      JOIN users u ON u.id = d.user_id
-      WHERE d.id = ${displayId}::uuid AND u.google_id = ${googleId}
-      UNION ALL
-      SELECT 1 FROM display_collaborators dc
-      JOIN users u ON u.id = dc.user_id
-      WHERE dc.display_id = ${displayId}::uuid AND u.google_id = ${googleId}
-      LIMIT 1
-    `;
-    if (access.length === 0) {
+    const ownerAccess = await db
+      .select({ one: sql`1` })
+      .from(displays)
+      .innerJoin(users, eq(users.id, displays.userId))
+      .where(sql`${displays.id} = ${displayId}::uuid AND ${users.googleId} = ${googleId}`);
+
+    const collabAccess = await db
+      .select({ one: sql`1` })
+      .from(displayCollaborators)
+      .innerJoin(users, eq(users.id, displayCollaborators.userId))
+      .where(sql`${displayCollaborators.displayId} = ${displayId}::uuid AND ${users.googleId} = ${googleId}`);
+
+    if (ownerAccess.length === 0 && collabAccess.length === 0) {
       return { statusCode: 403, headers: CORS, body: JSON.stringify({ error: 'Forbidden' }) };
     }
 
     const [invites, collaborators] = await Promise.all([
-      sql`
-        SELECT di.id, di.invited_email, di.created_at
-        FROM display_invites di
-        WHERE di.display_id = ${displayId}::uuid
-        ORDER BY di.created_at ASC
-      `,
-      sql`
-        SELECT dc.id, u.email, u.name, u.picture, dc.created_at
-        FROM display_collaborators dc
-        JOIN users u ON u.id = dc.user_id
-        WHERE dc.display_id = ${displayId}::uuid
-        ORDER BY dc.created_at ASC
-      `,
+      db
+        .select({
+          id: displayInvites.id,
+          invitedEmail: displayInvites.invitedEmail,
+          createdAt: displayInvites.createdAt,
+        })
+        .from(displayInvites)
+        .where(eq(displayInvites.displayId, displayId))
+        .orderBy(asc(displayInvites.createdAt)),
+      db
+        .select({
+          id: displayCollaborators.id,
+          email: users.email,
+          name: users.name,
+          picture: users.picture,
+          createdAt: displayCollaborators.createdAt,
+        })
+        .from(displayCollaborators)
+        .innerJoin(users, eq(users.id, displayCollaborators.userId))
+        .where(eq(displayCollaborators.displayId, displayId))
+        .orderBy(asc(displayCollaborators.createdAt)),
     ]);
 
     return {
       statusCode: 200,
       headers: CORS,
-      body: JSON.stringify({ invites, collaborators }),
+      body: JSON.stringify({
+        invites: invites.map((i) => ({ id: i.id, invited_email: i.invitedEmail, created_at: i.createdAt })),
+        collaborators: collaborators.map((c) => ({
+          id: c.id,
+          email: c.email,
+          name: c.name,
+          picture: c.picture,
+          created_at: c.createdAt,
+        })),
+      }),
     };
   }
 
@@ -116,48 +139,75 @@ export const handler: Handler = async (event) => {
 
     const normalizedEmail = email.trim().toLowerCase();
 
-    // Verify requester owns the display
-    const ownerCheck = await sql`
-      SELECT d.id FROM displays d
-      JOIN users u ON u.id = d.user_id
-      WHERE d.id = ${displayId}::uuid AND u.google_id = ${googleId}
-    `;
+    const ownerCheck = await db
+      .select({ id: displays.id })
+      .from(displays)
+      .innerJoin(users, eq(users.id, displays.userId))
+      .where(sql`${displays.id} = ${displayId}::uuid AND ${users.googleId} = ${googleId}`);
+
     if (ownerCheck.length === 0) {
       return { statusCode: 403, headers: CORS, body: JSON.stringify({ error: 'Only the owner can invite people' }) };
     }
 
-    // Don't invite yourself
-    const selfCheck = await sql`
-      SELECT 1 FROM users WHERE google_id = ${googleId} AND LOWER(email) = ${normalizedEmail} LIMIT 1
-    `;
+    const selfCheck = await db
+      .select({ one: sql`1` })
+      .from(users)
+      .where(sql`${users.googleId} = ${googleId} AND LOWER(${users.email}) = ${normalizedEmail}`)
+      .limit(1);
+
     if (selfCheck.length > 0) {
       return { statusCode: 400, headers: CORS, body: JSON.stringify({ error: 'You cannot invite yourself' }) };
     }
 
-    // Don't re-invite an existing collaborator
-    const collabCheck = await sql`
-      SELECT 1 FROM display_collaborators dc
-      JOIN users u ON u.id = dc.user_id
-      WHERE dc.display_id = ${displayId}::uuid AND LOWER(u.email) = ${normalizedEmail}
-      LIMIT 1
-    `;
+    const collabCheck = await db
+      .select({ one: sql`1` })
+      .from(displayCollaborators)
+      .innerJoin(users, eq(users.id, displayCollaborators.userId))
+      .where(
+        sql`${displayCollaborators.displayId} = ${displayId}::uuid AND LOWER(${users.email}) = ${normalizedEmail}`
+      )
+      .limit(1);
+
     if (collabCheck.length > 0) {
       return { statusCode: 409, headers: CORS, body: JSON.stringify({ error: 'This person is already a collaborator' }) };
     }
 
-    // Get inviter's user id
-    const inviterRows = await sql`SELECT id FROM users WHERE google_id = ${googleId} LIMIT 1`;
-    const inviterId = (inviterRows[0] as { id: string }).id;
+    const [inviter] = await db
+      .select({ id: users.id })
+      .from(users)
+      .where(eq(users.googleId, googleId))
+      .limit(1);
 
-    // Upsert invite (idempotent — just update created_at on conflict)
-    const rows = await sql`
-      INSERT INTO display_invites (display_id, invited_email, invited_by)
-      VALUES (${displayId}::uuid, ${normalizedEmail}, ${inviterId}::uuid)
-      ON CONFLICT (display_id, invited_email) DO UPDATE SET created_at = NOW()
-      RETURNING id, invited_email, created_at
-    `;
+    if (!inviter) {
+      return { statusCode: 500, headers: CORS, body: JSON.stringify({ error: 'User not found' }) };
+    }
 
-    return { statusCode: 201, headers: CORS, body: JSON.stringify(rows[0]) };
+    const [created] = await db
+      .insert(displayInvites)
+      .values({
+        displayId,
+        invitedEmail: normalizedEmail,
+        invitedBy: inviter.id,
+      })
+      .onConflictDoUpdate({
+        target: [displayInvites.displayId, displayInvites.invitedEmail],
+        set: { createdAt: new Date() },
+      })
+      .returning({ id: displayInvites.id, invitedEmail: displayInvites.invitedEmail, createdAt: displayInvites.createdAt });
+
+    if (!created) {
+      return { statusCode: 500, headers: CORS, body: JSON.stringify({ error: 'Failed to create invite' }) };
+    }
+
+    return {
+      statusCode: 201,
+      headers: CORS,
+      body: JSON.stringify({
+        id: created.id,
+        invited_email: created.invitedEmail,
+        created_at: created.createdAt,
+      }),
+    };
   }
 
   // DELETE /api/invites?displayId=<id>&email=<email>   — revoke a pending invite (owner only)
@@ -175,27 +225,35 @@ export const handler: Handler = async (event) => {
       };
     }
 
-    // Verify requester owns the display
-    const ownerCheck = await sql`
-      SELECT d.id FROM displays d
-      JOIN users u ON u.id = d.user_id
-      WHERE d.id = ${displayId}::uuid AND u.google_id = ${googleId}
-    `;
+    const ownerCheck = await db
+      .select({ id: displays.id })
+      .from(displays)
+      .innerJoin(users, eq(users.id, displays.userId))
+      .where(sql`${displays.id} = ${displayId}::uuid AND ${users.googleId} = ${googleId}`);
+
     if (ownerCheck.length === 0) {
       return { statusCode: 403, headers: CORS, body: JSON.stringify({ error: 'Only the owner can remove access' }) };
     }
 
     if (email) {
       const normalizedEmail = email.trim().toLowerCase();
-      await sql`
-        DELETE FROM display_invites
-        WHERE display_id = ${displayId}::uuid AND LOWER(invited_email) = ${normalizedEmail}
-      `;
+      await db
+        .delete(displayInvites)
+        .where(
+          and(
+            eq(displayInvites.displayId, displayId),
+            sql`LOWER(${displayInvites.invitedEmail}) = ${normalizedEmail}`
+          )
+        );
     } else if (collaboratorId) {
-      await sql`
-        DELETE FROM display_collaborators
-        WHERE display_id = ${displayId}::uuid AND id = ${collaboratorId}::uuid
-      `;
+      await db
+        .delete(displayCollaborators)
+        .where(
+          and(
+            eq(displayCollaborators.displayId, displayId),
+            eq(displayCollaborators.id, collaboratorId)
+          )
+        );
     }
 
     return { statusCode: 200, headers: CORS, body: JSON.stringify({ ok: true }) };

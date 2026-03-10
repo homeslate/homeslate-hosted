@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Group,
   Text,
@@ -23,28 +24,16 @@ import {
 } from '@tabler/icons-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useDashboardStore } from '../store/dashboardStore';
-import type { RemoteDisplay } from '../store/dashboardStore';
 import { ShareDisplayModal } from '../components/ShareDisplayModal';
 import classes from './DisplayListPage.module.css';
 
 export function DisplayListPage() {
   const { user, accessToken, signOut } = useAuth();
-  const { displays, setDisplays, addDisplay, selectDisplay } = useDashboardStore();
+  const navigate = useNavigate();
+  const { displays, addDisplay } = useDashboardStore();
   const [creating, setCreating] = useState(false);
   const [shareDisplayId, setShareDisplayId] = useState<string | null>(null);
   const [shareDisplayName, setShareDisplayName] = useState<string>('');
-
-  // Load displays from API on mount
-  useEffect(() => {
-    if (!accessToken) return;
-    fetch('/api/displays', {
-      headers: { Authorization: `Bearer ${accessToken}` },
-    })
-      .then((r) => r.json())
-      .then((rows: RemoteDisplay[]) => setDisplays(rows))
-      .catch(console.error);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [accessToken]);
 
   const handleNewDisplay = async () => {
     const name = prompt('Display name:', 'Kitchen Display');
@@ -136,7 +125,7 @@ export function DisplayListPage() {
               <Paper key={display.id} className={classes.card} p="lg" radius="md">
                 <UnstyledButton
                   className={classes.cardInner}
-                  onClick={() => selectDisplay(display.id)}
+                  onClick={() => navigate(`/displays/${display.id}`)}
                 >
                   <Stack gap={6}>
                     <Text fw={600} size="lg" className={classes.cardTitle}>{display.name}</Text>

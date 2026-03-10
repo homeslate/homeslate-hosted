@@ -1,5 +1,6 @@
 import type { Handler } from '@netlify/functions';
-import { neon } from '@neondatabase/serverless';
+import { eq, sql } from 'drizzle-orm';
+import { getDb, displays, displayConfigs, displayCollaborators, users } from '../../src/db';
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -30,31 +31,36 @@ export const handler: Handler = async (event) => {
         return { statusCode: 400, headers: CORS, body: JSON.stringify({ error: 'Missing displayId' }) };
       }
       const config = JSON.parse(event.body ?? '{}');
-      const sql = neon(process.env.DATABASE_URL!);
+      const db = getDb();
 
-      // Verify the display belongs to the authenticated user OR they are a collaborator
-      const check = await sql`
-        SELECT d.id FROM displays d
-        JOIN users u ON u.id = d.user_id
-        WHERE d.id = ${displayId}::uuid AND u.google_id = ${googleId}
-        UNION ALL
-        SELECT d.id FROM display_collaborators dc
-        JOIN users u ON u.id = dc.user_id
-        JOIN displays d ON d.id = dc.display_id
-        WHERE d.id = ${displayId}::uuid AND u.google_id = ${googleId}
-        LIMIT 1
-      `;
-      if (check.length === 0) {
+      const ownerRows = await db
+        .select({ id: displays.id })
+        .from(displays)
+        .innerJoin(users, eq(users.id, displays.userId))
+        .where(sql`${displays.id} = ${displayId}::uuid AND ${users.googleId} = ${googleId}`);
+
+      const collabRows =
+        ownerRows.length > 0
+          ? []
+          : await db
+              .select({ id: displays.id })
+              .from(displayCollaborators)
+              .innerJoin(users, eq(users.id, displayCollaborators.userId))
+              .innerJoin(displays, eq(displays.id, displayCollaborators.displayId))
+              .where(sql`${displays.id} = ${displayId}::uuid AND ${users.googleId} = ${googleId}`);
+
+      if (ownerRows.length === 0 && collabRows.length === 0) {
         return { statusCode: 403, headers: CORS, body: JSON.stringify({ error: 'Forbidden' }) };
       }
 
-      await sql`
-        INSERT INTO display_configs (display_id, config)
-        VALUES (${displayId}::uuid, ${JSON.stringify(config)}::jsonb)
-        ON CONFLICT (display_id) DO UPDATE SET
-          config = EXCLUDED.config,
-          updated_at = NOW()
-      `;
+      await db
+        .insert(displayConfigs)
+        .values({ displayId, config })
+        .onConflictDoUpdate({
+          target: displayConfigs.displayId,
+          set: { config, updatedAt: new Date() },
+        });
+
       return { statusCode: 200, headers: CORS, body: JSON.stringify({ ok: true }) };
     } catch (err) {
       console.error('Config save error:', err);

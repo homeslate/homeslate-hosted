@@ -1,5 +1,6 @@
 import type { Handler } from '@netlify/functions';
-import { neon } from '@neondatabase/serverless';
+import { eq } from 'drizzle-orm';
+import { getDb, displayConfigs, displays } from '../../src/db';
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -35,16 +36,18 @@ export const handler: Handler = async (event) => {
       const body = JSON.parse(event.body ?? '{}') as { items?: TodoItem[] };
       const items = body.items ?? [];
 
-      const sql = neon(process.env.DATABASE_URL!);
+      const db = getDb();
 
-      const rows = await sql`
-        SELECT dc.config, dc.display_id AS config_display_id
-        FROM display_configs dc
-        JOIN displays d ON d.id = dc.display_id
-        WHERE d.display_id = ${publicDisplayId}
-      `;
+      const [row] = await db
+        .select({
+          config: displayConfigs.config,
+          configDisplayId: displayConfigs.displayId,
+        })
+        .from(displayConfigs)
+        .innerJoin(displays, eq(displays.id, displayConfigs.displayId))
+        .where(eq(displays.displayId, publicDisplayId));
 
-      if (rows.length === 0) {
+      if (!row) {
         return {
           statusCode: 404,
           headers: CORS,
@@ -52,10 +55,7 @@ export const handler: Handler = async (event) => {
         };
       }
 
-      const { config, config_display_id } = rows[0] as {
-        config: Record<string, unknown>;
-        config_display_id: string;
-      };
+      const { config, configDisplayId } = row;
 
       const layouts = (config.layouts ?? []) as Array<{
         id: string;
@@ -73,12 +73,10 @@ export const handler: Handler = async (event) => {
 
       const newConfig = { ...config, layouts: updatedLayouts };
 
-      await sql`
-        UPDATE display_configs
-        SET config = ${JSON.stringify(newConfig)}::jsonb,
-            updated_at = NOW()
-        WHERE display_id = ${config_display_id}::uuid
-      `;
+      await db
+        .update(displayConfigs)
+        .set({ config: newConfig, updatedAt: new Date() })
+        .where(eq(displayConfigs.displayId, configDisplayId));
 
       return { statusCode: 200, headers: CORS, body: JSON.stringify({ ok: true }) };
     } catch (err) {
