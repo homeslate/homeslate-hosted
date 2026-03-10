@@ -180,8 +180,11 @@ export function WeatherWidget({ widget }: WidgetProps<WeatherConfig>) {
   const isSmallWidget = w <= 3 && h <= 3;
   const showWeeklyForecast = showForecast && !isSmallWidget;
 
+  // Compact layout for very short widgets (row height 2) to prevent overlap
+  const isCompact = h <= 2;
+
   return (
-    <Box className={`${classes.container} ${transparentBackground ? classes.transparent : ''} ${alignClass}`}>
+    <Box className={`${classes.container} ${transparentBackground ? classes.transparent : ''} ${alignClass} ${isCompact ? classes.compact : ''}`}>
       <div className={classes.header}>
         <Text className={classes.location}>
           {weather.location.name}
@@ -192,7 +195,7 @@ export function WeatherWidget({ widget }: WidgetProps<WeatherConfig>) {
       
       <div className={classes.current}>
         <div className={classes.mainTemp}>
-          <WeatherIcon condition={iconCondition} size={64} isDay={weather.current.isDay} />
+          <WeatherIcon condition={iconCondition} size={isCompact ? 36 : 64} isDay={weather.current.isDay} />
           <div>
             <Text className={classes.temperature}>
               {weather.current.temperature}{tempUnit}
@@ -201,6 +204,7 @@ export function WeatherWidget({ widget }: WidgetProps<WeatherConfig>) {
           </div>
         </div>
         
+        {!isCompact && (
         <div className={classes.details}>
           <div className={classes.detailItem}>
             <IconDroplet size={16} />
@@ -214,8 +218,9 @@ export function WeatherWidget({ widget }: WidgetProps<WeatherConfig>) {
             <Text size="sm" c="dimmed">Feels {weather.current.apparentTemperature}°</Text>
           </div>
         </div>
+        )}
 
-        {showAirQuality && aqData !== null && (() => {
+        {!isCompact && showAirQuality && aqData !== null && (() => {
           const band = getAqiBand(aqData.usAqi);
           return (
             <div className={classes.aqiBadge} style={{ borderColor: band.color }}>

@@ -9,6 +9,43 @@
   flex-direction: column;
 }
 
+/* Compact layout for small grid sizes (row height 2) - prevents overlap */
+.compact {
+  padding: 0.5rem 0.75rem;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.compact .header {
+  margin-bottom: 0.25rem;
+  flex-shrink: 0;
+}
+
+.compact .location {
+  font-size: 0.75rem;
+  line-height: 1.2;
+}
+
+.compact .current {
+  flex: 0 1 auto;
+  justify-content: flex-start;
+}
+
+.compact .mainTemp {
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.compact .temperature {
+  font-size: 1.5rem;
+  line-height: 1.1;
+}
+
+.compact .condition {
+  font-size: 0.75rem;
+  margin-top: 0.125rem;
+}
+
 .container.transparent {
   background: transparent;
 }
