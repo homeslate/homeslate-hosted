@@ -185,6 +185,7 @@ export function WeatherWidget({ widget }: WidgetProps<WeatherConfig>) {
 
   return (
     <Box className={`${classes.container} ${transparentBackground ? classes.transparent : ''} ${alignClass} ${isCompact ? classes.compact : ''}`}>
+      {!isCompact && (
       <div className={classes.header}>
         <Text className={classes.location}>
           {weather.location.name}
@@ -192,6 +193,7 @@ export function WeatherWidget({ widget }: WidgetProps<WeatherConfig>) {
         </Text>
         {isLoading && <Loader size="xs" color="orange" />}
       </div>
+      )}
       
       <div className={classes.current}>
         <div className={classes.mainTemp}>

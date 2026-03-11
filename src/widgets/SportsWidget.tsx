@@ -27,6 +27,7 @@ export interface SportsConfig extends WidgetConfig {
   leagueId: string;
   favoriteTeamIds: string[];
   showAllGames: boolean;
+  showCurrentGames: boolean;
   transparentBackground: boolean;
 }
 
@@ -134,19 +135,25 @@ function formatPeriod(period: number, detail: string): string {
 // ---------------------------------------------------------------------------
 
 export function SportsWidget({ widget }: WidgetProps<SportsConfig>) {
-  const { leagueId, favoriteTeamIds, showAllGames, transparentBackground } = widget.config;
+  const { leagueId, favoriteTeamIds, showAllGames, showCurrentGames = true, transparentBackground } = widget.config;
 
   const teamFilter = useMemo(
     () => (showAllGames ? [] : favoriteTeamIds),
     [showAllGames, favoriteTeamIds]
   );
 
-  const { games, leagueLogo, isLoading, error, refresh } = useScores({
+  const { games: rawGames, leagueLogo, isLoading, error, refresh } = useScores({
     leagueId,
     favoriteTeamIds: teamFilter,
   });
 
   const leagueName = LEAGUES.find((l) => l.id === leagueId)?.name ?? leagueId.toUpperCase();
+
+  const games = useMemo(
+    () =>
+      showCurrentGames ? rawGames : rawGames.filter((g) => g.status !== 'in'),
+    [rawGames, showCurrentGames]
+  );
 
   if (!leagueId) {
     return (
@@ -253,7 +260,7 @@ export function SportsWidget({ widget }: WidgetProps<SportsConfig>) {
 // ---------------------------------------------------------------------------
 
 export function SportsWidgetSettings({ widget, onConfigChange }: WidgetProps<SportsConfig>) {
-  const { leagueId, favoriteTeamIds, showAllGames } = widget.config;
+  const { leagueId, favoriteTeamIds, showAllGames, showCurrentGames } = widget.config;
 
   const [availableTeams, setAvailableTeams] = useState<SportsTeam[]>([]);
   const [loadingTeams, setLoadingTeams] = useState(false);
@@ -321,6 +328,13 @@ export function SportsWidgetSettings({ widget, onConfigChange }: WidgetProps<Spo
         description="Show every game instead of just your favorite teams"
         checked={showAllGames}
         onChange={(e) => onConfigChange({ showAllGames: e.currentTarget.checked })}
+      />
+
+      <Switch
+        label="Show current games"
+        description="Include games that are currently in progress"
+        checked={showCurrentGames ?? true}
+        onChange={(e) => onConfigChange({ showCurrentGames: e.currentTarget.checked })}
       />
     </Stack>
   );

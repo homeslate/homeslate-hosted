@@ -52,7 +52,7 @@ export function WidgetWrapper({ widget, isEditing, onConfigChangeOverride }: Wid
         {isEditing && (
           <>
             <div className={classes.toolbar}>
-              <Group gap="xs">
+              <Group gap="xs" wrap="nowrap" className={classes.toolbarLeft}>
                 <div className={`${classes.dragHandle} widget-drag-handle`}>
                   <IconGripVertical size={16} />
                 </div>
@@ -60,7 +60,7 @@ export function WidgetWrapper({ widget, isEditing, onConfigChangeOverride }: Wid
                   {widgetEntry.name}
                 </Text>
               </Group>
-              <Group gap="xs">
+              <Group gap="xs" wrap="nowrap" className={classes.toolbarRight}>
                 <Tooltip label="Drag edges to resize" position="bottom">
                   <div className={classes.sizeIndicator}>
                     <IconArrowsMaximize size={12} />

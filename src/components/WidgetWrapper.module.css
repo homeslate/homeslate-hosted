@@ -58,16 +58,30 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-wrap: nowrap;
+  gap: 0.5rem;
   padding: 0.25rem 0.5rem;
-  /* Use a semi-transparent overlay that works in both light and dark */
-  background: linear-gradient(
-    180deg,
-    light-dark(rgba(255, 255, 255, 0.75), rgba(0, 0, 0, 0.6)) 0%,
-    transparent 100%
+  /* Semi-transparent background so buttons stand out over widget content */
+  background: light-dark(
+    rgba(255, 255, 255, 0.85),
+    rgba(0, 0, 0, 0.65)
   );
+  backdrop-filter: blur(8px);
   z-index: 10;
   opacity: 0;
   transition: opacity 0.2s ease;
+  container-type: inline-size;
+  container-name: toolbar;
+}
+
+.toolbarLeft {
+  flex-shrink: 1;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.toolbarRight {
+  flex-shrink: 0;
 }
 
 .editing:hover .toolbar {
@@ -92,11 +106,12 @@
 
 .toolbarButton {
   color: var(--theme-text-muted, var(--mantine-color-dimmed));
+  background: light-dark(rgba(0, 0, 0, 0.06), rgba(255, 255, 255, 0.08));
 }
 
 .toolbarButton:hover {
   color: var(--theme-text, var(--mantine-color-text));
-  background: light-dark(rgba(0, 0, 0, 0.08), rgba(255, 255, 255, 0.1));
+  background: light-dark(rgba(0, 0, 0, 0.1), rgba(255, 255, 255, 0.15));
 }
 
 .content {
@@ -109,6 +124,14 @@
   font-weight: 500;
   opacity: 0.8;
   color: var(--theme-text, var(--mantine-color-text));
+  white-space: nowrap;
+}
+
+/* Hide widget title when toolbar is narrow so icon buttons stay on one row */
+@container toolbar (max-width: 180px) {
+  .widgetName {
+    display: none;
+  }
 }
 
 .sizeIndicator {

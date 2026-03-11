@@ -376,6 +376,7 @@ const sportsEntry: WidgetRegistryEntry<SportsConfig> = {
     leagueId: 'nhl',
     favoriteTeamIds: [],
     showAllGames: true,
+    showCurrentGames: true,
     transparentBackground: false,
   },
   defaultLayout: {
