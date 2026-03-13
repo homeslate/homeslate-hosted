@@ -9,7 +9,7 @@ import dayjs from 'dayjs';
 import type { WidgetProps, WidgetConfig } from '../types/widget';
 import { useGoogleCalendar } from '../hooks/useGoogleCalendar';
 import { useDisplayCalendar } from '../hooks/useDisplayCalendar';
-import { useDisplayId, getDisplayIdFromWindow } from '../contexts/DisplayContext';
+import { useDisplayId, useIsPreviewDisplay } from '../contexts/DisplayContext';
 import { useAuth } from '../contexts/AuthContext';
 import type { ParsedCalendarEvent, CalendarEventInput } from '../services/googleCalendar';
 import classes from './WeekCalendarWidget.module.css';
@@ -168,11 +168,12 @@ function formDataToEventInput(data: EventFormData): CalendarEventInput {
 
 export function WeekCalendarWidget({ widget }: WidgetProps<WeekCalendarConfig>) {
   const { selectedCalendarIds, viewMode, weekStartsOn, startHour, endHour, transparentBackground } = widget.config;
-  const displayId = useDisplayId() ?? getDisplayIdFromWindow();
+  const displayId = useDisplayId();
+  const isPreviewDisplay = useIsPreviewDisplay();
   const displayData = useDisplayCalendar({ displayId, selectedCalendarIds, daysAhead: 14 });
   const googleData = useGoogleCalendar({ selectedCalendarIds, daysAhead: 14 });
   const { isAuthenticated } = useAuth();
-  const isDisplayMode = !!displayId;
+  const isDisplayMode = !!displayId && !isPreviewDisplay;
   const { events, calendars, addEvent } = isDisplayMode ? displayData : googleData;
 
   // ── Create-event form state ──

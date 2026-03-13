@@ -29,11 +29,12 @@ interface DisplayConfig {
 
 interface Props {
   displayId: string;
+  isPreview?: boolean;
 }
 
 const POLL_INTERVAL_MS = 30_000;
 
-export function DisplayViewer({ displayId }: Props) {
+export function DisplayViewer({ displayId, isPreview = false }: Props) {
   const [config, setConfig] = useState<DisplayConfig | null>(null);
   const [activeLayoutId, setActiveLayoutId] = useState<string | null>(null);
   // localColorMode is null when following the config value; set to override locally
@@ -402,7 +403,7 @@ export function DisplayViewer({ displayId }: Props) {
   const activeLayout = config?.layouts.find((l) => l.id === activeLayoutId);
 
   return (
-    <DisplayProvider displayId={displayId}>
+    <DisplayProvider displayId={displayId} isPreview={isPreview}>
     <div
       ref={rootRef}
       className={classes.root}

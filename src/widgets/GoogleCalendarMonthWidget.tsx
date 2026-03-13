@@ -32,7 +32,7 @@ import { GoogleCalendarEmptyState } from '../components/GoogleCalendarEmptyState
 import type { WidgetProps, WidgetConfig } from '../types/widget';
 import { useGoogleCalendar } from '../hooks/useGoogleCalendar';
 import { useDisplayCalendar } from '../hooks/useDisplayCalendar';
-import { useDisplayId, getDisplayIdFromWindow } from '../contexts/DisplayContext';
+import { useDisplayId, useIsPreviewDisplay } from '../contexts/DisplayContext';
 import { useAuth } from '../contexts/AuthContext';
 import type { ParsedCalendarEvent, CalendarEventInput } from '../services/googleCalendar';
 import classes from './GoogleCalendarMonthWidget.module.css';
@@ -106,11 +106,12 @@ function formatTimeRange(event: ParsedCalendarEvent): string {
 
 export function GoogleCalendarMonthWidget({ widget }: WidgetProps<GoogleCalendarMonthConfig>) {
   const { selectedCalendarIds, daysAhead, transparentBackground } = widget.config;
-  const displayId = useDisplayId() ?? getDisplayIdFromWindow();
+  const displayId = useDisplayId();
+  const isPreviewDisplay = useIsPreviewDisplay();
   const displayData = useDisplayCalendar({ displayId, selectedCalendarIds, daysAhead });
   const googleData = useGoogleCalendar({ selectedCalendarIds, daysAhead });
   const { isAuthenticated } = useAuth();
-  const isDisplayMode = !!displayId;
+  const isDisplayMode = !!displayId && !isPreviewDisplay;
   const { isLoading, events, calendars, refresh, addEvent } = isDisplayMode ? displayData : googleData;
 
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());

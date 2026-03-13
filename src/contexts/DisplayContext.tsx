@@ -2,18 +2,31 @@ import { createContext, useContext, type ReactNode } from 'react';
 
 export const DISPLAY_SESSION_KEY = 'kd_pending_display';
 
-const DisplayContext = createContext<string | null>(null);
+interface DisplayContextValue {
+  displayId: string;
+  isPreview: boolean;
+}
 
-export function DisplayProvider({ displayId, children }: { displayId: string; children: ReactNode }) {
+const DisplayContext = createContext<DisplayContextValue | null>(null);
+
+export function DisplayProvider({
+  displayId,
+  isPreview = false,
+  children,
+}: {
+  displayId: string;
+  isPreview?: boolean;
+  children: ReactNode;
+}) {
   return (
-    <DisplayContext.Provider value={displayId}>
+    <DisplayContext.Provider value={{ displayId, isPreview }}>
       {children}
     </DisplayContext.Provider>
   );
 }
 
 export function useDisplayContext(): string | null {
-  return useContext(DisplayContext);
+  return useContext(DisplayContext)?.displayId ?? null;
 }
 
 /**
@@ -33,7 +46,11 @@ export function getDisplayIdFromWindow(): string | null {
  * Prefer context (DisplayProvider); fallback to URL or sessionStorage.
  */
 export function useDisplayId(): string | null {
-  const fromContext = useContext(DisplayContext);
+  const fromContext = useContext(DisplayContext)?.displayId;
   if (fromContext) return fromContext;
   return getDisplayIdFromWindow();
+}
+
+export function useIsPreviewDisplay(): boolean {
+  return useContext(DisplayContext)?.isPreview ?? false;
 }

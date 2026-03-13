@@ -109,7 +109,7 @@ function AppInner() {
   if (previewDisplayId) {
     return (
       <div style={{ position: 'relative', width: '100%', height: '100%' }}>
-        <DisplayViewer displayId={previewDisplayId} />
+        <DisplayViewer displayId={previewDisplayId} isPreview />
         <div style={{ position: 'fixed', top: 12, right: 12, zIndex: 9999 }}>
           <Tooltip label="Exit preview" position="left" withArrow>
             <ActionIcon

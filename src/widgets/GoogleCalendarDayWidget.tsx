@@ -38,7 +38,7 @@ import { GoogleCalendarEmptyState } from '../components/GoogleCalendarEmptyState
 import type { WidgetProps, WidgetConfig } from '../types/widget';
 import { useGoogleCalendar } from '../hooks/useGoogleCalendar';
 import { useDisplayCalendar } from '../hooks/useDisplayCalendar';
-import { useDisplayId, getDisplayIdFromWindow } from '../contexts/DisplayContext';
+import { useDisplayId, useIsPreviewDisplay } from '../contexts/DisplayContext';
 import { useAuth } from '../contexts/AuthContext';
 import type { ParsedCalendarEvent, CalendarEventInput } from '../services/googleCalendar';
 import classes from './GoogleCalendarDayWidget.module.css';
@@ -146,10 +146,11 @@ function formDataToEventInput(data: EventFormData): CalendarEventInput {
 
 export function GoogleCalendarDayWidget({ widget }: WidgetProps<GoogleCalendarDayConfig>) {
   const { selectedCalendarIds, maxEvents, daysAhead, transparentBackground } = widget.config;
-  const displayId = useDisplayId() ?? getDisplayIdFromWindow();
+  const displayId = useDisplayId();
+  const isPreviewDisplay = useIsPreviewDisplay();
   const displayData = useDisplayCalendar({ displayId, selectedCalendarIds, daysAhead });
   const googleData = useGoogleCalendar({ selectedCalendarIds, daysAhead });
-  const isDisplayMode = !!displayId;
+  const isDisplayMode = !!displayId && !isPreviewDisplay;
   const {
     isAuthenticated,
     isLoading,
