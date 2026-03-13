@@ -14,6 +14,8 @@ import {
   Tooltip,
   Stack,
   Badge,
+  Modal,
+  TextInput,
 } from '@mantine/core';
 import {
   IconLayoutDashboard,
@@ -22,6 +24,7 @@ import {
   IconShare,
   IconUsers,
   IconDeviceDesktop,
+  IconEdit,
 } from '@tabler/icons-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useDashboardStore } from '../store/dashboardStore';
@@ -37,6 +40,9 @@ export function DisplayListPage() {
   const [registerModalOpen, setRegisterModalOpen] = useState(false);
   const [shareDisplayId, setShareDisplayId] = useState<string | null>(null);
   const [shareDisplayName, setShareDisplayName] = useState<string>('');
+  const [renameDisplayId, setRenameDisplayId] = useState<string | null>(null);
+  const [renameValue, setRenameValue] = useState('');
+  const [renaming, setRenaming] = useState(false);
 
   const handleNewDisplay = async () => {
     const name = prompt('Display name:', 'Kitchen Display');
@@ -65,6 +71,45 @@ export function DisplayListPage() {
     setShareDisplayName(displayName);
   };
 
+  const openRenameModal = (displayId: string, currentName: string) => {
+    setRenameDisplayId(displayId);
+    setRenameValue(currentName);
+  };
+
+  const closeRenameModal = () => {
+    setRenameDisplayId(null);
+    setRenameValue('');
+  };
+
+  const handleRenameDisplay = async () => {
+    if (!accessToken || !renameDisplayId) return;
+    const trimmed = renameValue.trim();
+    const current = displays.find((d) => d.id === renameDisplayId);
+    if (!trimmed || !current || trimmed === current.name) {
+      closeRenameModal();
+      return;
+    }
+
+    setRenaming(true);
+    try {
+      const res = await fetch(`/api/displays?id=${renameDisplayId}`, {
+        method: 'PATCH',
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ name: trimmed }),
+      });
+      if (!res.ok) throw new Error('Failed to rename display');
+      renameDisplay(renameDisplayId, trimmed);
+      closeRenameModal();
+    } catch (err) {
+      console.error('Failed to rename display:', err);
+    } finally {
+      setRenaming(false);
+    }
+  };
+
   return (
     <>
     {shareDisplayId && (
@@ -82,6 +127,36 @@ export function DisplayListPage() {
       accessToken={accessToken ?? ''}
       addDisplay={addDisplay}
     />
+    <Modal
+      opened={renameDisplayId !== null}
+      onClose={closeRenameModal}
+      title="Rename display"
+      size="sm"
+      centered
+    >
+      <TextInput
+        label="Display name"
+        value={renameValue}
+        onChange={(e) => setRenameValue(e.currentTarget.value)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' && renameValue.trim()) {
+            void handleRenameDisplay();
+          }
+        }}
+        autoFocus
+        data-autofocus
+      />
+      <Group justify="flex-end" mt="md" gap="sm">
+        <Button variant="default" onClick={closeRenameModal}>Cancel</Button>
+        <Button
+          loading={renaming}
+          disabled={!renameValue.trim()}
+          onClick={() => { void handleRenameDisplay(); }}
+        >
+          Save
+        </Button>
+      </Group>
+    </Modal>
     <div className={classes.root}>
       <header className={classes.header}>
         <Group gap="sm">
@@ -165,6 +240,19 @@ export function DisplayListPage() {
                   </Stack>
                 </UnstyledButton>
                 <Group mt="md" justify="flex-end">
+                  {(display.isOwner ?? true) && (
+                    <Tooltip label="Rename display">
+                      <ActionIcon
+                        variant="subtle"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          openRenameModal(display.id, display.name);
+                        }}
+                      >
+                        <IconEdit size={16} />
+                      </ActionIcon>
+                    </Tooltip>
+                  )}
                   <Tooltip label="Share / QR code">
                     <ActionIcon
                       variant="subtle"

@@ -10,6 +10,40 @@ const CORS = {
 
 const GOOGLE_API_BASE = 'https://www.googleapis.com/calendar/v3';
 
+interface TokenRow {
+  refresh_token: string | null;
+  access_token: string | null;
+  access_token_expires_at: string | null;
+}
+
+interface TokenCandidate extends TokenRow {
+  source: 'owner' | 'collaborator';
+}
+
+function extractRows<T>(result: unknown): T[] {
+  if (Array.isArray(result)) return result as T[];
+  if (
+    result &&
+    typeof result === 'object' &&
+    'rows' in result &&
+    Array.isArray((result as { rows?: unknown }).rows)
+  ) {
+    return (result as { rows: T[] }).rows;
+  }
+  return [];
+}
+
+function isDebugEnabled(event: Parameters<Handler>[0]): boolean {
+  const queryDebug = event.queryStringParameters?.debug === '1';
+  const envDebug = process.env.DEBUG_DISPLAY_CALENDAR === '1';
+  return queryDebug || envDebug;
+}
+
+function toCandidate(row: TokenRow | undefined, source: TokenCandidate['source']): TokenCandidate[] {
+  if (!row) return [];
+  return [{ ...row, source }];
+}
+
 async function getAccessToken(refreshToken: string): Promise<string> {
   const clientId = process.env.GOOGLE_CLIENT_ID;
   const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
@@ -97,6 +131,7 @@ export const handler: Handler = async (event) => {
 
   const displayId = event.queryStringParameters?.displayId;
   const calendarIdsParam = event.queryStringParameters?.calendarIds;
+  const debug = isDebugEnabled(event);
   const daysAhead = Math.min(90, Math.max(1, parseInt(event.queryStringParameters?.daysAhead ?? '30', 10) || 30));
 
   if (!displayId || !calendarIdsParam) {
@@ -129,7 +164,7 @@ export const handler: Handler = async (event) => {
       // Ignore migration race/unsupported DDL errors and continue.
     }
 
-    const rows = await db.execute(sql`
+    const ownerResult = await db.execute(sql`
       SELECT
         u.refresh_token AS refresh_token,
         u.access_token AS access_token,
@@ -139,27 +174,95 @@ export const handler: Handler = async (event) => {
       WHERE d.display_id = ${displayId}::uuid
       LIMIT 1
     `);
-    const row = rows[0] as
-      | { refresh_token: string | null; access_token: string | null; access_token_expires_at: string | null }
-      | undefined;
+    const ownerRows = extractRows<TokenRow>(ownerResult);
+    const ownerRow = ownerRows[0];
+
+    let collaboratorRows: TokenRow[] = [];
+
+    try {
+      const collabResult = await db.execute(sql`
+        SELECT
+          u.refresh_token AS refresh_token,
+          u.access_token AS access_token,
+          u.access_token_expires_at AS access_token_expires_at
+        FROM displays d
+        INNER JOIN display_collaborators dc ON dc.display_id = d.id
+        INNER JOIN users u ON u.id = dc.user_id
+        WHERE d.display_id = ${displayId}::uuid
+      `);
+      collaboratorRows = extractRows<TokenRow>(collabResult);
+    } catch {
+      // Older databases may not have sharing tables yet. Owner token path still works.
+    }
+
+    const tokenCandidates: TokenCandidate[] = [
+      ...toCandidate(ownerRow, 'owner'),
+      ...collaboratorRows.map((row) => ({ ...row, source: 'collaborator' as const })),
+    ];
 
     let token: string | null = null;
-    if (row?.refresh_token) {
-      token = await getAccessToken(row.refresh_token);
-    } else if (row?.access_token && row.access_token_expires_at) {
-      const expiresMs = new Date(row.access_token_expires_at).getTime();
-      // Keep a small safety margin.
-      if (expiresMs > Date.now() + 60_000) {
-        token = row.access_token;
+    let chosenSource: TokenCandidate['source'] | null = null;
+    const refreshFailures: Array<TokenCandidate['source']> = [];
+
+    for (const candidate of tokenCandidates) {
+      if (candidate.refresh_token) {
+        try {
+          token = await getAccessToken(candidate.refresh_token);
+          chosenSource = candidate.source;
+          break;
+        } catch {
+          refreshFailures.push(candidate.source);
+          // Try next linked user token.
+        }
+      }
+
+      if (!token && candidate.access_token && candidate.access_token_expires_at) {
+        const expiresMs = new Date(candidate.access_token_expires_at).getTime();
+        // Keep a small safety margin.
+        if (expiresMs > Date.now() + 60_000) {
+          token = candidate.access_token;
+          chosenSource = candidate.source;
+          break;
+        }
       }
     }
 
     if (!token) {
+      if (debug) {
+        console.info('display-calendar token debug', {
+          displayId,
+          ownerCandidates: ownerRow ? 1 : 0,
+          collaboratorCandidates: collaboratorRows.length,
+          refreshFailures,
+          hasAnyRefreshToken: tokenCandidates.some((c) => !!c.refresh_token),
+          hasAnyAccessToken: tokenCandidates.some((c) => !!c.access_token),
+        });
+      }
       return {
         statusCode: 404,
         headers: CORS,
-        body: JSON.stringify({ error: 'Display owner needs to sign in from the management app to refresh calendar access' }),
+        body: JSON.stringify({
+          error: 'A display owner or linked collaborator needs to sign in from the management app to refresh calendar access',
+          ...(debug
+            ? {
+                debug: {
+                  ownerCandidates: ownerRow ? 1 : 0,
+                  collaboratorCandidates: collaboratorRows.length,
+                  refreshFailures,
+                  hasAnyRefreshToken: tokenCandidates.some((c) => !!c.refresh_token),
+                  hasAnyAccessToken: tokenCandidates.some((c) => !!c.access_token),
+                },
+              }
+            : {}),
+        }),
       };
+    }
+
+    if (debug) {
+      console.info('display-calendar token selected', {
+        displayId,
+        source: chosenSource,
+      });
     }
 
     const now = new Date();

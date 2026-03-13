@@ -69,6 +69,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const tokenClientRef = useRef<any>(null);
   const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const syncedTokenRef = useRef<string | null>(null);
 
   /**
    * Store a fresh token + schedule the next silent refresh.
@@ -196,6 +197,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem(TOKEN_EXPIRY_KEY);
     localStorage.removeItem(USER_KEY);
     localStorage.removeItem(REFRESH_TOKEN_KEY);
+    syncedTokenRef.current = null;
   }, []);
 
   const fetchAndStoreUser = useCallback(
@@ -248,6 +250,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Keep backend token state fresh for display-calendar usage (owner/collaborator).
+  // This runs once per access token value and is non-disruptive for existing sessions.
+  useEffect(() => {
+    if (!accessToken) return;
+    if (syncedTokenRef.current === accessToken) return;
+
+    void fetchAndStoreUser(accessToken)
+      .then(() => {
+        syncedTokenRef.current = accessToken;
+      })
+      .catch((err) => {
+        // Avoid forcing sign-out for transient backend sync issues.
+        console.warn('Failed to sync auth session to backend:', err);
+      });
+  }, [accessToken, fetchAndStoreUser]);
 
   const signIn = useCallback(() => {
     if (!tokenClientRef.current) return;
