@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import {
   Box,
   Text,
@@ -20,7 +20,7 @@ import {
 import type { WidgetProps, WidgetConfig } from '../types/widget';
 import { useScores } from '../hooks/useScores';
 import { LEAGUES, fetchLeagueTeams, type SportsTeam } from '../services/sports';
-import type { SportGame } from '../services/sports';
+import type { SportGame, RaceSession } from '../services/sports';
 import classes from './SportsWidget.module.css';
 
 export interface SportsConfig extends WidgetConfig {
@@ -131,6 +131,49 @@ function formatPeriod(period: number, detail: string): string {
 }
 
 // ---------------------------------------------------------------------------
+// F1 / race weekend card
+// ---------------------------------------------------------------------------
+
+function RaceCard({ game }: { game: SportGame }) {
+  const sessions = game.raceSessions ?? [];
+  const isLive = game.status === 'in';
+  const isFinal = game.status === 'post';
+
+  const statusColor = isLive ? 'green' : isFinal ? 'dimmed' : 'blue';
+
+  return (
+    <Box className={classes.gameCard}>
+      <Group justify="center" mb={4}>
+        {isLive ? (
+          <Badge color="green" size="xs" variant="dot" className={classes.liveBadge}>
+            {game.statusDetail}
+          </Badge>
+        ) : (
+          <Text size="xs" c={statusColor} className={isFinal ? classes.finalText : ''}>
+            {game.statusDetail}
+          </Text>
+        )}
+      </Group>
+      <Text size="sm" fw={600} className={classes.teamName} mb="xs">
+        {game.shortName || game.name}
+      </Text>
+      <Stack gap={2}>
+        {sessions.map((session: RaceSession) => (
+          <Group key={session.type} justify="space-between" wrap="nowrap" className={classes.teamRow}>
+            <Text size="xs" c="dimmed">
+              {session.type}
+            </Text>
+            <Text size="xs" c={session.status === 'post' ? 'dimmed' : undefined}>
+              {session.statusDetail || (session.status === 'pre' ? 'Scheduled' : '—')}
+            </Text>
+          </Group>
+        ))}
+      </Stack>
+    </Box>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Widget display
 // ---------------------------------------------------------------------------
 
@@ -142,10 +185,26 @@ export function SportsWidget({ widget }: WidgetProps<SportsConfig>) {
     [showAllGames, favoriteTeamIds]
   );
 
-  const { games: rawGames, leagueLogo, isLoading, error, refresh } = useScores({
+  const { games: rawGames, leagueLogo, isLoading, isLoadingMore, error, refresh, loadMore } = useScores({
     leagueId,
     favoriteTeamIds: teamFilter,
   });
+  const loadMoreSentinelRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const sentinel = loadMoreSentinelRef.current;
+    if (!sentinel || !loadMore) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const [e] = entries;
+        if (!e?.isIntersecting || isLoadingMore || isLoading) return;
+        loadMore();
+      },
+      { root: null, rootMargin: '100px', threshold: 0 }
+    );
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [loadMore, isLoadingMore, isLoading]);
 
   const leagueName = LEAGUES.find((l) => l.id === leagueId)?.name ?? leagueId.toUpperCase();
 
@@ -227,7 +286,7 @@ export function SportsWidget({ widget }: WidgetProps<SportsConfig>) {
       {games.length === 0 ? (
         <div className={classes.empty}>
           <Text size="sm" c="dimmed" ta="center">
-            No games scheduled today
+            {leagueId === 'f1' ? 'No races today' : 'No games scheduled today'}
           </Text>
           {!showAllGames && favoriteTeamIds.length > 0 && (
             <Text size="xs" c="dimmed" ta="center" mt={4}>
@@ -241,9 +300,22 @@ export function SportsWidget({ widget }: WidgetProps<SportsConfig>) {
             {games.map((game, i) => (
               <div key={game.id}>
                 {i > 0 && <Divider opacity={0.3} />}
-                <GameCard game={game} />
+                {game.raceSessions?.length ? (
+                  <RaceCard game={game} />
+                ) : (
+                  <GameCard game={game} />
+                )}
               </div>
             ))}
+            <div ref={loadMoreSentinelRef} style={{ minHeight: 1 }} aria-hidden />
+            {isLoadingMore && (
+              <Group justify="center" py="xs">
+                <Loader size="sm" color="dimmed" />
+                <Text size="xs" c="dimmed">
+                  Loading earlier games…
+                </Text>
+              </Group>
+            )}
           </Stack>
         </ScrollArea>
       )}

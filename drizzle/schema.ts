@@ -80,3 +80,11 @@ export const displayInvites = pgTable("display_invites", {
 		}).onDelete("cascade"),
 	unique("display_invites_display_id_invited_email_key").on(table.displayId, table.invitedEmail),
 ]);
+
+// Short-lived codes for pairing a headless device to a new display (no auth on device).
+export const displayPairing = pgTable("display_pairing", {
+	code: varchar("code", { length: 12 }).primaryKey().notNull(),
+	displayId: uuid("display_id"),
+	createdAt: timestamp("created_at", { withTimezone: true, mode: "string" }).defaultNow().notNull(),
+	expiresAt: timestamp("expires_at", { withTimezone: true, mode: "string" }).notNull(),
+});

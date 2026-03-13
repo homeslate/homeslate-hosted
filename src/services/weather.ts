@@ -28,6 +28,13 @@ export interface DailyForecast {
   precipitationProbability: number;
 }
 
+export interface HourlyForecast {
+  time: string; // ISO datetime
+  temperature: number;
+  weatherCode: number;
+  isDay: boolean;
+}
+
 export interface AirQualityData {
   usAqi: number;
 }
@@ -35,6 +42,7 @@ export interface AirQualityData {
 export interface WeatherData {
   current: CurrentWeather;
   daily: DailyForecast[];
+  hourly: HourlyForecast[]; // next 12 hours
   location: {
     name: string;
     country: string;
@@ -146,6 +154,13 @@ export async function fetchWeather(
     'temperature_2m_min',
     'precipitation_probability_max',
   ].join(','));
+
+  // Hourly forecast (next 12 hours: temperature + weather icon)
+  url.searchParams.set('hourly', [
+    'temperature_2m',
+    'weather_code',
+    'is_day',
+  ].join(','));
   
   // Units
   if (units === 'imperial') {
@@ -167,6 +182,16 @@ export async function fetchWeather(
 
   const data = await response.json();
 
+  // Next 12 hours from hourly arrays (API returns 168 by default)
+  const hourlyCount = 12;
+  const hourlyTimes = (data.hourly?.time ?? []).slice(0, hourlyCount);
+  const hourly: HourlyForecast[] = hourlyTimes.map((time: string, i: number) => ({
+    time,
+    temperature: Math.round(data.hourly.temperature_2m[i]),
+    weatherCode: data.hourly.weather_code[i],
+    isDay: data.hourly.is_day[i] === 1,
+  }));
+
   return {
     current: {
       temperature: Math.round(data.current.temperature_2m),
@@ -183,6 +208,7 @@ export async function fetchWeather(
       tempMin: Math.round(data.daily.temperature_2m_min[i]),
       precipitationProbability: data.daily.precipitation_probability_max[i],
     })),
+    hourly,
     location: locationInfo ?? {
       name: 'Unknown',
       country: '',

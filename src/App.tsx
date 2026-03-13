@@ -1,7 +1,7 @@
 import { MantineProvider, createTheme, ActionIcon, Tooltip, Loader, Center } from '@mantine/core';
 import { IconX } from '@tabler/icons-react';
 import { lazy, Suspense } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useWakeLock } from './hooks/useWakeLock';
 import { useConfigSync } from './hooks/useConfigSync';
 import { AuthProvider } from './contexts/AuthContext';
@@ -21,6 +21,7 @@ const AuthPage = lazy(() => import('./pages/AuthPage').then((m) => ({ default: m
 const DisplayListPage = lazy(() => import('./pages/DisplayListPage').then((m) => ({ default: m.DisplayListPage })));
 const DisplayDetailPage = lazy(() => import('./pages/DisplayDetailPage').then((m) => ({ default: m.DisplayDetailPage })));
 const ViewEditorPage = lazy(() => import('./pages/ViewEditorPage').then((m) => ({ default: m.ViewEditorPage })));
+const PairPage = lazy(() => import('./pages/PairPage').then((m) => ({ default: m.PairPage })));
 
 function PageLoader() {
   return (
@@ -77,9 +78,19 @@ if (_initialDisplayParam) {
 
 function AppInner() {
   const { isAuthenticated } = useAuth();
+  const { pathname } = useLocation();
   const { previewDisplayId, closePreview } = useDashboardStore();
   useWakeLock();
   useConfigSync();
+
+  // Unauthenticated pairing page for headless displays (no keyboard/mouse).
+  if (pathname === '/pair') {
+    return (
+      <Suspense fallback={<PageLoader />}>
+        <PairPage />
+      </Suspense>
+    );
+  }
 
   // Display device mode: ?display=<uuid> → fullscreen viewer, no auth needed.
   // Also check sessionStorage so we survive OAuth redirects that strip query params

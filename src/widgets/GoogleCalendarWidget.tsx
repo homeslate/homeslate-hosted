@@ -38,6 +38,8 @@ import {
 import { GoogleCalendarEmptyState } from '../components/GoogleCalendarEmptyState';
 import type { WidgetProps, WidgetConfig } from '../types/widget';
 import { useGoogleCalendar } from '../hooks/useGoogleCalendar';
+import { useDisplayCalendar } from '../hooks/useDisplayCalendar';
+import { useDisplayId, getDisplayIdFromWindow } from '../contexts/DisplayContext';
 import { useAuth } from '../contexts/AuthContext';
 import type { ParsedCalendarEvent } from '../services/googleCalendar';
 import type { CalendarEventInput } from '../services/googleCalendar';
@@ -148,7 +150,10 @@ function formDataToEventInput(data: EventFormData): CalendarEventInput {
 
 export function GoogleCalendarWidget({ widget }: WidgetProps<GoogleCalendarConfig>) {
   const { selectedCalendarIds, maxEvents, daysAhead, showCalendar, transparentBackground } = widget.config;
-
+  const displayId = useDisplayId() ?? getDisplayIdFromWindow();
+  const displayData = useDisplayCalendar({ displayId, selectedCalendarIds, daysAhead });
+  const googleData = useGoogleCalendar({ selectedCalendarIds, daysAhead });
+  const isDisplayMode = !!displayId;
   const {
     isAuthenticated,
     isLoading,
@@ -159,7 +164,7 @@ export function GoogleCalendarWidget({ widget }: WidgetProps<GoogleCalendarConfi
     addEvent,
     editEvent,
     removeEvent,
-  } = useGoogleCalendar({ selectedCalendarIds, daysAhead });
+  } = isDisplayMode ? displayData : googleData;
 
   // Long-press timer ref
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -325,11 +330,24 @@ export function GoogleCalendarWidget({ widget }: WidgetProps<GoogleCalendarConfi
   }, [detailEvent, removeEvent]);
 
   // ── Early-return states ──
-
-  if (!isAuthenticated) {
+  // Only show "Sign in" when not in display mode (display never needs to sign in).
+  if (!isAuthenticated && !isDisplayMode) {
     return (
       <Box className={`${classes.container} ${transparentBackground ? classes.transparent : ''}`}>
         <GoogleCalendarEmptyState variant="signIn" className={classes.empty} />
+      </Box>
+    );
+  }
+
+  // Display mode but API error (e.g. owner has not connected Google): show friendly message.
+  if (isDisplayMode && error && !isLoading && events.length === 0) {
+    return (
+      <Box className={`${classes.container} ${transparentBackground ? classes.transparent : ''}`}>
+        <div className={classes.empty}>
+          <Text size="sm" c="dimmed" ta="center">
+            Calendar will appear when the display owner signs in with Google in the app.
+          </Text>
+        </div>
       </Box>
     );
   }

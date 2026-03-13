@@ -2,7 +2,7 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 
-export default defineConfig(({ command }) => ({
+export default defineConfig(() => ({
   build: {
     rollupOptions: {
       output: {
@@ -31,7 +31,7 @@ export default defineConfig(({ command }) => ({
   },
   plugins: [
     react(),
-    command === 'build' && VitePWA({
+    VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['icon.svg', 'vite.svg', 'icons/*.png'],
       manifest: {

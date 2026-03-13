@@ -3,6 +3,7 @@ import { PinInput, Stack, Text, Button, ActionIcon, Tooltip } from '@mantine/cor
 import * as TablerIcons from '@tabler/icons-react';
 import { IconLock, IconSun, IconMoon } from '@tabler/icons-react';
 import { useWakeLock } from '../hooks/useWakeLock';
+import { DisplayProvider } from '../contexts/DisplayContext';
 import type { DashboardLayout, StickyNote, WidgetDefinition } from '../types/widget';
 import type { TodoItem } from '../widgets/TodoWidget';
 import type { ColorMode, DisplayTheme } from '../types/theme';
@@ -401,6 +402,7 @@ export function DisplayViewer({ displayId }: Props) {
   const activeLayout = config?.layouts.find((l) => l.id === activeLayoutId);
 
   return (
+    <DisplayProvider displayId={displayId}>
     <div
       ref={rootRef}
       className={classes.root}
@@ -480,6 +482,7 @@ export function DisplayViewer({ displayId }: Props) {
         </div>
       )}
     </div>
+    </DisplayProvider>
   );
 }
 

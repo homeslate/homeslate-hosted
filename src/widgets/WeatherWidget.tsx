@@ -234,6 +234,28 @@ export function WeatherWidget({ widget }: WidgetProps<WeatherConfig>) {
         })()}
       </div>
       
+      {!isCompact && weather.hourly.length > 0 && (
+        <div className={classes.hourlySection}>
+          <Text size="xs" fw={600} c="dimmed" mb="xs">Next 12 hours</Text>
+          <div className={classes.hourly}>
+            {weather.hourly.map((hour, index) => {
+              const hourLabel = new Date(hour.time).toLocaleTimeString('en-US', {
+                hour: 'numeric',
+                hour12: true,
+              });
+              const hourIcon = getWeatherIcon(hour.weatherCode);
+              return (
+                <div key={index} className={classes.forecastHour}>
+                  <Text size="xs" fw={500}>{hourLabel}</Text>
+                  <WeatherIcon condition={hourIcon} size={22} isDay={hour.isDay} />
+                  <Text size="xs">{hour.temperature}{tempUnit}</Text>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {showWeeklyForecast && weather.daily.length > 1 && (
         <div className={classes.forecast}>
           {weather.daily.slice(1, forecastDays + 1).map((day, index) => {

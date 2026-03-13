@@ -21,10 +21,12 @@ import {
   IconPlus,
   IconShare,
   IconUsers,
+  IconDeviceDesktop,
 } from '@tabler/icons-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useDashboardStore } from '../store/dashboardStore';
 import { ShareDisplayModal } from '../components/ShareDisplayModal';
+import { RegisterDeviceModal } from '../components/RegisterDeviceModal';
 import classes from './DisplayListPage.module.css';
 
 export function DisplayListPage() {
@@ -32,6 +34,7 @@ export function DisplayListPage() {
   const navigate = useNavigate();
   const { displays, addDisplay } = useDashboardStore();
   const [creating, setCreating] = useState(false);
+  const [registerModalOpen, setRegisterModalOpen] = useState(false);
   const [shareDisplayId, setShareDisplayId] = useState<string | null>(null);
   const [shareDisplayName, setShareDisplayName] = useState<string>('');
 
@@ -72,6 +75,13 @@ export function DisplayListPage() {
         displayName={shareDisplayName}
       />
     )}
+    <RegisterDeviceModal
+      opened={registerModalOpen}
+      onClose={() => setRegisterModalOpen(false)}
+      onSuccess={() => {}}
+      accessToken={accessToken ?? ''}
+      addDisplay={addDisplay}
+    />
     <div className={classes.root}>
       <header className={classes.header}>
         <Group gap="sm">
@@ -79,6 +89,14 @@ export function DisplayListPage() {
           <Title order={4} className={classes.title}>Your Displays</Title>
         </Group>
         <Group gap="sm">
+          <Button
+            leftSection={<IconDeviceDesktop size={16} />}
+            variant="light"
+            onClick={() => setRegisterModalOpen(true)}
+            size="sm"
+          >
+            Register device
+          </Button>
           <Button
             leftSection={<IconPlus size={16} />}
             onClick={handleNewDisplay}

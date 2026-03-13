@@ -31,6 +31,8 @@ import {
 import { GoogleCalendarEmptyState } from '../components/GoogleCalendarEmptyState';
 import type { WidgetProps, WidgetConfig } from '../types/widget';
 import { useGoogleCalendar } from '../hooks/useGoogleCalendar';
+import { useDisplayCalendar } from '../hooks/useDisplayCalendar';
+import { useDisplayId, getDisplayIdFromWindow } from '../contexts/DisplayContext';
 import { useAuth } from '../contexts/AuthContext';
 import type { ParsedCalendarEvent, CalendarEventInput } from '../services/googleCalendar';
 import classes from './GoogleCalendarMonthWidget.module.css';
@@ -104,8 +106,12 @@ function formatTimeRange(event: ParsedCalendarEvent): string {
 
 export function GoogleCalendarMonthWidget({ widget }: WidgetProps<GoogleCalendarMonthConfig>) {
   const { selectedCalendarIds, daysAhead, transparentBackground } = widget.config;
+  const displayId = useDisplayId() ?? getDisplayIdFromWindow();
+  const displayData = useDisplayCalendar({ displayId, selectedCalendarIds, daysAhead });
+  const googleData = useGoogleCalendar({ selectedCalendarIds, daysAhead });
   const { isAuthenticated } = useAuth();
-  const { isLoading, events, calendars, refresh, addEvent } = useGoogleCalendar({ selectedCalendarIds, daysAhead });
+  const isDisplayMode = !!displayId;
+  const { isLoading, events, calendars, refresh, addEvent } = isDisplayMode ? displayData : googleData;
 
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
 
@@ -209,10 +215,22 @@ export function GoogleCalendarMonthWidget({ widget }: WidgetProps<GoogleCalendar
     return dayjs(selectedDate).format('ddd, MMM D');
   })();
 
-  if (!isAuthenticated) {
+  if (!isAuthenticated && !isDisplayMode) {
     return (
       <Box className={`${classes.container} ${transparentBackground ? classes.transparent : ''}`}>
         <GoogleCalendarEmptyState variant="signIn" className={classes.empty} />
+      </Box>
+    );
+  }
+
+  if (isDisplayMode && displayData.error && !displayData.isLoading && events.length === 0) {
+    return (
+      <Box className={`${classes.container} ${transparentBackground ? classes.transparent : ''}`}>
+        <div className={classes.empty}>
+          <Text size="sm" c="dimmed" ta="center">
+            Calendar will appear when the display owner signs in with Google in the app.
+          </Text>
+        </div>
       </Box>
     );
   }

@@ -1,0 +1,49 @@
+.root {
+  min-height: 100vh;
+  background: var(--mantine-color-body);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.center {
+  width: 100%;
+  padding: 1rem;
+}
+
+.card {
+  width: 100%;
+  max-width: 380px;
+  background: var(--mantine-color-default);
+  border: 1px solid var(--mantine-color-default-border);
+}
+
+.iconWrap {
+  width: 72px;
+  height: 72px;
+  border-radius: 16px;
+  background: var(--mantine-color-indigo-9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--mantine-color-indigo-3);
+}
+
+.title {
+  color: var(--mantine-color-text);
+}
+
+.codeWrap {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  justify-content: center;
+}
+
+.code {
+  font-size: 1.75rem;
+  font-weight: 700;
+  letter-spacing: 0.25em;
+  padding: 0.75rem 1rem;
+}

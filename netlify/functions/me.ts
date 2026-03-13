@@ -8,14 +8,14 @@ const CORS = {
   'Content-Type': 'application/json',
 };
 
-async function verifyToken(accessToken: string): Promise<{ sub: string; email: string }> {
+async function verifyToken(accessToken: string): Promise<{ sub: string; email: string; exp: number | null }> {
   const res = await fetch(
     `https://oauth2.googleapis.com/tokeninfo?access_token=${accessToken}`
   );
   if (!res.ok) throw new Error('Invalid token');
-  const data = await res.json() as { aud: string; sub: string; email: string };
+  const data = await res.json() as { aud: string; sub: string; email: string; exp?: string };
   if (data.aud !== process.env.GOOGLE_CLIENT_ID) throw new Error('Token audience mismatch');
-  return { sub: data.sub, email: data.email };
+  return { sub: data.sub, email: data.email, exp: data.exp ? parseInt(data.exp, 10) : null };
 }
 
 export const handler: Handler = async (event) => {
@@ -31,7 +31,7 @@ export const handler: Handler = async (event) => {
   const accessToken = authHeader.slice(7);
 
   try {
-    const { sub: googleId, email } = await verifyToken(accessToken);
+    const { sub: googleId, email, exp } = await verifyToken(accessToken);
 
     const userInfoRes = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
       headers: { Authorization: `Bearer ${accessToken}` },
@@ -42,13 +42,13 @@ export const handler: Handler = async (event) => {
 
     const refreshToken = event.headers['x-refresh-token'];
 
-    // Idempotent migration: ensure refresh_token column exists
-    if (refreshToken) {
-      try {
-        await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS refresh_token TEXT`);
-      } catch {
-        // Column might already exist, ignore error
-      }
+    // Idempotent migration: ensure token columns exist
+    try {
+      await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS refresh_token TEXT`);
+      await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS access_token TEXT`);
+      await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS access_token_expires_at TIMESTAMPTZ`);
+    } catch {
+      // Column might already exist, ignore error
     }
 
     // Upsert user
@@ -78,6 +78,17 @@ export const handler: Handler = async (event) => {
     if (!user) {
       throw new Error('Failed to upsert user');
     }
+
+    // Persist current access token for display-calendar fallback when no refresh token is available.
+    // exp is epoch seconds from Google tokeninfo.
+    const expiresAt = exp ? new Date(exp * 1000).toISOString() : null;
+    await db.execute(sql`
+      UPDATE users
+      SET
+        access_token = ${accessToken},
+        access_token_expires_at = ${expiresAt}::timestamptz
+      WHERE google_id = ${googleId}
+    `);
 
     // Ensure user has at least one display
     const [existingDisplay] = await db

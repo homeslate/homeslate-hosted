@@ -16,6 +16,7 @@ export const LEAGUES: League[] = [
   { id: 'wnba',                         sport: 'basketball', name: 'WNBA' },
   { id: 'mlb',                          sport: 'baseball',   name: 'MLB' },
   { id: 'mls',                          sport: 'soccer',     name: 'MLS' },
+  { id: 'f1',                           sport: 'racing',    name: 'Formula 1' },
   { id: 'mens-college-basketball',      sport: 'basketball', name: 'NCAA Basketball (M)' },
   { id: 'womens-college-basketball',    sport: 'basketball', name: 'NCAA Basketball (W)' },
   { id: 'college-football',             sport: 'football',   name: 'NCAA Football' },
@@ -40,6 +41,13 @@ export interface SportsCompetitor {
 
 export type GameStatus = 'pre' | 'in' | 'post';
 
+export interface RaceSession {
+  type: string;       // e.g. "FP1", "Qual", "Race", "Sprint"
+  date: string;       // ISO string
+  statusDetail: string;
+  status: GameStatus;
+}
+
 export interface SportGame {
   id: string;
   date: string; // ISO string
@@ -50,6 +58,8 @@ export interface SportGame {
   period?: number;        // current period / quarter
   clock?: string;         // remaining clock
   competitors: [SportsCompetitor, SportsCompetitor]; // [away, home] typically
+  /** Present for F1/racing: sessions (FP1, Qual, Race, etc.) for this race weekend */
+  raceSessions?: RaceSession[];
 }
 
 // ---------------------------------------------------------------------------
@@ -58,12 +68,16 @@ export interface SportGame {
 
 const ESPN_BASE = 'https://site.api.espn.com/apis/site/v2/sports';
 
-// Simple in-memory cache keyed by leagueId
-const scoreboardCache = new Map<string, { data: SportGame[]; timestamp: number; teams: SportsTeam[]; leagueLogo?: string }>();
+// Simple in-memory cache keyed by leagueId or leagueId:dates
+const scoreboardCache = new Map<
+  string,
+  { data: SportGame[]; timestamp: number; teams: SportsTeam[]; leagueLogo?: string; date?: string }
+>();
 const CACHE_DURATION = 2 * 60 * 1000; // 2 minutes
 
-function buildScoreboardUrl(leagueId: string, sport: string): string {
-  return `${ESPN_BASE}/${sport}/${leagueId}/scoreboard`;
+function buildScoreboardUrl(leagueId: string, sport: string, dates?: string): string {
+  const base = `${ESPN_BASE}/${sport}/${leagueId}/scoreboard`;
+  return dates ? `${base}?dates=${dates}` : base;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -111,22 +125,108 @@ function parseGame(event: any): SportGame {
   };
 }
 
-export async function fetchScoreboard(leagueId: string): Promise<{ games: SportGame[]; teams: SportsTeam[]; leagueLogo?: string }> {
+// F1/racing: each "event" is a race weekend with multiple sessions (FP1, Qual, Race, etc.)
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function parseF1Event(event: any): SportGame {
+  const competitions = event.competitions ?? [];
+  const raceSession = competitions.find((c: any) => c.type?.abbreviation === 'Race');
+  const statusType = raceSession?.status?.type ?? event.status?.type ?? competitions[0]?.status?.type;
+
+  let status: GameStatus = 'pre';
+  if (statusType?.state === 'in') status = 'in';
+  else if (statusType?.state === 'post') status = 'post';
+
+  const raceSessions: RaceSession[] = competitions.map((c: any) => {
+    const st = c.status?.type;
+    let s: GameStatus = 'pre';
+    if (st?.state === 'in') s = 'in';
+    else if (st?.state === 'post') s = 'post';
+    return {
+      type: c.type?.abbreviation ?? c.type?.name ?? 'Session',
+      date: c.date ?? event.date,
+      statusDetail: st?.shortDetail ?? st?.detail ?? '',
+      status: s,
+    };
+  });
+
+  const circuitName = event.circuit?.fullName ?? event.circuit?.address?.city ?? '';
+  const placeholderTeam: SportsTeam = {
+    id: event.id,
+    abbreviation: 'GP',
+    displayName: event.shortName ?? event.name ?? 'Grand Prix',
+    shortDisplayName: event.shortName ?? event.name ?? 'GP',
+  };
+  const nextSession = raceSessions.find((s) => s.status === 'pre') ?? raceSessions[raceSessions.length - 1];
+  const nextDetail = nextSession ? `${nextSession.type}: ${nextSession.statusDetail}` : statusType?.shortDetail ?? '';
+
+  const competitors: [SportsCompetitor, SportsCompetitor] = [
+    {
+      team: { ...placeholderTeam, displayName: circuitName || placeholderTeam.displayName, shortDisplayName: circuitName || placeholderTeam.shortDisplayName },
+      score: '',
+      homeAway: 'away',
+    },
+    {
+      team: { ...placeholderTeam, displayName: nextDetail, shortDisplayName: nextDetail },
+      score: '',
+      homeAway: 'home',
+    },
+  ];
+
+  return {
+    id: event.id,
+    date: event.date,
+    name: event.name ?? '',
+    shortName: event.shortName ?? '',
+    status,
+    statusDetail: statusType?.shortDetail ?? statusType?.detail ?? '',
+    competitors,
+    raceSessions,
+  };
+}
+
+export interface FetchScoreboardOptions {
+  /** Date in YYYYMMDD format; if omitted, API returns today's games */
+  dates?: string;
+}
+
+export interface FetchScoreboardResult {
+  games: SportGame[];
+  teams: SportsTeam[];
+  leagueLogo?: string;
+  /** Scoreboard date in YYYYMMDD (from API response when available) */
+  date?: string;
+}
+
+export async function fetchScoreboard(
+  leagueId: string,
+  options?: FetchScoreboardOptions
+): Promise<FetchScoreboardResult> {
   const league = LEAGUES.find((l) => l.id === leagueId);
   if (!league) throw new Error(`Unknown league: ${leagueId}`);
 
-  const cached = scoreboardCache.get(leagueId);
+  const { dates } = options ?? {};
+  const cacheKey = dates ? `${leagueId}:${dates}` : leagueId;
+
+  const cached = scoreboardCache.get(cacheKey);
   if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
-    return { games: cached.data, teams: cached.teams, leagueLogo: cached.leagueLogo };
+    return {
+      games: cached.data,
+      teams: cached.teams,
+      leagueLogo: cached.leagueLogo,
+      date: cached.date,
+    };
   }
 
-  const url = buildScoreboardUrl(leagueId, league.sport);
+  const url = buildScoreboardUrl(leagueId, league.sport, dates);
   const response = await fetch(url);
   if (!response.ok) throw new Error(`ESPN fetch failed: ${response.statusText}`);
 
   const data = await response.json();
 
-  const games: SportGame[] = (data.events ?? []).map(parseGame);
+  const isRacing = league.sport === 'racing';
+  const games: SportGame[] = (data.events ?? []).map((event: unknown) =>
+    isRacing ? parseF1Event(event) : parseGame(event)
+  );
 
   // Extract league logo from response (prefer dark variant for display on dark backgrounds)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -135,12 +235,21 @@ export async function fetchScoreboard(leagueId: string): Promise<{ games: SportG
   const defaultLogo = logos.find((l: any) => l.rel?.includes('default'))?.href ?? logos[0]?.href;
   const leagueLogo: string | undefined = darkLogo ?? defaultLogo;
 
-  // Collect unique teams from this scoreboard response
+  // Scoreboard date from API (e.g. "2026-03-12" -> "20260312")
+  const rawDay = data.day?.date;
+  const dateStr =
+    rawDay && typeof rawDay === 'string'
+      ? rawDay.replace(/-/g, '')
+      : dates;
+
+  // Collect unique teams from this scoreboard response (racing events use placeholder competitors, so skip)
   const teamMap = new Map<string, SportsTeam>();
-  for (const game of games) {
-    for (const competitor of game.competitors) {
-      if (!teamMap.has(competitor.team.id)) {
-        teamMap.set(competitor.team.id, competitor.team);
+  if (!isRacing) {
+    for (const game of games) {
+      for (const competitor of game.competitors) {
+        if (!teamMap.has(competitor.team.id)) {
+          teamMap.set(competitor.team.id, competitor.team);
+        }
       }
     }
   }
@@ -148,8 +257,20 @@ export async function fetchScoreboard(leagueId: string): Promise<{ games: SportG
     a.displayName.localeCompare(b.displayName)
   );
 
-  scoreboardCache.set(leagueId, { data: games, timestamp: Date.now(), teams, leagueLogo });
-  return { games, teams, leagueLogo };
+  const cacheEntry = {
+    data: games,
+    timestamp: Date.now(),
+    teams,
+    leagueLogo,
+    date: dateStr,
+  };
+  scoreboardCache.set(cacheKey, cacheEntry);
+  return {
+    games,
+    teams,
+    leagueLogo,
+    date: dateStr,
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -198,7 +319,11 @@ export async function fetchLeagueTeams(leagueId: string): Promise<SportsTeam[]> 
 
 export function invalidateCache(leagueId?: string): void {
   if (leagueId) {
-    scoreboardCache.delete(leagueId);
+    for (const key of scoreboardCache.keys()) {
+      if (key === leagueId || key.startsWith(`${leagueId}:`)) {
+        scoreboardCache.delete(key);
+      }
+    }
   } else {
     scoreboardCache.clear();
   }

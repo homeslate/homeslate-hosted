@@ -8,6 +8,13 @@
       "when": 1773120386904,
       "tag": "0000_wet_proudstar",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1773289798778,
+      "tag": "0001_fresh_puck",
+      "breakpoints": true
     }
   ]
 }
