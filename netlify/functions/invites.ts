@@ -1,5 +1,6 @@
 import type { Handler } from '@netlify/functions';
 import { and, asc, eq, sql } from 'drizzle-orm';
+import { z } from 'zod';
 import {
   getDb,
   users,
@@ -7,67 +8,34 @@ import {
   displayCollaborators,
   displayInvites,
 } from '../../src/db';
+import type { InviteCreateRequest } from '../../src/types/api';
+import { AUTH_JSON_HEADERS, errorResponse, jsonResponse, optionsResponse } from './_shared/http';
+import { requireGoogleId } from './_shared/googleAuth';
 
-const CORS = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'Authorization, Content-Type',
-  'Content-Type': 'application/json',
-};
-
-async function getGoogleId(authHeader: string | undefined): Promise<string> {
-  if (!authHeader?.startsWith('Bearer ')) throw new Error('No token');
-  const token = authHeader.slice(7);
-  const res = await fetch(`https://oauth2.googleapis.com/tokeninfo?access_token=${token}`);
-  if (!res.ok) throw new Error('Invalid token');
-  const data = await res.json() as { aud: string; sub: string };
-  if (data.aud !== process.env.GOOGLE_CLIENT_ID) throw new Error('Token mismatch');
-  return data.sub;
-}
+const InviteBodySchema: z.ZodType<InviteCreateRequest> = z.object({
+  displayId: z.string().uuid(),
+  email: z.string().trim().email(),
+});
 
 export const handler: Handler = async (event) => {
   if (event.httpMethod === 'OPTIONS') {
-    return { statusCode: 204, headers: CORS, body: '' };
+    return optionsResponse(AUTH_JSON_HEADERS);
   }
 
   const db = getDb();
 
   let googleId: string;
   try {
-    googleId = await getGoogleId(event.headers['authorization']);
+    googleId = await requireGoogleId(event.headers['authorization']);
   } catch {
-    return { statusCode: 401, headers: CORS, body: JSON.stringify({ error: 'Unauthorized' }) };
-  }
-
-  try {
-    await db.execute(sql`
-      CREATE TABLE IF NOT EXISTS display_collaborators (
-        id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        display_id  UUID NOT NULL REFERENCES displays(id) ON DELETE CASCADE,
-        user_id     UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-        created_at  TIMESTAMP NOT NULL DEFAULT NOW(),
-        UNIQUE (display_id, user_id)
-      )
-    `);
-    await db.execute(sql`
-      CREATE TABLE IF NOT EXISTS display_invites (
-        id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        display_id  UUID NOT NULL REFERENCES displays(id) ON DELETE CASCADE,
-        invited_email TEXT NOT NULL,
-        invited_by  UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-        created_at  TIMESTAMP NOT NULL DEFAULT NOW(),
-        UNIQUE (display_id, invited_email)
-      )
-    `);
-  } catch (err) {
-    console.error('Migration error:', err);
-    return { statusCode: 500, headers: CORS, body: JSON.stringify({ error: 'DB setup failed' }) };
+    return errorResponse(401, 'Unauthorized', AUTH_JSON_HEADERS);
   }
 
   // GET /api/invites?displayId=<id> — list pending invites and collaborators for a display
   if (event.httpMethod === 'GET') {
     const displayId = event.queryStringParameters?.displayId;
     if (!displayId) {
-      return { statusCode: 400, headers: CORS, body: JSON.stringify({ error: 'Missing displayId' }) };
+      return errorResponse(400, 'Missing displayId', AUTH_JSON_HEADERS);
     }
 
     const ownerAccess = await db
@@ -83,7 +51,7 @@ export const handler: Handler = async (event) => {
       .where(sql`${displayCollaborators.displayId} = ${displayId}::uuid AND ${users.googleId} = ${googleId}`);
 
     if (ownerAccess.length === 0 && collabAccess.length === 0) {
-      return { statusCode: 403, headers: CORS, body: JSON.stringify({ error: 'Forbidden' }) };
+      return errorResponse(403, 'Forbidden', AUTH_JSON_HEADERS);
     }
 
     const [invites, collaborators] = await Promise.all([
@@ -112,7 +80,7 @@ export const handler: Handler = async (event) => {
 
     return {
       statusCode: 200,
-      headers: CORS,
+      headers: AUTH_JSON_HEADERS,
       body: JSON.stringify({
         invites: invites.map((i) => ({ id: i.id, invited_email: i.invitedEmail, created_at: i.createdAt })),
         collaborators: collaborators.map((c) => ({
@@ -128,16 +96,21 @@ export const handler: Handler = async (event) => {
 
   // POST /api/invites — send an invite (owner only)
   if (event.httpMethod === 'POST') {
-    const { displayId, email } = JSON.parse(event.body ?? '{}') as {
-      displayId?: string;
-      email?: string;
-    };
-
-    if (!displayId || !email?.trim()) {
-      return { statusCode: 400, headers: CORS, body: JSON.stringify({ error: 'Missing displayId or email' }) };
+    let body: unknown;
+    try {
+      body = JSON.parse(event.body ?? '{}');
+    } catch {
+      return errorResponse(400, 'Invalid JSON body', AUTH_JSON_HEADERS);
+    }
+    const parsed = InviteBodySchema.safeParse(body);
+    if (!parsed.success) {
+      return errorResponse(400, 'Invalid invite payload', AUTH_JSON_HEADERS, {
+        details: parsed.error.flatten(),
+      });
     }
 
-    const normalizedEmail = email.trim().toLowerCase();
+    const { displayId, email } = parsed.data;
+    const normalizedEmail = email.toLowerCase();
 
     const ownerCheck = await db
       .select({ id: displays.id })
@@ -146,7 +119,7 @@ export const handler: Handler = async (event) => {
       .where(sql`${displays.id} = ${displayId}::uuid AND ${users.googleId} = ${googleId}`);
 
     if (ownerCheck.length === 0) {
-      return { statusCode: 403, headers: CORS, body: JSON.stringify({ error: 'Only the owner can invite people' }) };
+      return errorResponse(403, 'Only the owner can invite people', AUTH_JSON_HEADERS);
     }
 
     const selfCheck = await db
@@ -156,7 +129,7 @@ export const handler: Handler = async (event) => {
       .limit(1);
 
     if (selfCheck.length > 0) {
-      return { statusCode: 400, headers: CORS, body: JSON.stringify({ error: 'You cannot invite yourself' }) };
+      return errorResponse(400, 'You cannot invite yourself', AUTH_JSON_HEADERS);
     }
 
     const collabCheck = await db
@@ -169,7 +142,7 @@ export const handler: Handler = async (event) => {
       .limit(1);
 
     if (collabCheck.length > 0) {
-      return { statusCode: 409, headers: CORS, body: JSON.stringify({ error: 'This person is already a collaborator' }) };
+      return errorResponse(409, 'This person is already a collaborator', AUTH_JSON_HEADERS);
     }
 
     const [inviter] = await db
@@ -179,7 +152,7 @@ export const handler: Handler = async (event) => {
       .limit(1);
 
     if (!inviter) {
-      return { statusCode: 500, headers: CORS, body: JSON.stringify({ error: 'User not found' }) };
+      return errorResponse(500, 'User not found', AUTH_JSON_HEADERS);
     }
 
     const [created] = await db
@@ -196,12 +169,12 @@ export const handler: Handler = async (event) => {
       .returning({ id: displayInvites.id, invitedEmail: displayInvites.invitedEmail, createdAt: displayInvites.createdAt });
 
     if (!created) {
-      return { statusCode: 500, headers: CORS, body: JSON.stringify({ error: 'Failed to create invite' }) };
+      return errorResponse(500, 'Failed to create invite', AUTH_JSON_HEADERS);
     }
 
     return {
       statusCode: 201,
-      headers: CORS,
+      headers: AUTH_JSON_HEADERS,
       body: JSON.stringify({
         id: created.id,
         invited_email: created.invitedEmail,
@@ -218,11 +191,7 @@ export const handler: Handler = async (event) => {
     const collaboratorId = event.queryStringParameters?.collaboratorId;
 
     if (!displayId || (!email && !collaboratorId)) {
-      return {
-        statusCode: 400,
-        headers: CORS,
-        body: JSON.stringify({ error: 'Missing displayId and email or collaboratorId' }),
-      };
+      return errorResponse(400, 'Missing displayId and email or collaboratorId', AUTH_JSON_HEADERS);
     }
 
     const ownerCheck = await db
@@ -232,7 +201,7 @@ export const handler: Handler = async (event) => {
       .where(sql`${displays.id} = ${displayId}::uuid AND ${users.googleId} = ${googleId}`);
 
     if (ownerCheck.length === 0) {
-      return { statusCode: 403, headers: CORS, body: JSON.stringify({ error: 'Only the owner can remove access' }) };
+      return errorResponse(403, 'Only the owner can remove access', AUTH_JSON_HEADERS);
     }
 
     if (email) {
@@ -256,8 +225,8 @@ export const handler: Handler = async (event) => {
         );
     }
 
-    return { statusCode: 200, headers: CORS, body: JSON.stringify({ ok: true }) };
+    return jsonResponse(200, { ok: true }, AUTH_JSON_HEADERS);
   }
 
-  return { statusCode: 405, headers: CORS, body: JSON.stringify({ error: 'Method not allowed' }) };
+  return errorResponse(405, 'Method not allowed', AUTH_JSON_HEADERS);
 };

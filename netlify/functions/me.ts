@@ -1,37 +1,29 @@
 import type { Handler } from '@netlify/functions';
 import { and, eq, sql } from 'drizzle-orm';
 import { getDb, users, displays, displayCollaborators, displayInvites } from '../../src/db';
-
-const CORS = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'Authorization, Content-Type',
-  'Content-Type': 'application/json',
-};
-
-async function verifyToken(accessToken: string): Promise<{ sub: string; email: string; exp: number | null }> {
-  const res = await fetch(
-    `https://oauth2.googleapis.com/tokeninfo?access_token=${accessToken}`
-  );
-  if (!res.ok) throw new Error('Invalid token');
-  const data = await res.json() as { aud: string; sub: string; email: string; exp?: string };
-  if (data.aud !== process.env.GOOGLE_CLIENT_ID) throw new Error('Token audience mismatch');
-  return { sub: data.sub, email: data.email, exp: data.exp ? parseInt(data.exp, 10) : null };
-}
+import { AUTH_JSON_HEADERS, errorResponse, jsonResponse, optionsResponse } from './_shared/http';
+import { verifyGoogleToken } from './_shared/googleAuth';
 
 export const handler: Handler = async (event) => {
   if (event.httpMethod === 'OPTIONS') {
-    return { statusCode: 204, headers: CORS, body: '' };
+    return optionsResponse(AUTH_JSON_HEADERS);
   }
 
   const authHeader = event.headers['authorization'];
   if (!authHeader?.startsWith('Bearer ')) {
-    return { statusCode: 401, headers: CORS, body: JSON.stringify({ error: 'Unauthorized' }) };
+    return errorResponse(401, 'Unauthorized', AUTH_JSON_HEADERS);
   }
 
   const accessToken = authHeader.slice(7);
 
   try {
-    const { sub: googleId, email, exp } = await verifyToken(accessToken);
+    const tokenInfo = await verifyGoogleToken(accessToken);
+    const googleId = tokenInfo.sub;
+    const email = tokenInfo.email;
+    const exp = tokenInfo.exp ? parseInt(tokenInfo.exp, 10) : null;
+    if (!email) {
+      return errorResponse(401, 'Authentication failed', AUTH_JSON_HEADERS);
+    }
 
     const userInfoRes = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
       headers: { Authorization: `Bearer ${accessToken}` },
@@ -41,15 +33,6 @@ export const handler: Handler = async (event) => {
     const db = getDb();
 
     const refreshToken = event.headers['x-refresh-token'];
-
-    // Idempotent migration: ensure token columns exist
-    try {
-      await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS refresh_token TEXT`);
-      await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS access_token TEXT`);
-      await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS access_token_expires_at TIMESTAMPTZ`);
-    } catch {
-      // Column might already exist, ignore error
-    }
 
     // Upsert user
     const values = { googleId, email, name, picture };
@@ -127,13 +110,9 @@ export const handler: Handler = async (event) => {
       // If invite tables don't exist yet, skip gracefully
     }
 
-    return { statusCode: 200, headers: CORS, body: JSON.stringify(user) };
+    return jsonResponse(200, user, AUTH_JSON_HEADERS);
   } catch (err) {
     console.error('Auth error:', err);
-    return {
-      statusCode: 401,
-      headers: CORS,
-      body: JSON.stringify({ error: 'Authentication failed' }),
-    };
+    return errorResponse(401, 'Authentication failed', AUTH_JSON_HEADERS);
   }
 };

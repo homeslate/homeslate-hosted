@@ -63,6 +63,8 @@ import { useDashboardStore } from '../store/dashboardStore';
 import { ThemePicker } from '../components/ThemePicker';
 import type { ColorMode, DisplayTheme } from '../types/theme';
 import type { DashboardLayout } from '../types/widget';
+import { apiClient, ApiError } from '../services/apiClient';
+import type { ConfigUpsertRequest, DisplayPasscodeRequest, DisplayRenameRequest } from '../types/api';
 import classes from './DisplayDetailPage.module.css';
 
 const INTERVAL_OPTIONS = [
@@ -290,14 +292,22 @@ export function DisplayDetailPage() {
       ...display,
       ...overrides,
     };
-    fetch(`/api/config?displayId=${display.id}`, {
-      method: 'PUT',
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ layouts, activeLayoutId, rotationEnabled, rotationIntervalMs, theme: displayTheme, colorMode: savedColorMode, stickyNotesEnabled }),
-    }).catch(console.error);
+    const payload: ConfigUpsertRequest = {
+      layouts,
+      activeLayoutId,
+      rotationEnabled,
+      rotationIntervalMs,
+      theme: displayTheme,
+      colorMode: savedColorMode,
+      stickyNotesEnabled,
+    };
+    void apiClient
+      .put<unknown, ConfigUpsertRequest>('/api/config', {
+        token: accessToken,
+        query: { displayId: display.id },
+        body: payload,
+      })
+      .catch(console.error);
   };
 
   const handleRename = async () => {
@@ -309,14 +319,13 @@ export function DisplayDetailPage() {
     renameDisplay(display.id, trimmed);
     setEditingName(false);
     if (accessToken) {
-      fetch(`/api/displays?id=${display.id}`, {
-        method: 'PATCH',
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ name: trimmed }),
-      }).catch(console.error);
+      void apiClient
+        .patch<unknown, DisplayRenameRequest>('/api/displays', {
+          token: accessToken,
+          query: { id: display.id },
+          body: { name: trimmed },
+        })
+        .catch(console.error);
     }
   };
 
@@ -329,23 +338,15 @@ export function DisplayDetailPage() {
     setPinSaving(true);
     setPinError(null);
     try {
-      const res = await fetch(`/api/displays?id=${display.id}`, {
-        method: 'PATCH',
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ passcode: pin }),
+      await apiClient.patch<unknown, DisplayPasscodeRequest>('/api/displays', {
+        token: accessToken,
+        query: { id: display.id },
+        body: { passcode: pin },
       });
-      if (!res.ok) {
-        const err = await res.json() as { error?: string };
-        setPinError(err.error ?? 'Failed to save passcode');
-        return;
-      }
       setPasscodeEnabled(display.id, pin !== null);
       setPinInput('');
-    } catch {
-      setPinError('Network error');
+    } catch (err) {
+      setPinError(err instanceof ApiError ? err.message : 'Network error');
     } finally {
       setPinSaving(false);
     }

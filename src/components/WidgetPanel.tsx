@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Stack,
   Text,
@@ -31,6 +31,7 @@ import { useDashboardStore } from '../store/dashboardStore';
 import { useAuth } from '../contexts/AuthContext';
 import { useGooglePhotos } from '../hooks/useGooglePhotos';
 import { loadStoredImage } from '../services/googlePhotos';
+import { apiClient } from '../services/apiClient';
 import type { DashboardLayout } from '../types/widget';
 import type { Photo, StoredPhoto } from '../widgets/PhotoWidget';
 import classes from './WidgetPanel.module.css';
@@ -38,16 +39,12 @@ import classes from './WidgetPanel.module.css';
 // ── Upload helper ──────────────────────────────────────────────────────────────
 
 async function uploadPhoto(payload: { dataUrl?: string; url?: string; filename?: string }): Promise<{ key: string; filename: string }> {
-  const res = await fetch('/api/photo-upload', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
-  });
-  if (!res.ok) {
-    const text = await res.text().catch(() => '');
-    throw new Error(`Upload failed: ${res.status} ${text}`);
-  }
-  return res.json() as Promise<{ key: string; filename: string }>;
+  return apiClient.post<{ key: string; filename: string }, { dataUrl?: string; url?: string; filename?: string }>(
+    '/api/photo-upload',
+    {
+      body: payload,
+    }
+  );
 }
 
 // ── Interval presets ───────────────────────────────────────────────────────────
@@ -144,7 +141,7 @@ interface BgSettingsProps {
 }
 
 function BgSettings({ view, updateBg }: BgSettingsProps) {
-  const photos: Photo[] = view.backgroundPhotos ?? [];
+  const photos: Photo[] = useMemo(() => view.backgroundPhotos ?? [], [view.backgroundPhotos]);
   const interval = view.backgroundInterval ?? 10;
 
   // URL tab

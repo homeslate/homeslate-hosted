@@ -1,36 +1,55 @@
 import type { Handler } from '@netlify/functions';
 import { eq, sql } from 'drizzle-orm';
+import { z } from 'zod';
 import { getDb, displays, displayConfigs, displayCollaborators, users } from '../../src/db';
+import type { ConfigUpsertRequest } from '../../src/types/api';
+import { AUTH_JSON_HEADERS, errorResponse, jsonResponse, optionsResponse } from './_shared/http';
+import { requireGoogleId } from './_shared/googleAuth';
 
-const CORS = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'Authorization, Content-Type',
-  'Content-Type': 'application/json',
-};
-
-async function getGoogleId(authHeader: string | undefined): Promise<string> {
-  if (!authHeader?.startsWith('Bearer ')) throw new Error('No token');
-  const token = authHeader.slice(7);
-  const res = await fetch(`https://oauth2.googleapis.com/tokeninfo?access_token=${token}`);
-  if (!res.ok) throw new Error('Invalid token');
-  const data = await res.json() as { aud: string; sub: string };
-  if (data.aud !== process.env.GOOGLE_CLIENT_ID) throw new Error('Token mismatch');
-  return data.sub;
+function isDebugEnabled(event: Parameters<Handler>[0]): boolean {
+  const queryDebug = event.queryStringParameters?.debug === '1';
+  const envDebug = process.env.DEBUG_CONFIG === '1';
+  return queryDebug || envDebug;
 }
+
+const ConfigBodySchema = z
+  .object({
+    layouts: z.array(z.unknown()),
+    activeLayoutId: z.string().nullable(),
+    rotationEnabled: z.boolean(),
+    rotationIntervalMs: z.number().int().positive(),
+    theme: z.record(z.string(), z.unknown()).optional(),
+    colorMode: z.enum(['light', 'dark']).optional(),
+    stickyNotesEnabled: z.boolean().optional(),
+  })
+  .passthrough();
 
 export const handler: Handler = async (event) => {
   if (event.httpMethod === 'OPTIONS') {
-    return { statusCode: 204, headers: CORS, body: '' };
+    return optionsResponse(AUTH_JSON_HEADERS);
   }
 
   if (event.httpMethod === 'PUT') {
+    const debug = isDebugEnabled(event);
     try {
-      const googleId = await getGoogleId(event.headers['authorization']);
+      const googleId = await requireGoogleId(event.headers['authorization']);
       const displayId = event.queryStringParameters?.displayId;
       if (!displayId) {
-        return { statusCode: 400, headers: CORS, body: JSON.stringify({ error: 'Missing displayId' }) };
+        return errorResponse(400, 'Missing displayId', AUTH_JSON_HEADERS, debug ? { debug: { missingDisplayId: true } } : undefined);
       }
-      const config = JSON.parse(event.body ?? '{}');
+      let rawBody: unknown;
+      try {
+        rawBody = JSON.parse(event.body ?? '{}');
+      } catch {
+        return errorResponse(400, 'Invalid JSON body', AUTH_JSON_HEADERS);
+      }
+      const parsedConfig = ConfigBodySchema.safeParse(rawBody);
+      if (!parsedConfig.success) {
+        return errorResponse(400, 'Invalid config payload', AUTH_JSON_HEADERS, {
+          details: parsedConfig.error.flatten(),
+        });
+      }
+      const config: ConfigUpsertRequest = parsedConfig.data;
       const db = getDb();
 
       const ownerRows = await db
@@ -50,7 +69,26 @@ export const handler: Handler = async (event) => {
               .where(sql`${displays.id} = ${displayId}::uuid AND ${users.googleId} = ${googleId}`);
 
       if (ownerRows.length === 0 && collabRows.length === 0) {
-        return { statusCode: 403, headers: CORS, body: JSON.stringify({ error: 'Forbidden' }) };
+        if (debug) {
+          console.info('config debug: access denied', {
+            displayId,
+            ownerRows: ownerRows.length,
+            collaboratorRows: collabRows.length,
+          });
+        }
+        return errorResponse(
+          403,
+          'Forbidden',
+          AUTH_JSON_HEADERS,
+          debug
+            ? {
+                debug: {
+                  ownerRows: ownerRows.length,
+                  collaboratorRows: collabRows.length,
+                },
+              }
+            : undefined
+        );
       }
 
       await db
@@ -58,15 +96,22 @@ export const handler: Handler = async (event) => {
         .values({ displayId, config })
         .onConflictDoUpdate({
           target: displayConfigs.displayId,
-          set: { config, updatedAt: new Date() },
+          set: { config, updatedAt: new Date().toISOString() },
         });
 
-      return { statusCode: 200, headers: CORS, body: JSON.stringify({ ok: true }) };
+      if (debug) {
+        console.info('config debug: config saved', {
+          displayId,
+          asOwner: ownerRows.length > 0,
+        });
+      }
+
+      return jsonResponse(200, { ok: true }, AUTH_JSON_HEADERS);
     } catch (err) {
       console.error('Config save error:', err);
-      return { statusCode: 400, headers: CORS, body: JSON.stringify({ error: 'Failed to save' }) };
+      return errorResponse(400, 'Failed to save', AUTH_JSON_HEADERS, debug ? { debug: { method: 'PUT' } } : undefined);
     }
   }
 
-  return { statusCode: 405, headers: CORS, body: JSON.stringify({ error: 'Method not allowed' }) };
+  return errorResponse(405, 'Method not allowed', AUTH_JSON_HEADERS);
 };

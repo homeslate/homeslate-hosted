@@ -9,6 +9,8 @@ export const users = pgTable("users", {
 	name: varchar(),
 	picture: varchar(),
 	refreshToken: text("refresh_token"),
+	accessToken: text("access_token"),
+	accessTokenExpiresAt: timestamp("access_token_expires_at", { withTimezone: true, mode: 'string' }),
 	createdAt: timestamp("created_at", { withTimezone: true, mode: 'string' }).defaultNow(),
 }, (table) => [
 	unique("users_google_id_key").on(table.googleId),

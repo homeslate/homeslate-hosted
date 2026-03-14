@@ -6,44 +6,30 @@ import {
   displays,
   displayPairing,
 } from '../../src/db';
-
-const CORS = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'Authorization, Content-Type',
-  'Content-Type': 'application/json',
-};
-
-async function getGoogleId(authHeader: string | undefined): Promise<string> {
-  if (!authHeader?.startsWith('Bearer ')) throw new Error('No token');
-  const token = authHeader.slice(7);
-  const res = await fetch(`https://oauth2.googleapis.com/tokeninfo?access_token=${token}`);
-  if (!res.ok) throw new Error('Invalid token');
-  const data = await res.json() as { aud: string; sub: string };
-  if (data.aud !== process.env.GOOGLE_CLIENT_ID) throw new Error('Token mismatch');
-  return data.sub;
-}
+import { AUTH_JSON_HEADERS, errorResponse, optionsResponse } from './_shared/http';
+import { requireGoogleId } from './_shared/googleAuth';
 
 export const handler: Handler = async (event) => {
   if (event.httpMethod === 'OPTIONS') {
-    return { statusCode: 204, headers: CORS, body: '' };
+    return optionsResponse(AUTH_JSON_HEADERS);
   }
 
   if (event.httpMethod !== 'POST') {
-    return { statusCode: 405, headers: CORS, body: JSON.stringify({ error: 'Method not allowed' }) };
+    return errorResponse(405, 'Method not allowed', AUTH_JSON_HEADERS);
   }
 
   const db = getDb();
   let googleId: string;
   try {
-    googleId = await getGoogleId(event.headers['authorization']);
+    googleId = await requireGoogleId(event.headers['authorization']);
   } catch {
-    return { statusCode: 401, headers: CORS, body: JSON.stringify({ error: 'Unauthorized' }) };
+    return errorResponse(401, 'Unauthorized', AUTH_JSON_HEADERS);
   }
 
   const body = JSON.parse(event.body ?? '{}') as { code?: string };
   const code = body.code?.toUpperCase().replace(/[^A-Z0-9]/g, '');
   if (!code || code.length !== 6) {
-    return { statusCode: 400, headers: CORS, body: JSON.stringify({ error: 'Invalid or missing code' }) };
+    return errorResponse(400, 'Invalid or missing code', AUTH_JSON_HEADERS);
   }
 
   try {
@@ -53,15 +39,15 @@ export const handler: Handler = async (event) => {
       .where(eq(displayPairing.code, code));
 
     if (!pairRow) {
-      return { statusCode: 404, headers: CORS, body: JSON.stringify({ error: 'Code not found' }) };
+      return errorResponse(404, 'Code not found', AUTH_JSON_HEADERS);
     }
     if (pairRow.displayId) {
-      return { statusCode: 409, headers: CORS, body: JSON.stringify({ error: 'Code already claimed' }) };
+      return errorResponse(409, 'Code already claimed', AUTH_JSON_HEADERS);
     }
 
     const expiresAt = typeof pairRow.expiresAt === 'string' ? new Date(pairRow.expiresAt) : pairRow.expiresAt;
     if (expiresAt.getTime() < Date.now()) {
-      return { statusCode: 410, headers: CORS, body: JSON.stringify({ error: 'Code expired' }) };
+      return errorResponse(410, 'Code expired', AUTH_JSON_HEADERS);
     }
 
     const [user] = await db
@@ -70,7 +56,7 @@ export const handler: Handler = async (event) => {
       .where(eq(users.googleId, googleId));
 
     if (!user) {
-      return { statusCode: 401, headers: CORS, body: JSON.stringify({ error: 'User not found' }) };
+      return errorResponse(401, 'User not found', AUTH_JSON_HEADERS);
     }
 
     const [created] = await db
@@ -84,7 +70,7 @@ export const handler: Handler = async (event) => {
       });
 
     if (!created) {
-      return { statusCode: 500, headers: CORS, body: JSON.stringify({ error: 'Failed to create display' }) };
+      return errorResponse(500, 'Failed to create display', AUTH_JSON_HEADERS);
     }
 
     const publicDisplayId = created.displayId;
@@ -96,12 +82,12 @@ export const handler: Handler = async (event) => {
 
     if (!updated.length) {
       console.error('Claim: pairing row update affected 0 rows', { code });
-      return { statusCode: 500, headers: CORS, body: JSON.stringify({ error: 'Failed to link device' }) };
+      return errorResponse(500, 'Failed to link device', AUTH_JSON_HEADERS);
     }
 
     return {
       statusCode: 200,
-      headers: CORS,
+      headers: AUTH_JSON_HEADERS,
       body: JSON.stringify({
         id: created.id,
         display_id: publicDisplayId,
@@ -111,6 +97,6 @@ export const handler: Handler = async (event) => {
     };
   } catch (err) {
     console.error('Claim error:', err);
-    return { statusCode: 500, headers: CORS, body: JSON.stringify({ error: 'Server error' }) };
+    return errorResponse(500, 'Server error', AUTH_JSON_HEADERS);
   }
 };

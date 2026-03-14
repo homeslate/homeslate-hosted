@@ -47,6 +47,37 @@ npm run build
 npm run preview
 ```
 
+## Database Environments (Neon + Drizzle)
+
+This project uses `DATABASE_URL` at runtime/migration time, so you can map each environment to a different Neon branch.
+
+- Local development: Neon `dev` branch URL in `.env.local` as `DATABASE_URL`
+- Netlify Production: Neon `prod` branch URL as `DATABASE_URL`
+- Netlify Deploy Previews (optional): Neon staging/dev URL as `DATABASE_URL`
+
+### Migration scripts
+
+```bash
+# Uses current DATABASE_URL (.env.local for local dev)
+npm run db:migrate:dev
+
+# Uses DATABASE_URL_PROD (loaded from environment or .env.local)
+npm run db:migrate:prod
+```
+
+### Promote flow (dev -> prod)
+
+1. Develop and test against Neon `dev` branch.
+2. Generate migrations: `npm run db:generate`.
+3. Apply to dev: `npm run db:migrate:dev`.
+4. Deploy app code.
+5. Apply the same migrations to prod with:
+   `DATABASE_URL_PROD="postgres://..." npm run db:migrate:prod`.
+
+Notes:
+- Prefer `db:migrate` over `db:push` for production.
+- Keep prod credentials in Netlify environment variables, not in committed files.
+
 ## Widget Setup Guides
 
 ### Weather Widget

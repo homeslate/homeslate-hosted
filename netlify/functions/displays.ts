@@ -8,70 +8,31 @@ import {
   displayConfigs,
   displayCollaborators,
 } from '../../src/db';
+import { AUTH_JSON_HEADERS, errorResponse, jsonResponse, optionsResponse } from './_shared/http';
+import { requireGoogleId } from './_shared/googleAuth';
 
-const CORS = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'Authorization, Content-Type',
-  'Content-Type': 'application/json',
-};
+function isDebugEnabled(event: Parameters<Handler>[0]): boolean {
+  const queryDebug = event.queryStringParameters?.debug === '1';
+  const envDebug = process.env.DEBUG_DISPLAYS === '1';
+  return queryDebug || envDebug;
+}
 
 function hashPin(pin: string): string {
   return createHash('sha256').update(pin).digest('hex');
 }
 
-async function getGoogleId(authHeader: string | undefined): Promise<string> {
-  if (!authHeader?.startsWith('Bearer ')) throw new Error('No token');
-  const token = authHeader.slice(7);
-  const res = await fetch(`https://oauth2.googleapis.com/tokeninfo?access_token=${token}`);
-  if (!res.ok) throw new Error('Invalid token');
-  const data = await res.json() as { aud: string; sub: string };
-  if (data.aud !== process.env.GOOGLE_CLIENT_ID) throw new Error('Token mismatch');
-  return data.sub;
-}
-
 export const handler: Handler = async (event) => {
   if (event.httpMethod === 'OPTIONS') {
-    return { statusCode: 204, headers: CORS, body: '' };
+    return optionsResponse(AUTH_JSON_HEADERS);
   }
 
   const db = getDb();
+  const debug = isDebugEnabled(event);
   let googleId: string;
   try {
-    googleId = await getGoogleId(event.headers['authorization']);
+    googleId = await requireGoogleId(event.headers['authorization']);
   } catch {
-    return { statusCode: 401, headers: CORS, body: JSON.stringify({ error: 'Unauthorized' }) };
-  }
-
-  // Ensure passcode_hash column exists (idempotent migration)
-  try {
-    await db.execute(sql`ALTER TABLE displays ADD COLUMN IF NOT EXISTS passcode_hash TEXT`);
-  } catch {
-    // column already exists or DDL not supported — ignore
-  }
-
-  // Ensure collaborator/invite tables exist (idempotent)
-  try {
-    await db.execute(sql`
-      CREATE TABLE IF NOT EXISTS display_collaborators (
-        id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        display_id  UUID NOT NULL REFERENCES displays(id) ON DELETE CASCADE,
-        user_id     UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-        created_at  TIMESTAMP NOT NULL DEFAULT NOW(),
-        UNIQUE (display_id, user_id)
-      )
-    `);
-    await db.execute(sql`
-      CREATE TABLE IF NOT EXISTS display_invites (
-        id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        display_id  UUID NOT NULL REFERENCES displays(id) ON DELETE CASCADE,
-        invited_email TEXT NOT NULL,
-        invited_by  UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-        created_at  TIMESTAMP NOT NULL DEFAULT NOW(),
-        UNIQUE (display_id, invited_email)
-      )
-    `);
-  } catch {
-    // tables already exist — ignore
+    return errorResponse(401, 'Unauthorized', AUTH_JSON_HEADERS, debug ? { debug: { authHeaderPresent: !!event.headers['authorization'] } } : undefined);
   }
 
   // GET /api/displays — list user's owned displays + displays shared with them
@@ -127,10 +88,20 @@ export const handler: Handler = async (event) => {
         is_owner: r.isOwner,
       }));
 
-      return { statusCode: 200, headers: CORS, body: JSON.stringify(formatted) };
+      if (debug) {
+        console.info('displays debug: fetched displays', {
+          ownerCount: ownerRows.length,
+          collaboratorCount: collabRows.length,
+          total: formatted.length,
+        });
+      }
+
+      return jsonResponse(200, formatted, AUTH_JSON_HEADERS);
     } catch (err) {
       console.error('Displays fetch error:', err);
-      return { statusCode: 500, headers: CORS, body: JSON.stringify({ error: 'Server error' }) };
+      return {
+        ...errorResponse(500, 'Server error', AUTH_JSON_HEADERS, debug ? { debug: { method: 'GET' } } : undefined),
+      };
     }
   }
 
@@ -146,7 +117,14 @@ export const handler: Handler = async (event) => {
         .where(eq(users.googleId, googleId));
 
       if (!user) {
-        return { statusCode: 401, headers: CORS, body: JSON.stringify({ error: 'User not found' }) };
+        return {
+          statusCode: 401,
+          headers: AUTH_JSON_HEADERS,
+          body: JSON.stringify({
+            error: 'User not found',
+            ...(debug ? { debug: { googleIdFound: !!googleId } } : {}),
+          }),
+        };
       }
 
       const [created] = await db
@@ -155,12 +133,19 @@ export const handler: Handler = async (event) => {
         .returning({ id: displays.id, displayId: displays.displayId, name: displays.name, createdAt: displays.createdAt });
 
       if (!created) {
-        return { statusCode: 500, headers: CORS, body: JSON.stringify({ error: 'Failed to create' }) };
+        return errorResponse(500, 'Failed to create', AUTH_JSON_HEADERS);
+      }
+
+      if (debug) {
+        console.info('displays debug: created display', {
+          displayId: created.id,
+          name: created.name,
+        });
       }
 
       return {
         statusCode: 201,
-        headers: CORS,
+        headers: AUTH_JSON_HEADERS,
         body: JSON.stringify({
           id: created.id,
           display_id: created.displayId,
@@ -170,7 +155,14 @@ export const handler: Handler = async (event) => {
       };
     } catch (err) {
       console.error('Display create error:', err);
-      return { statusCode: 500, headers: CORS, body: JSON.stringify({ error: 'Failed to create' }) };
+      return {
+        statusCode: 500,
+        headers: AUTH_JSON_HEADERS,
+        body: JSON.stringify({
+          error: 'Failed to create',
+          ...(debug ? { debug: { method: 'POST' } } : {}),
+        }),
+      };
     }
   }
 
@@ -178,16 +170,16 @@ export const handler: Handler = async (event) => {
   if (event.httpMethod === 'PATCH') {
     try {
       const id = event.queryStringParameters?.id;
-      if (!id) return { statusCode: 400, headers: CORS, body: JSON.stringify({ error: 'Missing id' }) };
+      if (!id) return errorResponse(400, 'Missing id', AUTH_JSON_HEADERS);
       const body = JSON.parse(event.body ?? '{}') as { name?: string; passcode?: string | null };
 
       if (!body.name?.trim() && !('passcode' in body)) {
-        return { statusCode: 400, headers: CORS, body: JSON.stringify({ error: 'Nothing to update' }) };
+        return errorResponse(400, 'Nothing to update', AUTH_JSON_HEADERS);
       }
 
       if ('passcode' in body && body.passcode !== null) {
         if (!/^\d{4}$/.test(body.passcode ?? '')) {
-          return { statusCode: 400, headers: CORS, body: JSON.stringify({ error: 'Passcode must be 4 digits' }) };
+          return errorResponse(400, 'Passcode must be 4 digits', AUTH_JSON_HEADERS);
         }
       }
 
@@ -217,13 +209,20 @@ export const handler: Handler = async (event) => {
         });
 
       if (rows.length === 0) {
-        return { statusCode: 404, headers: CORS, body: JSON.stringify({ error: 'Not found' }) };
+        return {
+          statusCode: 404,
+          headers: AUTH_JSON_HEADERS,
+          body: JSON.stringify({
+            error: 'Not found',
+            ...(debug ? { debug: { id, accessibleByUser: false } } : {}),
+          }),
+        };
       }
 
       const r = rows[0];
       return {
         statusCode: 200,
-        headers: CORS,
+        headers: AUTH_JSON_HEADERS,
         body: JSON.stringify({
           id: r.id,
           display_id: r.displayId,
@@ -234,7 +233,14 @@ export const handler: Handler = async (event) => {
       };
     } catch (err) {
       console.error('Display patch error:', err);
-      return { statusCode: 500, headers: CORS, body: JSON.stringify({ error: 'Failed to update' }) };
+      return {
+        statusCode: 500,
+        headers: AUTH_JSON_HEADERS,
+        body: JSON.stringify({
+          error: 'Failed to update',
+          ...(debug ? { debug: { method: 'PATCH' } } : {}),
+        }),
+      };
     }
   }
 
@@ -242,7 +248,7 @@ export const handler: Handler = async (event) => {
   if (event.httpMethod === 'DELETE') {
     try {
       const id = event.queryStringParameters?.id;
-      if (!id) return { statusCode: 400, headers: CORS, body: JSON.stringify({ error: 'Missing id' }) };
+      if (!id) return errorResponse(400, 'Missing id', AUTH_JSON_HEADERS);
 
       const countRows = await db
         .select({ cnt: sql<number>`count(*)` })
@@ -252,7 +258,14 @@ export const handler: Handler = async (event) => {
 
       const cnt = Number(countRows[0]?.cnt ?? 0);
       if (cnt <= 1) {
-        return { statusCode: 409, headers: CORS, body: JSON.stringify({ error: 'Cannot delete last display' }) };
+        return {
+          statusCode: 409,
+          headers: AUTH_JSON_HEADERS,
+          body: JSON.stringify({
+            error: 'Cannot delete last display',
+            ...(debug ? { debug: { ownedDisplayCount: cnt } } : {}),
+          }),
+        };
       }
 
       await db
@@ -261,12 +274,19 @@ export const handler: Handler = async (event) => {
           sql`${displays.id} = ${id}::uuid AND ${displays.userId} IN (SELECT id FROM users WHERE google_id = ${googleId})`
         );
 
-      return { statusCode: 200, headers: CORS, body: JSON.stringify({ ok: true }) };
+      return jsonResponse(200, { ok: true }, AUTH_JSON_HEADERS);
     } catch (err) {
       console.error('Display delete error:', err);
-      return { statusCode: 500, headers: CORS, body: JSON.stringify({ error: 'Failed to delete' }) };
+      return {
+        statusCode: 500,
+        headers: AUTH_JSON_HEADERS,
+        body: JSON.stringify({
+          error: 'Failed to delete',
+          ...(debug ? { debug: { method: 'DELETE' } } : {}),
+        }),
+      };
     }
   }
 
-  return { statusCode: 405, headers: CORS, body: JSON.stringify({ error: 'Method not allowed' }) };
+  return errorResponse(405, 'Method not allowed', AUTH_JSON_HEADERS);
 };

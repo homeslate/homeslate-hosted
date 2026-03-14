@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { Modal, Stack, Text, TextInput, Button } from '@mantine/core';
+import { apiClient, ApiError } from '../services/apiClient';
+import type { ClaimDisplayRequest, ClaimDisplayResponse } from '../types/api';
 
 interface Props {
   opened: boolean;
@@ -29,25 +31,23 @@ export function RegisterDeviceModal({
     setError(null);
     setLoading(true);
     try {
-      const res = await fetch('/api/claim-display', {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ code: trimmed }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        setError(data.error ?? 'Failed to register device');
-        return;
-      }
+      const data = await apiClient.post<ClaimDisplayResponse, ClaimDisplayRequest>(
+        '/api/claim-display',
+        {
+          token: accessToken,
+          body: { code: trimmed },
+        }
+      );
       addDisplay(data.id, data.display_id, data.name);
       setCode('');
       onSuccess();
       onClose();
-    } catch {
-      setError('Network error. Try again.');
+    } catch (err) {
+      if (err instanceof ApiError) {
+        setError(err.message);
+      } else {
+        setError('Network error. Try again.');
+      }
     } finally {
       setLoading(false);
     }

@@ -1,22 +1,23 @@
 import type { Handler } from '@netlify/functions';
 import { eq } from 'drizzle-orm';
+import { z } from 'zod';
 import { getDb, displayConfigs, displays } from '../../src/db';
+import type { TodosPatchRequest } from '../../src/types/api';
+import { PUBLIC_JSON_HEADERS, errorResponse, jsonResponse, optionsResponse } from './_shared/http';
 
-const CORS = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'Content-Type',
-  'Content-Type': 'application/json',
-};
+const TodoItemSchema = z.object({
+  id: z.string().min(1),
+  text: z.string(),
+  checked: z.boolean(),
+});
 
-interface TodoItem {
-  id: string;
-  text: string;
-  checked: boolean;
-}
+const TodoBodySchema: z.ZodType<TodosPatchRequest> = z.object({
+  items: z.array(TodoItemSchema),
+});
 
 export const handler: Handler = async (event) => {
   if (event.httpMethod === 'OPTIONS') {
-    return { statusCode: 204, headers: CORS, body: '' };
+    return optionsResponse(PUBLIC_JSON_HEADERS);
   }
 
   if (event.httpMethod === 'PATCH') {
@@ -26,15 +27,22 @@ export const handler: Handler = async (event) => {
       const widgetId = event.queryStringParameters?.widgetId;
 
       if (!publicDisplayId || !layoutId || !widgetId) {
-        return {
-          statusCode: 400,
-          headers: CORS,
-          body: JSON.stringify({ error: 'Missing publicDisplayId, layoutId, or widgetId' }),
-        };
+        return errorResponse(400, 'Missing publicDisplayId, layoutId, or widgetId', PUBLIC_JSON_HEADERS);
       }
 
-      const body = JSON.parse(event.body ?? '{}') as { items?: TodoItem[] };
-      const items = body.items ?? [];
+      let body: unknown;
+      try {
+        body = JSON.parse(event.body ?? '{}');
+      } catch {
+        return errorResponse(400, 'Invalid JSON body', PUBLIC_JSON_HEADERS);
+      }
+      const parsed = TodoBodySchema.safeParse(body);
+      if (!parsed.success) {
+        return errorResponse(400, 'Invalid todos payload', PUBLIC_JSON_HEADERS, {
+          details: parsed.error.flatten(),
+        });
+      }
+      const items = parsed.data.items;
 
       const db = getDb();
 
@@ -48,11 +56,7 @@ export const handler: Handler = async (event) => {
         .where(eq(displays.displayId, publicDisplayId));
 
       if (!row) {
-        return {
-          statusCode: 404,
-          headers: CORS,
-          body: JSON.stringify({ error: 'Display not found' }),
-        };
+        return errorResponse(404, 'Display not found', PUBLIC_JSON_HEADERS);
       }
 
       const { config, configDisplayId } = row;
@@ -78,16 +82,12 @@ export const handler: Handler = async (event) => {
         .set({ config: newConfig, updatedAt: new Date() })
         .where(eq(displayConfigs.displayId, configDisplayId));
 
-      return { statusCode: 200, headers: CORS, body: JSON.stringify({ ok: true }) };
+      return jsonResponse(200, { ok: true }, PUBLIC_JSON_HEADERS);
     } catch (err) {
       console.error('Todos save error:', err);
-      return {
-        statusCode: 500,
-        headers: CORS,
-        body: JSON.stringify({ error: 'Failed to save todos' }),
-      };
+      return errorResponse(500, 'Failed to save todos', PUBLIC_JSON_HEADERS);
     }
   }
 
-  return { statusCode: 405, headers: CORS, body: JSON.stringify({ error: 'Method not allowed' }) };
+  return errorResponse(405, 'Method not allowed', PUBLIC_JSON_HEADERS);
 };

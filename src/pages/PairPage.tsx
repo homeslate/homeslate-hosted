@@ -1,6 +1,8 @@
 import { useEffect, useState, useCallback } from 'react';
 import { Center, Paper, Title, Text, Stack, Code, Loader, CopyButton, Tooltip, ActionIcon, Box } from '@mantine/core';
 import { IconLayoutDashboard, IconCopy, IconCheck } from '@tabler/icons-react';
+import { apiClient, ApiError } from '../services/apiClient';
+import type { PairCreateResponse, PairStatusResponse } from '../types/api';
 import classes from './PairPage.module.css';
 
 const POLL_INTERVAL_MS = 2000;
@@ -11,8 +13,9 @@ export function PairPage() {
   const [status, setStatus] = useState<'loading' | 'pending' | 'expired' | 'claimed'>('loading');
 
   const fetchStatus = useCallback(async (c: string) => {
-    const res = await fetch(`/api/pair?code=${encodeURIComponent(c)}`);
-    const data = (await res.json()) as { status: string; displayId?: string };
+    const data = await apiClient.get<PairStatusResponse>('/api/pair', {
+      query: { code: c },
+    });
     if (data.status === 'claimed' && data.displayId) {
       setStatus('claimed');
       sessionStorage.setItem('kd_pending_display', data.displayId);
@@ -28,8 +31,7 @@ export function PairPage() {
 
     async function createPairing() {
       try {
-        const res = await fetch('/api/pair', { method: 'POST' });
-        const data = (await res.json()) as { code?: string; error?: string };
+        const data = await apiClient.post<PairCreateResponse>('/api/pair');
         if (cancelled) return;
         if (data.error) {
           setError(data.error);
@@ -42,7 +44,7 @@ export function PairPage() {
         }
       } catch (err) {
         if (!cancelled) {
-          setError('Failed to get pairing code');
+          setError(err instanceof ApiError ? err.message : 'Failed to get pairing code');
           setStatus('expired');
         }
       }

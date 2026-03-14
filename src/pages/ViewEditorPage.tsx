@@ -16,6 +16,8 @@ import { useDashboardStore } from '../store/dashboardStore';
 import { useTheme, themeToVars } from '../contexts/ThemeContext';
 import { BackgroundSlideshow } from '../components/BackgroundSlideshow';
 import type { ColorMode } from '../types/theme';
+import { apiClient } from '../services/apiClient';
+import type { ConfigUpsertRequest } from '../types/api';
 import { Dashboard } from '../components/Dashboard';
 import { WidgetPanel } from '../components/WidgetPanel';
 import classes from './ViewEditorPage.module.css';
@@ -49,14 +51,21 @@ export function ViewEditorPage() {
         d.stickyNotesEnabled !== prev.stickyNotesEnabled
       ) {
         const { layouts, activeLayoutId, rotationEnabled, rotationIntervalMs, theme: displayTheme, stickyNotesEnabled } = d;
-        fetch(`/api/config?displayId=${selectedDisplayId}`, {
-          method: 'PUT',
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ layouts, activeLayoutId, rotationEnabled, rotationIntervalMs, theme: displayTheme, stickyNotesEnabled }),
-        }).catch(console.error);
+        const payload: ConfigUpsertRequest = {
+          layouts,
+          activeLayoutId,
+          rotationEnabled,
+          rotationIntervalMs,
+          theme: displayTheme,
+          stickyNotesEnabled,
+        };
+        void apiClient
+          .put<unknown, ConfigUpsertRequest>('/api/config', {
+            token: accessToken,
+            query: { displayId: selectedDisplayId },
+            body: payload,
+          })
+          .catch(console.error);
       }
     });
     return () => {

@@ -154,16 +154,6 @@ export const handler: Handler = async (event) => {
   const db = getDb();
 
   try {
-    // Idempotent migration for local/dev databases that don't yet have
-    // access-token fallback columns on users.
-    try {
-      await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS access_token TEXT`);
-      await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS access_token_expires_at TIMESTAMPTZ`);
-      await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS refresh_token TEXT`);
-    } catch {
-      // Ignore migration race/unsupported DDL errors and continue.
-    }
-
     const ownerResult = await db.execute(sql`
       SELECT
         u.refresh_token AS refresh_token,

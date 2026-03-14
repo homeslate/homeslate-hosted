@@ -9,6 +9,12 @@ const CORS = {
   'Content-Type': 'application/json',
 };
 
+function isDebugEnabled(event: Parameters<Handler>[0]): boolean {
+  const queryDebug = event.queryStringParameters?.debug === '1';
+  const envDebug = process.env.DEBUG_DISPLAY === '1';
+  return queryDebug || envDebug;
+}
+
 function hashPin(pin: string): string {
   return createHash('sha256').update(pin).digest('hex');
 }
@@ -22,8 +28,16 @@ export const handler: Handler = async (event) => {
   }
 
   const displayId = event.queryStringParameters?.id;
+  const debug = isDebugEnabled(event);
   if (!displayId) {
-    return { statusCode: 400, headers: CORS, body: JSON.stringify({ error: 'Missing display id' }) };
+    return {
+      statusCode: 400,
+      headers: CORS,
+      body: JSON.stringify({
+        error: 'Missing display id',
+        ...(debug ? { debug: { missingDisplayId: true } } : {}),
+      }),
+    };
   }
 
   const db = getDb();
@@ -40,6 +54,9 @@ export const handler: Handler = async (event) => {
       .where(eq(displays.displayId, displayId));
 
     if (!row) {
+      if (debug) {
+        console.info('display debug: config not found', { displayId });
+      }
       return {
         statusCode: 200,
         headers: CORS,
@@ -52,12 +69,36 @@ export const handler: Handler = async (event) => {
     if (passcodeHash) {
       const provided = event.queryStringParameters?.passcode;
       if (!provided || hashPin(provided) !== passcodeHash) {
+        if (debug) {
+          console.info('display debug: passcode required or mismatch', {
+            displayId,
+            hasPasscode: true,
+            passcodeProvided: !!provided,
+          });
+        }
         return {
           statusCode: 401,
           headers: CORS,
-          body: JSON.stringify({ passcodeRequired: true }),
+          body: JSON.stringify({
+            passcodeRequired: true,
+            ...(debug
+              ? {
+                  debug: {
+                    hasPasscode: true,
+                    passcodeProvided: !!provided,
+                  },
+                }
+              : {}),
+          }),
         };
       }
+    }
+
+    if (debug) {
+      console.info('display debug: config served', {
+        displayId,
+        hasPasscode: !!passcodeHash,
+      });
     }
 
     return {
@@ -67,6 +108,13 @@ export const handler: Handler = async (event) => {
     };
   } catch (err) {
     console.error('Display fetch error:', err);
-    return { statusCode: 500, headers: CORS, body: JSON.stringify({ error: 'Server error' }) };
+    return {
+      statusCode: 500,
+      headers: CORS,
+      body: JSON.stringify({
+        error: 'Server error',
+        ...(debug ? { debug: { displayId } } : {}),
+      }),
+    };
   }
 };

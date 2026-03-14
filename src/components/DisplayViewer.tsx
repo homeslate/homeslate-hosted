@@ -8,6 +8,8 @@ import type { DashboardLayout, StickyNote, WidgetDefinition } from '../types/wid
 import type { TodoItem } from '../widgets/TodoWidget';
 import type { ColorMode, DisplayTheme } from '../types/theme';
 import { themeToVars } from '../themes/utils';
+import { apiClient } from '../services/apiClient';
+import type { NotesPatchRequest, TodosPatchRequest } from '../types/api';
 import { BackgroundSlideshow } from './BackgroundSlideshow';
 import { Dashboard } from './Dashboard';
 import classes from './DisplayViewer.module.css';
@@ -62,12 +64,10 @@ export function DisplayViewer({ displayId, isPreview = false }: Props) {
   // Load and poll config
   useEffect(() => {
     const load = () => {
-      const url = passcode
-        ? `/api/display?id=${displayId}&passcode=${passcode}`
-        : `/api/display?id=${displayId}`;
-
-      fetch(url)
-        .then((r) => r.json())
+      apiClient
+        .get<{ config?: DisplayConfig | null; passcodeRequired?: boolean }>('/api/display', {
+          query: { id: displayId, passcode: passcode ?? undefined },
+        })
         .then((data: { config?: DisplayConfig | null; passcodeRequired?: boolean }) => {
           setPinVerifying(false);
           if (data.passcodeRequired) {
@@ -129,10 +129,9 @@ export function DisplayViewer({ displayId, isPreview = false }: Props) {
     (layoutId: string, notes: StickyNote[]) => {
       if (writeDebounceRef.current[layoutId]) clearTimeout(writeDebounceRef.current[layoutId]);
       writeDebounceRef.current[layoutId] = setTimeout(() => {
-        fetch(`/api/notes?publicDisplayId=${displayId}&layoutId=${layoutId}`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ notes }),
+        apiClient.patch<unknown, NotesPatchRequest>('/api/notes', {
+          query: { publicDisplayId: displayId, layoutId },
+          body: { notes },
         })
           .catch(console.error)
           .finally(() => {
@@ -194,14 +193,10 @@ export function DisplayViewer({ displayId, isPreview = false }: Props) {
       const key = `${layoutId}:${widgetId}`;
       if (todoWriteDebounceRef.current[key]) clearTimeout(todoWriteDebounceRef.current[key]);
       todoWriteDebounceRef.current[key] = setTimeout(() => {
-        fetch(
-          `/api/todos?publicDisplayId=${displayId}&layoutId=${layoutId}&widgetId=${widgetId}`,
-          {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ items }),
-          }
-        )
+        apiClient.patch<unknown, TodosPatchRequest>('/api/todos', {
+          query: { publicDisplayId: displayId, layoutId, widgetId },
+          body: { items },
+        })
           .catch(console.error)
           .finally(() => {
             pendingTodoWrite.current[key] = false;
@@ -227,9 +222,10 @@ export function DisplayViewer({ displayId, isPreview = false }: Props) {
   );
 
   // Merge todo overrides into layouts for display
+  const layoutList = config?.layouts;
   const mergedLayouts = useMemo(() => {
-    if (!config?.layouts) return [];
-    return config.layouts.map((layout) => ({
+    if (!layoutList) return [];
+    return layoutList.map((layout) => ({
       ...layout,
       widgets: (layout.widgets ?? []).map((widget) => {
         if (widget.type !== 'todo') return widget;
@@ -242,7 +238,7 @@ export function DisplayViewer({ displayId, isPreview = false }: Props) {
         } as WidgetDefinition;
       }),
     }));
-  }, [config?.layouts, viewerTodoItemsByKey]);
+  }, [layoutList, viewerTodoItemsByKey]);
 
   // Auto-rotation
   const navigate = useCallback((direction: 'next' | 'prev') => {

@@ -14,20 +14,14 @@ import {
   Paper,
 } from '@mantine/core';
 import { IconTrash, IconMail, IconUser } from '@tabler/icons-react';
-
-interface PendingInvite {
-  id: string;
-  invited_email: string;
-  created_at: string;
-}
-
-interface Collaborator {
-  id: string;
-  email: string;
-  name: string;
-  picture: string;
-  created_at: string;
-}
+import { apiClient, ApiError } from '../services/apiClient';
+import type {
+  CollaboratorDto,
+  InviteCreateRequest,
+  InviteCreateResponse,
+  InviteListResponse,
+  InviteSummaryDto,
+} from '../types/api';
 
 interface Props {
   opened: boolean;
@@ -43,22 +37,20 @@ export function InviteModal({ opened, onClose, displayId, displayName, accessTok
   const [inviteError, setInviteError] = useState<string | null>(null);
   const [inviteSuccess, setInviteSuccess] = useState<string | null>(null);
 
-  const [invites, setInvites] = useState<PendingInvite[]>([]);
-  const [collaborators, setCollaborators] = useState<Collaborator[]>([]);
+  const [invites, setInvites] = useState<InviteSummaryDto[]>([]);
+  const [collaborators, setCollaborators] = useState<CollaboratorDto[]>([]);
   const [loading, setLoading] = useState(false);
 
   const loadInvites = useCallback(async () => {
     if (!accessToken) return;
     setLoading(true);
     try {
-      const res = await fetch(`/api/invites?displayId=${displayId}`, {
-        headers: { Authorization: `Bearer ${accessToken}` },
+      const data = await apiClient.get<InviteListResponse>('/api/invites', {
+        token: accessToken,
+        query: { displayId },
       });
-      if (res.ok) {
-        const data = await res.json() as { invites: PendingInvite[]; collaborators: Collaborator[] };
-        setInvites(data.invites);
-        setCollaborators(data.collaborators);
-      }
+      setInvites(data.invites);
+      setCollaborators(data.collaborators);
     } catch {
       // ignore
     } finally {
@@ -82,24 +74,26 @@ export function InviteModal({ opened, onClose, displayId, displayName, accessTok
     setInviteError(null);
     setInviteSuccess(null);
     try {
-      const res = await fetch('/api/invites', {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ displayId, email: trimmed }),
-      });
-      const data = await res.json() as { error?: string; invited_email?: string };
-      if (!res.ok) {
-        setInviteError(data.error ?? 'Failed to send invite');
+      const data = await apiClient.post<InviteCreateResponse, InviteCreateRequest>(
+        '/api/invites',
+        {
+          token: accessToken,
+          body: { displayId, email: trimmed },
+        }
+      );
+      if (!data.invited_email) {
+        setInviteError('Failed to send invite');
       } else {
         setEmail('');
         setInviteSuccess(`Invite sent to ${data.invited_email}`);
         await loadInvites();
       }
-    } catch {
-      setInviteError('Network error');
+    } catch (err) {
+      if (err instanceof ApiError) {
+        setInviteError(err.message);
+      } else {
+        setInviteError('Network error');
+      }
     } finally {
       setInviting(false);
     }
@@ -107,13 +101,10 @@ export function InviteModal({ opened, onClose, displayId, displayName, accessTok
 
   const handleRevokeInvite = async (inviteEmail: string) => {
     try {
-      await fetch(
-        `/api/invites?displayId=${displayId}&email=${encodeURIComponent(inviteEmail)}`,
-        {
-          method: 'DELETE',
-          headers: { Authorization: `Bearer ${accessToken}` },
-        }
-      );
+      await apiClient.delete<unknown>('/api/invites', {
+        token: accessToken,
+        query: { displayId, email: inviteEmail },
+      });
       await loadInvites();
     } catch {
       // ignore
@@ -122,13 +113,10 @@ export function InviteModal({ opened, onClose, displayId, displayName, accessTok
 
   const handleRemoveCollaborator = async (collaboratorRowId: string) => {
     try {
-      await fetch(
-        `/api/invites?displayId=${displayId}&collaboratorId=${collaboratorRowId}`,
-        {
-          method: 'DELETE',
-          headers: { Authorization: `Bearer ${accessToken}` },
-        }
-      );
+      await apiClient.delete<unknown>('/api/invites', {
+        token: accessToken,
+        query: { displayId, collaboratorId: collaboratorRowId },
+      });
       await loadInvites();
     } catch {
       // ignore

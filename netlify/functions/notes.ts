@@ -1,16 +1,25 @@
 import type { Handler } from '@netlify/functions';
 import { eq } from 'drizzle-orm';
+import { z } from 'zod';
 import { getDb, displayConfigs, displays } from '../../src/db';
+import type { NotesPatchRequest } from '../../src/types/api';
+import { PUBLIC_JSON_HEADERS, errorResponse, jsonResponse, optionsResponse } from './_shared/http';
 
-const CORS = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'Content-Type',
-  'Content-Type': 'application/json',
-};
+const StickyNoteSchema = z.object({
+  id: z.string().min(1),
+  text: z.string(),
+  x: z.number(),
+  y: z.number(),
+  color: z.string().min(1),
+});
+
+const NotesBodySchema: z.ZodType<NotesPatchRequest> = z.object({
+  notes: z.array(StickyNoteSchema),
+});
 
 export const handler: Handler = async (event) => {
   if (event.httpMethod === 'OPTIONS') {
-    return { statusCode: 204, headers: CORS, body: '' };
+    return optionsResponse(PUBLIC_JSON_HEADERS);
   }
 
   if (event.httpMethod === 'PATCH') {
@@ -19,15 +28,22 @@ export const handler: Handler = async (event) => {
       const layoutId = event.queryStringParameters?.layoutId;
 
       if (!publicDisplayId || !layoutId) {
-        return {
-          statusCode: 400,
-          headers: CORS,
-          body: JSON.stringify({ error: 'Missing publicDisplayId or layoutId' }),
-        };
+        return errorResponse(400, 'Missing publicDisplayId or layoutId', PUBLIC_JSON_HEADERS);
       }
 
-      const body = JSON.parse(event.body ?? '{}') as { notes?: unknown[] };
-      const notes = body.notes ?? [];
+      let body: unknown;
+      try {
+        body = JSON.parse(event.body ?? '{}');
+      } catch {
+        return errorResponse(400, 'Invalid JSON body', PUBLIC_JSON_HEADERS);
+      }
+      const parsed = NotesBodySchema.safeParse(body);
+      if (!parsed.success) {
+        return errorResponse(400, 'Invalid notes payload', PUBLIC_JSON_HEADERS, {
+          details: parsed.error.flatten(),
+        });
+      }
+      const notes = parsed.data.notes;
 
       const db = getDb();
 
@@ -41,11 +57,7 @@ export const handler: Handler = async (event) => {
         .where(eq(displays.displayId, publicDisplayId));
 
       if (!row) {
-        return {
-          statusCode: 404,
-          headers: CORS,
-          body: JSON.stringify({ error: 'Display not found' }),
-        };
+        return errorResponse(404, 'Display not found', PUBLIC_JSON_HEADERS);
       }
 
       const { config, configDisplayId } = row;
@@ -62,16 +74,12 @@ export const handler: Handler = async (event) => {
         .set({ config: newConfig, updatedAt: new Date() })
         .where(eq(displayConfigs.displayId, configDisplayId));
 
-      return { statusCode: 200, headers: CORS, body: JSON.stringify({ ok: true }) };
+      return jsonResponse(200, { ok: true }, PUBLIC_JSON_HEADERS);
     } catch (err) {
       console.error('Notes save error:', err);
-      return {
-        statusCode: 500,
-        headers: CORS,
-        body: JSON.stringify({ error: 'Failed to save notes' }),
-      };
+      return errorResponse(500, 'Failed to save notes', PUBLIC_JSON_HEADERS);
     }
   }
 
-  return { statusCode: 405, headers: CORS, body: JSON.stringify({ error: 'Method not allowed' }) };
+  return errorResponse(405, 'Method not allowed', PUBLIC_JSON_HEADERS);
 };

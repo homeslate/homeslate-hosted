@@ -30,12 +30,14 @@ import { useAuth } from '../contexts/AuthContext';
 import { useDashboardStore } from '../store/dashboardStore';
 import { ShareDisplayModal } from '../components/ShareDisplayModal';
 import { RegisterDeviceModal } from '../components/RegisterDeviceModal';
+import { apiClient } from '../services/apiClient';
+import type { DisplayDto, DisplayRenameRequest } from '../types/api';
 import classes from './DisplayListPage.module.css';
 
 export function DisplayListPage() {
   const { user, accessToken, signOut } = useAuth();
   const navigate = useNavigate();
-  const { displays, addDisplay } = useDashboardStore();
+  const { displays, addDisplay, renameDisplay } = useDashboardStore();
   const [creating, setCreating] = useState(false);
   const [registerModalOpen, setRegisterModalOpen] = useState(false);
   const [shareDisplayId, setShareDisplayId] = useState<string | null>(null);
@@ -49,15 +51,13 @@ export function DisplayListPage() {
     if (!name?.trim() || !accessToken) return;
     setCreating(true);
     try {
-      const res = await fetch('/api/displays', {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ name: name.trim() }),
-      });
-      const row = await res.json() as { id: string; display_id: string; name: string };
+      const row = await apiClient.post<DisplayDto, DisplayRenameRequest>(
+        '/api/displays',
+        {
+          token: accessToken,
+          body: { name: name.trim() },
+        }
+      );
       addDisplay(row.id, row.display_id, row.name);
     } catch (err) {
       console.error('Failed to create display:', err);
@@ -92,15 +92,11 @@ export function DisplayListPage() {
 
     setRenaming(true);
     try {
-      const res = await fetch(`/api/displays?id=${renameDisplayId}`, {
-        method: 'PATCH',
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ name: trimmed }),
+      await apiClient.patch<unknown, DisplayRenameRequest>('/api/displays', {
+        token: accessToken,
+        query: { id: renameDisplayId },
+        body: { name: trimmed },
       });
-      if (!res.ok) throw new Error('Failed to rename display');
       renameDisplay(renameDisplayId, trimmed);
       closeRenameModal();
     } catch (err) {

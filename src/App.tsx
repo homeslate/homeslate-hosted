@@ -3,7 +3,6 @@ import { IconX } from '@tabler/icons-react';
 import { lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useWakeLock } from './hooks/useWakeLock';
-import { useConfigSync } from './hooks/useConfigSync';
 import { AuthProvider } from './contexts/AuthContext';
 import { useAuth } from './contexts/AuthContext';
 import { ThemeProvider } from './contexts/ThemeContext';
@@ -81,7 +80,6 @@ function AppInner() {
   const { pathname } = useLocation();
   const { previewDisplayId, closePreview } = useDashboardStore();
   useWakeLock();
-  useConfigSync();
 
   // Unauthenticated pairing page for headless displays (no keyboard/mouse).
   if (pathname === '/pair') {

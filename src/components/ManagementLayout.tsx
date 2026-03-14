@@ -4,6 +4,7 @@ import { Center, Loader } from '@mantine/core';
 import { useAuth } from '../contexts/AuthContext';
 import { useDashboardStore } from '../store/dashboardStore';
 import type { RemoteDisplay } from '../store/dashboardStore';
+import { apiClient } from '../services/apiClient';
 
 /**
  * Layout for the management UI. Fetches displays from the API and syncs URL
@@ -18,10 +19,8 @@ export function ManagementLayout() {
   // Fetch displays when authenticated
   useEffect(() => {
     if (!accessToken) return;
-    fetch('/api/displays', {
-      headers: { Authorization: `Bearer ${accessToken}` },
-    })
-      .then((r) => r.json())
+    apiClient
+      .get<RemoteDisplay[]>('/api/displays', { token: accessToken })
       .then((rows: RemoteDisplay[]) => setDisplays(rows))
       .catch(console.error);
   }, [accessToken, setDisplays]);

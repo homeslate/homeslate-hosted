@@ -1,30 +1,25 @@
 import type { Handler } from '@netlify/functions';
-
-const CORS = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'Authorization, Content-Type',
-  'Content-Type': 'application/json',
-};
+import { AUTH_JSON_HEADERS, errorResponse, jsonResponse, optionsResponse } from './_shared/http';
 
 export const handler: Handler = async (event) => {
   if (event.httpMethod === 'OPTIONS') {
-    return { statusCode: 204, headers: CORS, body: '' };
+    return optionsResponse(AUTH_JSON_HEADERS);
   }
 
   if (event.httpMethod !== 'POST') {
-    return { statusCode: 405, headers: CORS, body: JSON.stringify({ error: 'Method not allowed' }) };
+    return errorResponse(405, 'Method not allowed', AUTH_JSON_HEADERS);
   }
 
   let body: { refresh_token?: string };
   try {
     body = JSON.parse(event.body || '{}');
   } catch {
-    return { statusCode: 400, headers: CORS, body: JSON.stringify({ error: 'Invalid JSON' }) };
+    return errorResponse(400, 'Invalid JSON', AUTH_JSON_HEADERS);
   }
 
   const { refresh_token: refreshToken } = body;
   if (!refreshToken) {
-    return { statusCode: 400, headers: CORS, body: JSON.stringify({ error: 'Missing refresh token' }) };
+    return errorResponse(400, 'Missing refresh token', AUTH_JSON_HEADERS);
   }
 
   try {
@@ -33,7 +28,7 @@ export const handler: Handler = async (event) => {
     
     if (!clientId || !clientSecret) {
       console.error('Missing Google OAuth credentials');
-      return { statusCode: 500, headers: CORS, body: JSON.stringify({ error: 'Server configuration error' }) };
+      return errorResponse(500, 'Server configuration error', AUTH_JSON_HEADERS);
     }
 
     const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
@@ -50,7 +45,7 @@ export const handler: Handler = async (event) => {
     if (!tokenRes.ok) {
       const error = await tokenRes.text();
       console.error('Google token refresh failed:', error);
-      return { statusCode: 401, headers: CORS, body: JSON.stringify({ error: 'Invalid refresh token' }) };
+      return errorResponse(401, 'Invalid refresh token', AUTH_JSON_HEADERS);
     }
 
     const tokenData = await tokenRes.json() as {
@@ -60,16 +55,16 @@ export const handler: Handler = async (event) => {
       token_type: string;
     };
 
-    return {
-      statusCode: 200,
-      headers: CORS,
-      body: JSON.stringify({
+    return jsonResponse(
+      200,
+      {
         access_token: tokenData.access_token,
         expires_in: tokenData.expires_in,
-      }),
-    };
+      },
+      AUTH_JSON_HEADERS
+    );
   } catch (err) {
     console.error('Token refresh error:', err);
-    return { statusCode: 500, headers: CORS, body: JSON.stringify({ error: 'Internal server error' }) };
+    return errorResponse(500, 'Internal server error', AUTH_JSON_HEADERS);
   }
 };

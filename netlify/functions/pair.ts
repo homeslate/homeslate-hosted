@@ -1,5 +1,5 @@
 import type { Handler } from '@netlify/functions';
-import { eq, sql } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import { getDb, displayPairing } from '../../src/db';
 
 const CORS = {
@@ -32,20 +32,6 @@ export const handler: Handler = async (event) => {
   }
 
   const db = getDb();
-
-  // Idempotent: ensure display_pairing table exists
-  try {
-    await db.execute(sql`
-      CREATE TABLE IF NOT EXISTS display_pairing (
-        code VARCHAR(12) PRIMARY KEY,
-        display_id UUID,
-        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-        expires_at TIMESTAMPTZ NOT NULL
-      )
-    `);
-  } catch {
-    // table already exists — ignore
-  }
 
   // POST /api/pair — create a new pairing code (no auth)
   if (event.httpMethod === 'POST') {
