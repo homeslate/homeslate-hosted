@@ -189,10 +189,30 @@ export async function storeImage(
  * No authentication is required — the image is served publicly by key.
  */
 export async function loadStoredImage(key: string): Promise<string> {
-  const response = await fetch(`/api/photo-proxy?key=${encodeURIComponent(key)}`);
-  if (!response.ok) {
+  const url = `/api/photo-proxy?key=${encodeURIComponent(key)}`;
+  const maxRetries = 5;
+  let attempt = 0;
+  let lastStatus = 0;
+
+  while (attempt <= maxRetries) {
+    const response = await fetch(url);
+    if (response.ok) {
+      const blob = await response.blob();
+      return URL.createObjectURL(blob);
+    }
+
+    lastStatus = response.status;
+
+    // Newly written blobs can briefly return 404 before propagation finishes.
+    if (response.status === 404 && attempt < maxRetries) {
+      const backoffMs = 250 * Math.pow(2, attempt);
+      await new Promise((resolve) => setTimeout(resolve, backoffMs));
+      attempt++;
+      continue;
+    }
+
     throw new Error(`Failed to load image: ${response.status}`);
   }
-  const blob = await response.blob();
-  return URL.createObjectURL(blob);
+
+  throw new Error(`Failed to load image: ${lastStatus || 404}`);
 }

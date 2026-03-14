@@ -23,6 +23,10 @@ const CORS = {
 
 const JSON_HEADERS = { ...CORS, 'Content-Type': 'application/json' };
 
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 async function verifyToken(accessToken: string): Promise<void> {
   const res = await fetch(
     `https://oauth2.googleapis.com/tokeninfo?access_token=${accessToken}`
@@ -35,6 +39,10 @@ async function verifyToken(accessToken: string): Promise<void> {
 /** Derive a stable, filesystem-safe key from the baseUrl + size. */
 function makeBlobKey(baseUrl: string, size: string): string {
   return createHash('sha256').update(`${baseUrl}|${size}`).digest('hex');
+}
+
+function shortKey(key: string): string {
+  return key.slice(0, 8);
 }
 
 export const handler: Handler = async (event) => {
@@ -117,6 +125,34 @@ export const handler: Handler = async (event) => {
   await store.set(key, arrayBuffer, {
     metadata: { contentType },
   });
+
+  // Best-effort propagation check: wait briefly until the just-written key can
+  // be read back. This reduces immediate 404s from /api/photo-proxy right
+  // after upload completes.
+  const maxReadChecks = 4;
+  const readCheckStart = Date.now();
+  let readable = false;
+  for (let attempt = 0; attempt <= maxReadChecks; attempt++) {
+    const written = await store.getWithMetadata(key, { type: 'arrayBuffer' });
+    if (written !== null) {
+      readable = true;
+      if (attempt > 0) {
+        console.info(
+          `[photo-store] blob readable after retry key=${shortKey(key)} attempt=${attempt} waitMs=${Date.now() - readCheckStart}`
+        );
+      }
+      break;
+    }
+    if (attempt < maxReadChecks) {
+      await sleep(150 * Math.pow(2, attempt));
+    }
+  }
+
+  if (!readable) {
+    console.warn(
+      `[photo-store] blob not readable after retries key=${shortKey(key)} checks=${maxReadChecks + 1} waitMs=${Date.now() - readCheckStart}`
+    );
+  }
 
   return {
     statusCode: 200,

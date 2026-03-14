@@ -64,6 +64,25 @@ function formatEventTime(event: ParsedCalendarEvent): string {
   return start.format(start.minute() === 0 ? 'h a' : 'h:mm a');
 }
 
+function formatEventDetailTime(event: ParsedCalendarEvent): string {
+  if (event.allDay) return 'All day';
+  const start = dayjs(event.start);
+  const end = dayjs(event.end);
+  if (start.format('A') === end.format('A')) {
+    return `${start.format('h:mm')} - ${end.format('h:mm A')}`;
+  }
+  return `${start.format('h:mm A')} - ${end.format('h:mm A')}`;
+}
+
+function formatEventDetailDate(event: ParsedCalendarEvent): string {
+  const start = dayjs(event.start);
+  const end = dayjs(event.end);
+  if (start.isSame(end, 'day')) {
+    return start.format('dddd, MMM D');
+  }
+  return `${start.format('ddd, MMM D')} - ${end.format('ddd, MMM D')}`;
+}
+
 interface PositionedEvent extends ParsedCalendarEvent {
   topPct: number;
   heightPct: number;
@@ -190,6 +209,7 @@ export function WeekCalendarWidget({ widget }: WidgetProps<WeekCalendarConfig>) 
   });
   const [formLoading, setFormLoading] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  const [detailEvent, setDetailEvent] = useState<ParsedCalendarEvent | null>(null);
 
   const calendarOptions = useMemo(
     () =>
@@ -239,6 +259,14 @@ export function WeekCalendarWidget({ widget }: WidgetProps<WeekCalendarConfig>) 
       setFormLoading(false);
     }
   }, [formData, addEvent]);
+
+  const openEventDetails = useCallback((event: ParsedCalendarEvent) => {
+    setDetailEvent(event);
+  }, []);
+
+  const closeEventDetails = useCallback(() => {
+    setDetailEvent(null);
+  }, []);
 
   const [now, setNow] = useState(() => dayjs());
   useEffect(() => {
@@ -372,6 +400,15 @@ export function WeekCalendarWidget({ widget }: WidgetProps<WeekCalendarConfig>) 
                   className={classes.allDayEvent}
                   style={{ backgroundColor: event.color + 'cc' }}
                   title={event.title}
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => openEventDetails(event)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      openEventDetails(event);
+                    }
+                  }}
                 >
                   {event.title}
                 </div>
@@ -487,6 +524,41 @@ export function WeekCalendarWidget({ widget }: WidgetProps<WeekCalendarConfig>) 
         </Stack>
       </Modal>
 
+      {/* Event details modal */}
+      <Modal
+        opened={!!detailEvent}
+        onClose={closeEventDetails}
+        title={detailEvent?.title ?? 'Event details'}
+        size="sm"
+        centered
+      >
+        {detailEvent && (
+          <Stack gap="xs">
+            <Text size="sm" fw={600}>
+              {formatEventDetailDate(detailEvent)}
+            </Text>
+            <Text size="sm" c="dimmed">
+              {formatEventDetailTime(detailEvent)}
+            </Text>
+            {detailEvent.calendarName && (
+              <Text size="sm">
+                Calendar: {detailEvent.calendarName}
+              </Text>
+            )}
+            {detailEvent.location && (
+              <Text size="sm">
+                Location: {detailEvent.location}
+              </Text>
+            )}
+            {detailEvent.description && (
+              <Text size="sm" style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+                {detailEvent.description.replace(/<[^>]*>/g, '').trim()}
+              </Text>
+            )}
+          </Stack>
+        )}
+      </Modal>
+
       {/* Scrollable time grid */}
       <div className={classes.scrollable} ref={scrollRef}>
         <div className={classes.gridBody} style={{ height: gridHeight }}>
@@ -542,6 +614,15 @@ export function WeekCalendarWidget({ widget }: WidgetProps<WeekCalendarConfig>) 
                     key={event.id}
                     className={classes.event}
                     title={`${event.title}\n${formatEventTime(event)}`}
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => openEventDetails(event)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        openEventDetails(event);
+                      }
+                    }}
                     style={{
                       top: `${event.topPct}%`,
                       height: `${event.heightPct}%`,
