@@ -319,10 +319,13 @@ export function PhotoWidgetSettings({ widget, onConfigChange }: WidgetProps<Phot
   } = useGooglePhotos({ savedImages: [] });
 
   // When Google Photos picker completes, add the newly stored images as StoredPhotos
-  const savedGoogleRef = useRef(false);
+  const lastSavedGoogleBatchRef = useRef<string | null>(null);
   useEffect(() => {
-    if (pickerStatus === 'ready' && storedImages.length > 0 && !savedGoogleRef.current) {
-      savedGoogleRef.current = true;
+    if (pickerStatus === 'ready' && storedImages.length > 0) {
+      const batchKey = storedImages.map((img) => img.key).sort().join('|');
+      if (lastSavedGoogleBatchRef.current === batchKey) return;
+      lastSavedGoogleBatchRef.current = batchKey;
+
       const newPhotos: StoredPhoto[] = storedImages.map((img) => ({
         type: 'stored',
         key: img.key,
@@ -338,7 +341,7 @@ export function PhotoWidgetSettings({ widget, onConfigChange }: WidgetProps<Phot
       }
     }
     if (pickerStatus === 'idle') {
-      savedGoogleRef.current = false;
+      lastSavedGoogleBatchRef.current = null;
     }
   }, [pickerStatus, storedImages, photos, onConfigChange]);
 

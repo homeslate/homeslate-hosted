@@ -125,10 +125,23 @@ export function useGooglePhotos({
       try {
         const items = await listPickedMediaItems(token, session.id);
         const stored = await uploadPickedItems(items, token);
+        if (stored.length === 0) {
+          setError('No images were selected.');
+          setPickerStatus('error');
+          return;
+        }
+
         setStoredImages(stored);
-        await loadRandomPhoto(stored);
         setPickerStatus('ready');
         setPickerUri(null);
+
+        // Loading a preview image is best-effort. If this fails, keep the
+        // picker in "ready" so the uploaded keys can still be saved to config.
+        void loadRandomPhoto(stored).catch((err) => {
+          const message = err instanceof Error ? err.message : String(err);
+          console.warn(`[useGooglePhotos] Failed to load preview image: ${message}`);
+        });
+
         // Delete the session now that we've permanently stored the images
         void deletePickerSession(token, session.id);
         sessionRef.current = null;
