@@ -2,7 +2,7 @@ import { spawnSync } from 'node:child_process';
 import { config } from 'dotenv';
 
 config();
-config({ path: '.env.local', override: true });
+config({ path: '.env.local' });
 
 const prodUrl = process.env.DATABASE_URL_PROD;
 if (!prodUrl) {
