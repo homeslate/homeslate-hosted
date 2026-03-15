@@ -67,6 +67,7 @@ export function DisplayViewer({ displayId, isPreview = false }: Props) {
       apiClient
         .get<{ config?: DisplayConfig | null; passcodeRequired?: boolean }>('/api/display', {
           query: { id: displayId, passcode: passcode ?? undefined },
+          cache: 'no-store',
         })
         .then((data: { config?: DisplayConfig | null; passcodeRequired?: boolean }) => {
           setPinVerifying(false);

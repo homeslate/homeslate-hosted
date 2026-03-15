@@ -32,7 +32,9 @@ export default defineConfig(() => ({
   plugins: [
     react(),
     VitePWA({
+      mode: 'development',
       registerType: 'autoUpdate',
+      minify: false,
       includeAssets: ['icon.svg', 'vite.svg', 'icons/*.png'],
       manifest: {
         name: 'Kitchen Display',

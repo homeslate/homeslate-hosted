@@ -272,7 +272,7 @@ export function useGooglePhotoCollage({
   );
 
   const pollSession = useCallback(
-    async (session: PickerSession, token: string) => {
+    async function pollSessionInternal(session: PickerSession, token: string) {
       try {
         const updated = await getPickerSession(token, session.id);
         sessionRef.current = updated;
@@ -288,7 +288,7 @@ export function useGooglePhotoCollage({
           : DEFAULT_POLL_INTERVAL_MS;
 
         pollTimerRef.current = setTimeout(() => {
-          void pollSession(updated, token);
+          void pollSessionInternal(updated, token);
         }, pollIntervalMs);
       } catch (err) {
         stopPolling();

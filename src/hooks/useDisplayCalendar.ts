@@ -58,9 +58,10 @@ export function useDisplayCalendar({
   const [error, setError] = useState<string | null>(null);
   const [calendars, setCalendars] = useState<GoogleCalendar[]>([]);
   const [events, setEvents] = useState<ParsedCalendarEvent[]>([]);
+  const selectedCalendarIdsKey = selectedCalendarIds.join(',');
 
   const fetchData = useCallback(async () => {
-    if (!displayId || selectedCalendarIds.length === 0) {
+    if (!displayId || selectedCalendarIdsKey.length === 0) {
       setCalendars([]);
       setEvents([]);
       setIsLoading(false);
@@ -71,7 +72,7 @@ export function useDisplayCalendar({
     try {
       const params = new URLSearchParams({
         displayId,
-        calendarIds: selectedCalendarIds.join(','),
+        calendarIds: selectedCalendarIdsKey,
         daysAhead: String(daysAhead),
       });
       const res = await fetch(`/api/display-calendar?${params}`);
@@ -96,7 +97,7 @@ export function useDisplayCalendar({
     } finally {
       setIsLoading(false);
     }
-  }, [displayId, selectedCalendarIds.join(','), daysAhead]);
+  }, [displayId, selectedCalendarIdsKey, daysAhead]);
 
   useEffect(() => {
     if (!displayId) {
@@ -110,10 +111,10 @@ export function useDisplayCalendar({
   }, [displayId, fetchData]);
 
   useEffect(() => {
-    if (!displayId || selectedCalendarIds.length === 0) return;
+    if (!displayId || selectedCalendarIdsKey.length === 0) return;
     const t = setInterval(fetchData, REFRESH_INTERVAL_MS);
     return () => clearInterval(t);
-  }, [displayId, selectedCalendarIds.length, fetchData]);
+  }, [displayId, selectedCalendarIdsKey, fetchData]);
 
   if (!displayId) return EMPTY_RESULT;
 

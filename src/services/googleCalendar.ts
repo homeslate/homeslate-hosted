@@ -67,14 +67,46 @@ const SCOPES = 'https://www.googleapis.com/auth/calendar';
 const TOKEN_KEY = 'gcal_access_token';
 const TOKEN_EXPIRY_KEY = 'gcal_token_expiry';
 
+interface GoogleTokenResponse {
+  access_token: string;
+  expires_in: number;
+  error?: string;
+  error_description?: string;
+}
+
+interface GoogleTokenClient {
+  callback: (response: GoogleTokenResponse) => void;
+  requestAccessToken: (config?: { prompt?: string }) => void;
+}
+
+interface GoogleOauth2Api {
+  initTokenClient: (config: {
+    client_id: string;
+    scope: string;
+    callback: (response: GoogleTokenResponse) => void;
+  }) => GoogleTokenClient;
+  revoke: (token: string, callback: () => void) => void;
+}
+
+interface GoogleIdentityServices {
+  accounts?: {
+    oauth2?: GoogleOauth2Api;
+  };
+}
+
 // Token storage
 let accessToken: string | null = null;
 let tokenExpiry: number | null = null;
-let tokenClient: google.accounts.oauth2.TokenClient | null = null;
+let tokenClient: GoogleTokenClient | null = null;
+
+function getOauth2Api(): GoogleOauth2Api | null {
+  if (typeof google === 'undefined') return null;
+  return google.accounts?.oauth2 ?? null;
+}
 
 // Check if Google Identity Services is loaded
 function isGoogleLoaded(): boolean {
-  return typeof google !== 'undefined' && google.accounts?.oauth2 !== undefined;
+  return getOauth2Api() !== null;
 }
 
 /**
@@ -137,7 +169,11 @@ export function initGoogleAuth(clientId: string): Promise<void> {
 }
 
 function setupTokenClient(clientId: string) {
-  tokenClient = google.accounts.oauth2.initTokenClient({
+  const oauth2 = getOauth2Api();
+  if (!oauth2) {
+    throw new Error('Google Identity Services not loaded');
+  }
+  tokenClient = oauth2.initTokenClient({
     client_id: clientId,
     scope: SCOPES,
     callback: () => {}, // Will be set during auth request
@@ -195,8 +231,9 @@ export function getAccessToken(): string | null {
  * Clear stored token (sign out)
  */
 export function clearGoogleAuth(): void {
-  if (accessToken && isGoogleLoaded()) {
-    google.accounts.oauth2.revoke(accessToken, () => {});
+  const oauth2 = getOauth2Api();
+  if (accessToken && oauth2) {
+    oauth2.revoke(accessToken, () => {});
   }
   accessToken = null;
   tokenExpiry = null;
@@ -461,31 +498,11 @@ export async function deleteCalendarEvent(
 }
 
 // Type declaration for Google Identity Services
+declare const google: GoogleIdentityServices;
+
 declare global {
   interface Window {
-    google?: typeof google;
-  }
-  
-  namespace google.accounts.oauth2 {
-    interface TokenClient {
-      callback: (response: TokenResponse) => void;
-      requestAccessToken: (config?: { prompt?: string }) => void;
-    }
-    
-    interface TokenResponse {
-      access_token: string;
-      expires_in: number;
-      error?: string;
-      error_description?: string;
-    }
-    
-    function initTokenClient(config: {
-      client_id: string;
-      scope: string;
-      callback: (response: TokenResponse) => void;
-    }): TokenClient;
-    
-    function revoke(token: string, callback: () => void): void;
+    google?: GoogleIdentityServices;
   }
 }
 

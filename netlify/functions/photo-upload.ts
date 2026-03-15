@@ -50,8 +50,7 @@ function mimeToExt(mime: string): string {
 }
 
 export const handler: Handler = async (event) => {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  connectLambda(event as any);
+  connectLambda(event as unknown as Parameters<typeof connectLambda>[0]);
 
   if (event.httpMethod === 'OPTIONS') {
     return { statusCode: 204, headers: CORS, body: '' };

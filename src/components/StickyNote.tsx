@@ -83,7 +83,7 @@ export function StickyNote({ note, containerRef, onUpdate, onRemove }: Props) {
         if (noteRef.current) {
           try {
             noteRef.current.releasePointerCapture(ev.pointerId);
-          } catch (_) { /* ignore */ }
+          } catch { /* ignore */ }
         }
         const dx = ev.clientX - startX;
         const dy = ev.clientY - startY;

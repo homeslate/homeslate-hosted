@@ -48,8 +48,7 @@ function shortKey(key: string): string {
 export const handler: Handler = async (event) => {
   // connectLambda reads event.blobs which Netlify injects at runtime but
   // isn't declared in the @netlify/functions HandlerEvent type.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  connectLambda(event as any);
+  connectLambda(event as unknown as Parameters<typeof connectLambda>[0]);
 
   if (event.httpMethod === 'OPTIONS') {
     return { statusCode: 204, headers: CORS, body: '' };

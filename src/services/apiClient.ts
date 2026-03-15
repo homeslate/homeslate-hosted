@@ -22,6 +22,7 @@ interface RequestOptions<TBody> {
   query?: QueryRecord;
   body?: TBody;
   signal?: AbortSignal;
+  cache?: RequestCache;
 }
 
 function buildUrl(path: string, query?: QueryRecord): string {
@@ -88,6 +89,7 @@ async function request<TResponse, TBody = undefined>(
     method,
     headers,
     signal: options.signal,
+    cache: options.cache,
     body:
       options.body === undefined
         ? undefined

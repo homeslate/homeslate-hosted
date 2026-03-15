@@ -70,8 +70,12 @@ const TodoWidgetSettings = lazy(() => import('./TodoWidget').then((m) => ({ defa
 const SportsWidget = lazy(() => import('./SportsWidget').then((m) => ({ default: m.SportsWidget })));
 const SportsWidgetSettings = lazy(() => import('./SportsWidget').then((m) => ({ default: m.SportsWidgetSettings })));
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const widgetRegistry = new Map<string, WidgetRegistryEntry<any>>();
+ 
+const widgetRegistry = new Map<string, WidgetRegistryEntry<WidgetConfig>>();
+
+function setWidgetEntry<T extends WidgetConfig>(type: string, entry: WidgetRegistryEntry<T>): void {
+  widgetRegistry.set(type, entry as unknown as WidgetRegistryEntry<WidgetConfig>);
+}
 
 // Clock Widget
 const clockEntry: WidgetRegistryEntry<ClockConfig> = {
@@ -96,7 +100,7 @@ const clockEntry: WidgetRegistryEntry<ClockConfig> = {
     minH: 2,
   },
 };
-widgetRegistry.set('clock', clockEntry);
+setWidgetEntry('clock', clockEntry);
 
 // Calendar Widget
 const calendarEntry: WidgetRegistryEntry<CalendarConfig> = {
@@ -121,7 +125,7 @@ const calendarEntry: WidgetRegistryEntry<CalendarConfig> = {
     minH: 3,
   },
 };
-widgetRegistry.set('calendar', calendarEntry);
+setWidgetEntry('calendar', calendarEntry);
 
 // Google Calendar Widget (OAuth)
 const googleCalendarEntry: WidgetRegistryEntry<GoogleCalendarConfig> = {
@@ -146,7 +150,7 @@ const googleCalendarEntry: WidgetRegistryEntry<GoogleCalendarConfig> = {
     minH: 3,
   },
 };
-widgetRegistry.set('google-calendar', googleCalendarEntry);
+setWidgetEntry('google-calendar', googleCalendarEntry);
 
 // Google Calendar Month Widget
 const googleCalendarMonthEntry: WidgetRegistryEntry<GoogleCalendarMonthConfig> = {
@@ -168,7 +172,7 @@ const googleCalendarMonthEntry: WidgetRegistryEntry<GoogleCalendarMonthConfig> =
     minH: 4,
   },
 };
-widgetRegistry.set('google-calendar-month', googleCalendarMonthEntry);
+setWidgetEntry('google-calendar-month', googleCalendarMonthEntry);
 
 // Google Calendar Day Widget
 const googleCalendarDayEntry: WidgetRegistryEntry<GoogleCalendarDayConfig> = {
@@ -191,7 +195,7 @@ const googleCalendarDayEntry: WidgetRegistryEntry<GoogleCalendarDayConfig> = {
     minH: 3,
   },
 };
-widgetRegistry.set('google-calendar-day', googleCalendarDayEntry);
+setWidgetEntry('google-calendar-day', googleCalendarDayEntry);
 
 // Photo Widget (combined: URL photos, Google Photos, and device uploads)
 const photoEntry: WidgetRegistryEntry<PhotoConfig> = {
@@ -215,7 +219,7 @@ const photoEntry: WidgetRegistryEntry<PhotoConfig> = {
     minH: 2,
   },
 };
-widgetRegistry.set('photo', photoEntry);
+setWidgetEntry('photo', photoEntry);
 
 
 
@@ -239,7 +243,7 @@ const googlePhotoCollageEntry: WidgetRegistryEntry<GooglePhotoCollageConfig> = {
     minH: 3,
   },
 };
-widgetRegistry.set('google-photo-collage', googlePhotoCollageEntry);
+setWidgetEntry('google-photo-collage', googlePhotoCollageEntry);
 
 // Weather Widget
 const weatherEntry: WidgetRegistryEntry<WeatherConfig> = {
@@ -267,7 +271,7 @@ const weatherEntry: WidgetRegistryEntry<WeatherConfig> = {
     minH: 2,
   },
 };
-widgetRegistry.set('weather', weatherEntry);
+setWidgetEntry('weather', weatherEntry);
 
 // News Widget
 const newsEntry: WidgetRegistryEntry<NewsConfig> = {
@@ -291,7 +295,7 @@ const newsEntry: WidgetRegistryEntry<NewsConfig> = {
     minH: 3,
   },
 };
-widgetRegistry.set('news', newsEntry);
+setWidgetEntry('news', newsEntry);
 
 // Stocks Widget
 const stocksEntry: WidgetRegistryEntry<StocksConfig> = {
@@ -315,7 +319,7 @@ const stocksEntry: WidgetRegistryEntry<StocksConfig> = {
     minH: 3,
   },
 };
-widgetRegistry.set('stocks', stocksEntry);
+setWidgetEntry('stocks', stocksEntry);
 
 // Week Calendar Widget
 const weekCalendarEntry: WidgetRegistryEntry<WeekCalendarConfig> = {
@@ -340,7 +344,7 @@ const weekCalendarEntry: WidgetRegistryEntry<WeekCalendarConfig> = {
     minH: 4,
   },
 };
-widgetRegistry.set('week-calendar', weekCalendarEntry);
+setWidgetEntry('week-calendar', weekCalendarEntry);
 
 // To-Do List Widget
 const todoEntry: WidgetRegistryEntry<TodoConfig> = {
@@ -362,7 +366,7 @@ const todoEntry: WidgetRegistryEntry<TodoConfig> = {
     minH: 3,
   },
 };
-widgetRegistry.set('todo', todoEntry);
+setWidgetEntry('todo', todoEntry);
 
 // Sports Scores Widget
 const sportsEntry: WidgetRegistryEntry<SportsConfig> = {
@@ -386,18 +390,18 @@ const sportsEntry: WidgetRegistryEntry<SportsConfig> = {
     minH: 3,
   },
 };
-widgetRegistry.set('sports', sportsEntry);
+setWidgetEntry('sports', sportsEntry);
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const getWidgetTypes = (): WidgetRegistryEntry<any>[] => {
+ 
+export const getWidgetTypes = (): WidgetRegistryEntry<WidgetConfig>[] => {
   return Array.from(widgetRegistry.values());
 };
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const getWidgetByType = (type: string): WidgetRegistryEntry<any> | undefined => {
+ 
+export const getWidgetByType = (type: string): WidgetRegistryEntry<WidgetConfig> | undefined => {
   return widgetRegistry.get(type);
 };
 
 export const registerWidget = <T extends WidgetConfig>(entry: WidgetRegistryEntry<T>): void => {
-  widgetRegistry.set(entry.type, entry);
+  setWidgetEntry(entry.type, entry);
 };

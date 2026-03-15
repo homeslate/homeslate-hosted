@@ -75,13 +75,55 @@ const scoreboardCache = new Map<
 >();
 const CACHE_DURATION = 2 * 60 * 1000; // 2 minutes
 
+interface EspnLogo {
+  href?: string;
+  rel?: string[];
+}
+
+interface EspnCompetitor {
+  team?: {
+    id?: string;
+    abbreviation?: string;
+    displayName?: string;
+    shortDisplayName?: string;
+    name?: string;
+    logo?: string;
+    color?: string;
+  };
+  score?: string;
+  homeAway?: string;
+  winner?: boolean;
+  records?: { summary: string }[];
+}
+
+interface EspnCompetition {
+  date?: string;
+  type?: { abbreviation?: string; name?: string };
+  status?: {
+    period?: number;
+    displayClock?: string;
+    type?: { state?: string; shortDetail?: string; detail?: string };
+  };
+  competitors?: EspnCompetitor[];
+}
+
+interface EspnEvent {
+  id: string;
+  date: string;
+  name?: string;
+  shortName?: string;
+  status?: { type?: { state?: string; shortDetail?: string; detail?: string } };
+  competitions?: EspnCompetition[];
+  circuit?: { fullName?: string; address?: { city?: string } };
+}
+
 function buildScoreboardUrl(leagueId: string, sport: string, dates?: string): string {
   const base = `${ESPN_BASE}/${sport}/${leagueId}/scoreboard`;
   return dates ? `${base}?dates=${dates}` : base;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function parseCompetitor(c: any): SportsCompetitor {
+ 
+function parseCompetitor(c: EspnCompetitor): SportsCompetitor {
   return {
     team: {
       id: c.team?.id ?? '',
@@ -98,8 +140,8 @@ function parseCompetitor(c: any): SportsCompetitor {
   };
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function parseGame(event: any): SportGame {
+ 
+function parseGame(event: EspnEvent): SportGame {
   const competition = event.competitions?.[0];
   const statusType = competition?.status?.type;
 
@@ -126,17 +168,17 @@ function parseGame(event: any): SportGame {
 }
 
 // F1/racing: each "event" is a race weekend with multiple sessions (FP1, Qual, Race, etc.)
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function parseF1Event(event: any): SportGame {
+ 
+function parseF1Event(event: EspnEvent): SportGame {
   const competitions = event.competitions ?? [];
-  const raceSession = competitions.find((c: any) => c.type?.abbreviation === 'Race');
+  const raceSession = competitions.find((c) => c.type?.abbreviation === 'Race');
   const statusType = raceSession?.status?.type ?? event.status?.type ?? competitions[0]?.status?.type;
 
   let status: GameStatus = 'pre';
   if (statusType?.state === 'in') status = 'in';
   else if (statusType?.state === 'post') status = 'post';
 
-  const raceSessions: RaceSession[] = competitions.map((c: any) => {
+  const raceSessions: RaceSession[] = competitions.map((c) => {
     const st = c.status?.type;
     let s: GameStatus = 'pre';
     if (st?.state === 'in') s = 'in';
@@ -224,15 +266,15 @@ export async function fetchScoreboard(
   const data = await response.json();
 
   const isRacing = league.sport === 'racing';
-  const games: SportGame[] = (data.events ?? []).map((event: unknown) =>
+  const games: SportGame[] = ((data.events ?? []) as EspnEvent[]).map((event) =>
     isRacing ? parseF1Event(event) : parseGame(event)
   );
 
   // Extract league logo from response (prefer dark variant for display on dark backgrounds)
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const logos: any[] = data.leagues?.[0]?.logos ?? [];
-  const darkLogo = logos.find((l: any) => l.rel?.includes('dark'))?.href;
-  const defaultLogo = logos.find((l: any) => l.rel?.includes('default'))?.href ?? logos[0]?.href;
+   
+  const logos = (data.leagues?.[0]?.logos ?? []) as EspnLogo[];
+  const darkLogo = logos.find((l) => l.rel?.includes('dark'))?.href;
+  const defaultLogo = logos.find((l) => l.rel?.includes('default'))?.href ?? logos[0]?.href;
   const leagueLogo: string | undefined = darkLogo ?? defaultLogo;
 
   // Scoreboard date from API (e.g. "2026-03-12" -> "20260312")
@@ -298,8 +340,8 @@ export async function fetchLeagueTeams(leagueId: string): Promise<SportsTeam[]> 
     const data = await response.json();
 
     const teams: SportsTeam[] = (data.sports?.[0]?.leagues?.[0]?.teams ?? []).map(
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (entry: any) => ({
+       
+      (entry: { team?: { id?: string; abbreviation?: string; displayName?: string; shortDisplayName?: string; logos?: { href?: string }[]; color?: string } }) => ({
         id: entry.team?.id ?? '',
         abbreviation: entry.team?.abbreviation ?? '',
         displayName: entry.team?.displayName ?? '',

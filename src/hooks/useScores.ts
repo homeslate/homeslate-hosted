@@ -41,11 +41,6 @@ interface UseScoresResult {
   loadMore: () => Promise<void>;
 }
 
-/** Stable string key for array comparison - avoids ref changes triggering re-fetches */
-function teamIdsKey(ids: string[]): string {
-  return ids.length === 0 ? '' : ids.slice().sort().join(',');
-}
-
 function filterAndSortGames(
   fetchedGames: SportGame[],
   favoriteTeamIds: string[]
@@ -77,8 +72,6 @@ export function useScores({
   const [error, setError] = useState<string | null>(null);
   const [oldestFetchedDate, setOldestFetchedDate] = useState<string | null>(null);
 
-  const teamIdsStable = teamIdsKey(favoriteTeamIds);
-
   const fetchData = useCallback(async () => {
     if (!leagueId) return;
 
@@ -99,7 +92,7 @@ export function useScores({
     } finally {
       setIsLoading(false);
     }
-  }, [leagueId, teamIdsStable]);
+  }, [leagueId, favoriteTeamIds]);
 
   const loadMore = useCallback(async () => {
     if (!leagueId || isLoadingMore || isLoading) return;

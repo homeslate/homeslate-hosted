@@ -49,13 +49,12 @@ export function Dashboard({
 
   // Resolve which display/layout to show
   const storeDisplay = store.displays.find((d) => d.id === store.selectedDisplayId);
-  const layouts = externalLayouts ?? storeDisplay?.layouts ?? [];
   const resolvedLayoutId = layoutId ?? storeDisplay?.activeLayoutId ?? null;
   const isEditing = isEditingProp ?? false;
 
   const activeLayout = useMemo(
-    () => layouts.find((l) => l.id === resolvedLayoutId),
-    [layouts, resolvedLayoutId]
+    () => (externalLayouts ?? storeDisplay?.layouts ?? []).find((l) => l.id === resolvedLayoutId),
+    [externalLayouts, storeDisplay?.layouts, resolvedLayoutId]
   );
 
   // Fade-in animation on view change
@@ -146,8 +145,10 @@ export function Dashboard({
     };
   });
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const handleLayoutChange = (newLayout: readonly any[]) => {
+   
+  const handleLayoutChange = (
+    newLayout: readonly { i: string; x: number; y: number; w: number; h: number }[]
+  ) => {
     if (!isEditing) return;
     // Clamp all layout items to the 12x12 grid bounds
     const clamped = newLayout.map((l: { i: string; x: number; y: number; w: number; h: number }) => {

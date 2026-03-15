@@ -39,6 +39,36 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
+interface GoogleTokenClientResponse {
+  access_token: string;
+  expires_in: number;
+  error?: string;
+  refresh_token?: string;
+}
+
+interface GoogleTokenClient {
+  callback: (response: GoogleTokenClientResponse) => void;
+  requestAccessToken: (config?: { prompt?: string }) => void;
+}
+
+interface GoogleOauth2Api {
+  initTokenClient: (config: {
+    client_id: string;
+    scope: string;
+    callback: (response: GoogleTokenClientResponse) => void;
+    access_type?: 'offline';
+  }) => GoogleTokenClient;
+  revoke: (token: string, callback: () => void) => void;
+}
+
+interface WindowWithGoogle extends Window {
+  google?: {
+    accounts?: {
+      oauth2?: GoogleOauth2Api;
+    };
+  };
+}
+
 function readStoredToken(): string | null {
   const token = localStorage.getItem(TOKEN_KEY);
   const expiry = localStorage.getItem(TOKEN_EXPIRY_KEY);
@@ -66,8 +96,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(readStoredUser);
   const [accessToken, setAccessToken] = useState<string | null>(readStoredToken);
   const [isLoading, setIsLoading] = useState(false);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const tokenClientRef = useRef<any>(null);
+   
+  const tokenClientRef = useRef<GoogleTokenClient | null>(null);
   const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const syncedTokenRef = useRef<string | null>(null);
 
@@ -122,11 +152,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!newToken) {
       console.warn('Server-side token refresh failed, will try GIS fallback');
       if (!tokenClientRef.current) return;
-      tokenClientRef.current.callback = (response: {
-        access_token: string;
-        expires_in: number;
-        error?: string;
-      }) => {
+      tokenClientRef.current.callback = (response: GoogleTokenClientResponse) => {
         if (response.error) {
           console.warn('GIS silent token refresh failed:', response.error);
           return;
@@ -142,12 +168,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const init = () => {
       const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID as string;
       if (!clientId) return;
-      tokenClientRef.current = (
-        window as typeof window & { google: typeof google }
-      ).google.accounts.oauth2.initTokenClient({
+      const oauth2 = (window as WindowWithGoogle).google?.accounts?.oauth2;
+      if (!oauth2) return;
+      tokenClientRef.current = oauth2.initTokenClient({
         client_id: clientId,
         scope: SCOPES,
-        // @ts-expect-error - access_type is a valid Google OAuth option
         access_type: 'offline',
         callback: () => {}, // replaced per-request in signIn() / silentRefresh()
       });
@@ -270,12 +295,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signIn = useCallback(() => {
     if (!tokenClientRef.current) return;
     setIsLoading(true);
-    tokenClientRef.current.callback = async (response: {
-      access_token: string;
-      refresh_token?: string;
-      expires_in: number;
-      error?: string;
-    }) => {
+    tokenClientRef.current.callback = async (response: GoogleTokenClientResponse) => {
       if (response.error) {
         setIsLoading(false);
         return;
@@ -297,8 +317,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [fetchAndStoreUser, storeToken]);
 
   const signOut = useCallback(() => {
-    if (accessToken && (window as typeof window & { google?: typeof google }).google) {
-      window.google?.accounts.oauth2.revoke(accessToken, () => {});
+    const oauth2 = (window as WindowWithGoogle).google?.accounts?.oauth2;
+    if (accessToken && oauth2) {
+      oauth2.revoke(accessToken, () => {});
     }
     clearSession();
   }, [accessToken, clearSession]);

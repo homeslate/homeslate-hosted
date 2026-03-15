@@ -36,7 +36,9 @@ export function TodoWidget({ widget, isEditing, onConfigChange }: WidgetProps<To
   const [localChecked, setLocalChecked] = useState<Set<string>>(() => getLocalChecked(widget.id));
   const [newItemText, setNewItemText] = useState('');
   const itemsRef = useRef(items);
-  itemsRef.current = items;
+  useEffect(() => {
+    itemsRef.current = items;
+  }, [items]);
 
   // Re-read localStorage whenever items change externally (poll/config update)
   useEffect(() => {
