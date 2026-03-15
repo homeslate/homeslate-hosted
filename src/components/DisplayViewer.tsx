@@ -438,22 +438,19 @@ export function DisplayViewer({ displayId, isPreview = false }: Props) {
                 ? (TablerIcons as Record<string, unknown>)[l.icon] as React.ComponentType<{ size?: number; stroke?: number }> | undefined
                 : undefined;
               const isActive = l.id === activeLayoutId;
-              return IconComp ? (
+              return (
                 <button
                   key={l.id}
                   className={`${classes.iconIndicator} ${isActive ? classes.iconIndicatorActive : ''}`}
                   onClick={() => { setActiveLayoutId(l.id); resetRotation(); }}
                   aria-label={`Switch to ${l.name}`}
                 >
-                  <IconComp size={20} stroke={isActive ? 2 : 1.5} />
+                  {IconComp ? (
+                    <IconComp size={20} stroke={isActive ? 2 : 1.5} />
+                  ) : (
+                    <span className={classes.iconPlaceholder} aria-hidden="true" />
+                  )}
                 </button>
-              ) : (
-                <button
-                  key={l.id}
-                  className={`${classes.dot} ${isActive ? classes.dotActive : ''}`}
-                  onClick={() => { setActiveLayoutId(l.id); resetRotation(); }}
-                  aria-label={`Switch to ${l.name}`}
-                />
               );
             })}
           </div>

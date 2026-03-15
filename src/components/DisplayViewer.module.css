@@ -63,23 +63,6 @@
   z-index: 10;
 }
 
-.dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--theme-text-muted, rgba(128, 128, 128, 0.5));
-  opacity: 0.4;
-  border: none;
-  cursor: pointer;
-  padding: 0;
-  transition: background 0.2s ease, opacity 0.2s ease;
-}
-
-.dotActive {
-  background: var(--theme-text, white);
-  opacity: 0.85;
-}
-
 /* ── Icon-based view indicators ── */
 
 .iconIndicator {
@@ -110,6 +93,14 @@
   border-color: var(--theme-text, rgba(255, 255, 255, 0.7));
   color: var(--theme-text, white);
   transform: scale(1.1);
+}
+
+.iconPlaceholder {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.5;
 }
 
 /* ── Light/dark mode toggle ── */

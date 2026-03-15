@@ -29,6 +29,7 @@
     "dayjs": "^1.11.19",
     "dotenv": "^17.3.1",
     "drizzle-orm": "^0.45.1",
+    "netlify-cli": "^24.2.0",
     "qrcode.react": "^4.2.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",

@@ -16,7 +16,17 @@
   to = "/.netlify/functions/:splat"
   status = 200
 
-[[redirects]]
+[[context.production.redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+[[context.deploy-preview.redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+[[context.branch-deploy.redirects]]
   from = "/*"
   to = "/index.html"
   status = 200

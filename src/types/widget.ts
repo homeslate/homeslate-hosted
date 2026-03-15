@@ -59,7 +59,7 @@ export interface StickyNote {
 export interface DashboardLayout {
   id: string;
   name: string;
-  /** Optional Tabler icon name (e.g. "IconHome") used as the view indicator on the display. Falls back to a dot when not set. */
+  /** Optional Tabler icon name (e.g. "IconHome") used as the view indicator on the display. Falls back to a neutral placeholder icon when not set. */
   icon?: string;
   widgets: WidgetDefinition[];
   columns: number;
