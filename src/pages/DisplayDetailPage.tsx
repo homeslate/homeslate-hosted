@@ -56,13 +56,15 @@ import {
   arrayMove,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import { v4 as uuidv4 } from 'uuid';
 import { ShareDisplayModal } from '../components/ShareDisplayModal';
 import { InviteModal } from '../components/InviteModal';
 import { useAuth } from '../contexts/AuthContext';
 import { useDashboardStore } from '../store/dashboardStore';
 import { ThemePicker } from '../components/ThemePicker';
+import { getWidgetByType } from '../widgets/registry';
 import type { ColorMode, DisplayTheme } from '../types/theme';
-import type { DashboardLayout } from '../types/widget';
+import type { DashboardLayout, WidgetDefinition } from '../types/widget';
 import { apiClient, ApiError } from '../services/apiClient';
 import type { ConfigUpsertRequest, DisplayPasscodeRequest, DisplayRenameRequest } from '../types/api';
 import classes from './DisplayDetailPage.module.css';
@@ -75,6 +77,84 @@ const INTERVAL_OPTIONS = [
   { value: '600000',  label: '10 minutes' },
   { value: '1800000', label: '30 minutes' },
 ];
+
+const PRESET_VIEW_NAMES = ['Morning', 'Evening', 'Weekend'] as const;
+
+function cloneConfig<T>(value: T): T {
+  return JSON.parse(JSON.stringify(value)) as T;
+}
+
+function createPresetWidget(
+  type: string,
+  x: number,
+  y: number,
+  overrides: Partial<Pick<WidgetDefinition['layout'], 'w' | 'h'>> = {}
+): WidgetDefinition | null {
+  const entry = getWidgetByType(type);
+  if (!entry) return null;
+
+  return {
+    id: uuidv4(),
+    type: entry.type,
+    title: entry.name,
+    config: cloneConfig(entry.defaultConfig),
+    layout: {
+      x,
+      y,
+      w: overrides.w ?? entry.defaultLayout.w,
+      h: overrides.h ?? entry.defaultLayout.h,
+      minW: entry.defaultLayout.minW,
+      minH: entry.defaultLayout.minH,
+      maxW: entry.defaultLayout.maxW,
+      maxH: entry.defaultLayout.maxH,
+    },
+  };
+}
+
+function createPresetLayout(name: (typeof PRESET_VIEW_NAMES)[number]): DashboardLayout {
+  const iconByName: Record<(typeof PRESET_VIEW_NAMES)[number], string> = {
+    Morning: 'IconSun',
+    Evening: 'IconMoon',
+    Weekend: 'IconCalendarWeek',
+  };
+
+  const widgetSpecs: Record<(typeof PRESET_VIEW_NAMES)[number], Array<{ type: string; x: number; y: number; w?: number; h?: number }>> = {
+    Morning: [
+      { type: 'clock', x: 0, y: 0 },
+      { type: 'weather', x: 3, y: 0 },
+      { type: 'google-calendar-day', x: 6, y: 0, w: 3, h: 4 },
+      { type: 'todo', x: 9, y: 0, w: 3, h: 4 },
+      { type: 'news', x: 0, y: 3, w: 6, h: 4 },
+    ],
+    Evening: [
+      { type: 'clock', x: 0, y: 0 },
+      { type: 'todo', x: 3, y: 0, w: 3, h: 4 },
+      { type: 'google-calendar-day', x: 6, y: 0, w: 3, h: 4 },
+      { type: 'photo', x: 9, y: 0, w: 3, h: 3 },
+      { type: 'weather', x: 0, y: 2, w: 3, h: 3 },
+    ],
+    Weekend: [
+      { type: 'clock', x: 0, y: 0 },
+      { type: 'google-calendar-month', x: 3, y: 0, w: 5, h: 5 },
+      { type: 'todo', x: 8, y: 0, w: 4, h: 4 },
+      { type: 'weather', x: 0, y: 2, w: 3, h: 3 },
+      { type: 'news', x: 8, y: 4, w: 4, h: 3 },
+    ],
+  };
+
+  const widgets = widgetSpecs[name]
+    .map((spec) => createPresetWidget(spec.type, spec.x, spec.y, { w: spec.w, h: spec.h }))
+    .filter((widget): widget is WidgetDefinition => widget !== null);
+
+  return {
+    id: uuidv4(),
+    name,
+    icon: iconByName[name],
+    widgets,
+    columns: 12,
+    rowHeight: 80,
+  };
+}
 
 // ─── Sortable view card ────────────────────────────────────────────────────────
 
@@ -249,6 +329,7 @@ export function DisplayDetailPage() {
     selectedDisplayId,
     renameDisplay,
     createLayout,
+    upsertDisplay,
     deleteLayout,
     renameLayout,
     reorderLayouts,
@@ -355,6 +436,22 @@ export function DisplayDetailPage() {
   const handleNewView = () => {
     setNewViewName('New View');
     setNewViewOpen(true);
+  };
+
+  const handleAddPresetViews = () => {
+    const existing = new Set(display.layouts.map((layout) => layout.name.trim().toLowerCase()));
+    const missing = PRESET_VIEW_NAMES.filter((name) => !existing.has(name.toLowerCase()));
+    if (missing.length === 0) return;
+
+    const presetLayouts = missing.map((name) => createPresetLayout(name));
+    const updatedLayouts = [...display.layouts, ...presetLayouts];
+
+    upsertDisplay({
+      ...display,
+      layouts: updatedLayouts,
+      activeLayoutId: display.activeLayoutId ?? updatedLayouts[0]?.id ?? null,
+    });
+    saveConfig({ layouts: updatedLayouts });
   };
 
   const handleDeleteView = (id: string) => {
@@ -583,9 +680,14 @@ export function DisplayDetailPage() {
         <section className={classes.section}>
           <Group justify="space-between" mb="md">
             <Title order={5} className={classes.sectionTitle}>Views</Title>
-            <Button leftSection={<IconPlus size={14} />} size="xs" variant="light" onClick={handleNewView}>
-              New View
-            </Button>
+            <Group gap="xs">
+              <Button size="xs" variant="default" onClick={handleAddPresetViews}>
+                Add Preset Views
+              </Button>
+              <Button leftSection={<IconPlus size={14} />} size="xs" variant="light" onClick={handleNewView}>
+                New View
+              </Button>
+            </Group>
           </Group>
           <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
             <SortableContext items={display.layouts.map((l) => l.id)} strategy={verticalListSortingStrategy}>

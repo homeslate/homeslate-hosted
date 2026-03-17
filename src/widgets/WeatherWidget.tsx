@@ -26,6 +26,7 @@ import {
 } from '@tabler/icons-react';
 import type { WidgetProps, WidgetConfig, TextAlign } from '../types/widget';
 import { useWeather } from '../hooks/useWeather';
+import { WidgetDataStatus } from '../components/WidgetDataStatus';
 import {
   searchLocations,
   getWeatherDescription,
@@ -110,7 +111,7 @@ export function WeatherWidget({ widget }: WidgetProps<WeatherConfig>) {
     };
   }, [location]);
 
-  const { data: weather, isLoading, error, refresh } = useWeather({
+  const { data: weather, isLoading, error, refresh, lastUpdated } = useWeather({
     latitude,
     longitude,
     units,
@@ -148,7 +149,7 @@ export function WeatherWidget({ widget }: WidgetProps<WeatherConfig>) {
   }
 
   // Error state
-  if (error) {
+  if (error && !weather) {
     return (
       <Box className={`${classes.container} ${transparentBackground ? classes.transparent : ''}`}>
         <div className={classes.error}>
@@ -193,6 +194,15 @@ export function WeatherWidget({ widget }: WidgetProps<WeatherConfig>) {
         </Text>
         {isLoading && <Loader size="xs" color="orange" />}
       </div>
+      )}
+      {!isCompact && (
+        <WidgetDataStatus
+          widgetId={widget.id}
+          lastUpdated={lastUpdated}
+          error={error}
+          isLoading={isLoading}
+          align={textAlign}
+        />
       )}
       
       <div className={classes.current}>

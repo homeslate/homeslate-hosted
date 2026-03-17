@@ -38,9 +38,11 @@ import { GoogleCalendarEmptyState } from '../components/GoogleCalendarEmptyState
 import type { WidgetProps, WidgetConfig } from '../types/widget';
 import { useGoogleCalendar } from '../hooks/useGoogleCalendar';
 import { useDisplayCalendar } from '../hooks/useDisplayCalendar';
+import { WidgetDataStatus } from '../components/WidgetDataStatus';
 import { useDisplayId, useIsPreviewDisplay } from '../contexts/DisplayContext';
 import { useAuth } from '../contexts/AuthContext';
 import type { ParsedCalendarEvent, CalendarEventInput } from '../services/googleCalendar';
+import { shouldShowGoogleCalendarErrorAlert } from './googleCalendarError';
 import classes from './GoogleCalendarDayWidget.module.css';
 import dayjs from 'dayjs';
 
@@ -157,6 +159,7 @@ export function GoogleCalendarDayWidget({ widget }: WidgetProps<GoogleCalendarDa
     error,
     calendars,
     events,
+    lastUpdated,
     refresh,
     addEvent,
     editEvent,
@@ -195,6 +198,8 @@ export function GoogleCalendarDayWidget({ widget }: WidgetProps<GoogleCalendarDa
     }
     return Array.from(map.entries());
   }, [upcomingEvents]);
+
+  const shouldShowErrorAlert = shouldShowGoogleCalendarErrorAlert(error, isDisplayMode);
 
   const calendarOptions = useMemo(
     () =>
@@ -351,8 +356,14 @@ export function GoogleCalendarDayWidget({ widget }: WidgetProps<GoogleCalendarDa
           </ActionIcon>
         </Group>
       </div>
+      <WidgetDataStatus
+        widgetId={widget.id}
+        lastUpdated={lastUpdated}
+        error={error}
+        isLoading={isLoading}
+      />
 
-      {error && (
+      {shouldShowErrorAlert && (
         <Alert color="red" variant="light" mb="xs" p="xs">
           <Text size="xs">{error}</Text>
         </Alert>

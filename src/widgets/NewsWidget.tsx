@@ -13,6 +13,7 @@ import {
 import { IconNews, IconRefresh, IconExternalLink } from '@tabler/icons-react';
 import type { WidgetProps, WidgetConfig } from '../types/widget';
 import { useNews } from '../hooks/useNews';
+import { WidgetDataStatus } from '../components/WidgetDataStatus';
 import { popularFeeds, type RSSFeed } from '../services/news';
 import classes from './NewsWidget.module.css';
 
@@ -33,7 +34,7 @@ export function NewsWidget({ widget }: WidgetProps<NewsConfig>) {
       .filter((f): f is RSSFeed => f !== undefined);
   }, [feedUrls]);
 
-  const { items, isLoading, error, refresh } = useNews({
+  const { items, isLoading, error, refresh, lastUpdated } = useNews({
     feeds,
     maxItems,
   });
@@ -106,6 +107,12 @@ export function NewsWidget({ widget }: WidgetProps<NewsConfig>) {
         </Text>
         {isLoading && <Loader size="xs" color="blue" />}
       </div>
+      <WidgetDataStatus
+        widgetId={widget.id}
+        lastUpdated={lastUpdated}
+        error={error}
+        isLoading={isLoading}
+      />
 
       <div className={classes.newsList}>
         <Stack gap="xs">

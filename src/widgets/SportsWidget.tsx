@@ -19,6 +19,7 @@ import {
 } from '@tabler/icons-react';
 import type { WidgetProps, WidgetConfig } from '../types/widget';
 import { useScores } from '../hooks/useScores';
+import { WidgetDataStatus } from '../components/WidgetDataStatus';
 import { LEAGUES, fetchLeagueTeams, type SportsTeam } from '../services/sports';
 import type { SportGame, RaceSession } from '../services/sports';
 import classes from './SportsWidget.module.css';
@@ -185,7 +186,7 @@ export function SportsWidget({ widget }: WidgetProps<SportsConfig>) {
     [showAllGames, favoriteTeamIds]
   );
 
-  const { games: rawGames, leagueLogo, isLoading, isLoadingMore, error, refresh, loadMore } = useScores({
+  const { games: rawGames, leagueLogo, isLoading, isLoadingMore, error, lastUpdated, refresh, loadMore } = useScores({
     leagueId,
     favoriteTeamIds: teamFilter,
   });
@@ -239,7 +240,7 @@ export function SportsWidget({ widget }: WidgetProps<SportsConfig>) {
     );
   }
 
-  if (error) {
+  if (error && games.length === 0) {
     return (
       <Box className={`${classes.container} ${transparentBackground ? classes.transparent : ''}`}>
         <div className={classes.empty}>
@@ -282,6 +283,12 @@ export function SportsWidget({ widget }: WidgetProps<SportsConfig>) {
           </Button>
         </Group>
       </div>
+      <WidgetDataStatus
+        widgetId={widget.id}
+        lastUpdated={lastUpdated}
+        error={error}
+        isLoading={isLoading}
+      />
 
       {games.length === 0 ? (
         <div className={classes.empty}>

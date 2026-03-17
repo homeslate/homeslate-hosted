@@ -17,6 +17,7 @@ import { Calendar } from '@mantine/dates';
 import { IconCalendarEvent, IconRefresh, IconChevronDown, IconChevronUp } from '@tabler/icons-react';
 import type { WidgetProps, WidgetConfig } from '../types/widget';
 import { useCalendar } from '../hooks/useCalendar';
+import { WidgetDataStatus } from '../components/WidgetDataStatus';
 import type { CalendarEvent } from '../services/calendar';
 import classes from './CalendarWidget.module.css';
 import dayjs from 'dayjs';
@@ -68,7 +69,7 @@ export function CalendarWidget({ widget }: WidgetProps<CalendarConfig>) {
   const [selectedDate, setSelectedDate] = useState<Date | null>(new Date());
   const { icalUrl, maxEvents, daysAhead, showCalendar, transparentBackground } = widget.config;
 
-  const { events, isLoading, error, refresh } = useCalendar({
+  const { events, isLoading, error, refresh, lastUpdated } = useCalendar({
     icalUrl,
     daysAhead,
   });
@@ -155,6 +156,12 @@ export function CalendarWidget({ widget }: WidgetProps<CalendarConfig>) {
             </Text>
             {isLoading && <Loader size="xs" color="teal" />}
           </div>
+          <WidgetDataStatus
+            widgetId={widget.id}
+            lastUpdated={lastUpdated}
+            error={error}
+            isLoading={isLoading}
+          />
           
           {isLoading && events.length === 0 ? (
             <div className={classes.loading}>

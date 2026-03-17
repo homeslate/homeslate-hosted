@@ -3,6 +3,7 @@ import {
   fetchWeatherCached, 
   type WeatherData,
 } from '../services/weather';
+import { getNextPollDelay } from './polling';
 
 interface UseWeatherOptions {
   latitude: number | null;
@@ -16,6 +17,7 @@ interface UseWeatherResult {
   data: WeatherData | null;
   isLoading: boolean;
   error: string | null;
+  lastUpdated: number | null;
   refresh: () => void;
 }
 
@@ -29,11 +31,15 @@ export function useWeather({
   const [data, setData] = useState<WeatherData | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [lastUpdated, setLastUpdated] = useState<number | null>(null);
+  const [consecutiveFailures, setConsecutiveFailures] = useState(0);
 
   const fetchData = useCallback(async () => {
     if (latitude === null || longitude === null) {
       setData(null);
       setError(null);
+      setLastUpdated(null);
+      setConsecutiveFailures(0);
       return;
     }
 
@@ -48,9 +54,11 @@ export function useWeather({
         locationInfo
       );
       setData(weatherData);
+      setLastUpdated(Date.now());
+      setConsecutiveFailures(0);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch weather');
-      setData(null);
+      setConsecutiveFailures((prev) => prev + 1);
     } finally {
       setIsLoading(false);
     }
@@ -64,15 +72,16 @@ export function useWeather({
   // Auto-refresh
   useEffect(() => {
     if (latitude === null || longitude === null) return;
-    
-    const interval = setInterval(fetchData, refreshInterval);
-    return () => clearInterval(interval);
-  }, [fetchData, refreshInterval, latitude, longitude]);
+
+    const interval = setTimeout(fetchData, getNextPollDelay(refreshInterval, consecutiveFailures));
+    return () => clearTimeout(interval);
+  }, [fetchData, refreshInterval, latitude, longitude, consecutiveFailures]);
 
   return {
     data,
     isLoading,
     error,
+    lastUpdated,
     refresh: fetchData,
   };
 }

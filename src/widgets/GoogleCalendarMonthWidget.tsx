@@ -32,6 +32,7 @@ import { GoogleCalendarEmptyState } from '../components/GoogleCalendarEmptyState
 import type { WidgetProps, WidgetConfig } from '../types/widget';
 import { useGoogleCalendar } from '../hooks/useGoogleCalendar';
 import { useDisplayCalendar } from '../hooks/useDisplayCalendar';
+import { WidgetDataStatus } from '../components/WidgetDataStatus';
 import { useDisplayId, useIsPreviewDisplay } from '../contexts/DisplayContext';
 import { useAuth } from '../contexts/AuthContext';
 import type { ParsedCalendarEvent, CalendarEventInput } from '../services/googleCalendar';
@@ -112,7 +113,7 @@ export function GoogleCalendarMonthWidget({ widget }: WidgetProps<GoogleCalendar
   const googleData = useGoogleCalendar({ selectedCalendarIds, daysAhead });
   const { isAuthenticated } = useAuth();
   const isDisplayMode = !!displayId && !isPreviewDisplay;
-  const { isLoading, events, calendars, refresh, addEvent } = isDisplayMode ? displayData : googleData;
+  const { isLoading, events, calendars, lastUpdated, error, refresh, addEvent } = isDisplayMode ? displayData : googleData;
 
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
 
@@ -267,6 +268,12 @@ export function GoogleCalendarMonthWidget({ widget }: WidgetProps<GoogleCalendar
           </ActionIcon>
         </Group>
       </div>
+      <WidgetDataStatus
+        widgetId={widget.id}
+        lastUpdated={lastUpdated}
+        error={error}
+        isLoading={isLoading}
+      />
 
       <div className={classes.calendarWrap}>
         <DatePicker

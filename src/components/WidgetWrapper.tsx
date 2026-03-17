@@ -1,9 +1,10 @@
-import { useState, Suspense } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { Paper, ActionIcon, Group, Text, Modal, Stack, Button, Tooltip, Switch, Divider, Center, Loader } from '@mantine/core';
-import { IconSettings, IconTrash, IconGripVertical, IconArrowsMaximize } from '@tabler/icons-react';
+import { IconSettings, IconTrash, IconGripVertical, IconArrowsMaximize, IconCircleFilled } from '@tabler/icons-react';
 import type { WidgetDefinition, WidgetConfig } from '../types/widget';
 import { getWidgetByType } from '../widgets/registry';
 import { useDashboardStore } from '../store/dashboardStore';
+import type { WidgetHealthStatus } from './WidgetDataStatus';
 import classes from './WidgetWrapper.module.css';
 
 function WidgetLoader() {
@@ -22,6 +23,7 @@ interface WidgetWrapperProps {
 
 export function WidgetWrapper({ widget, isEditing, onConfigChangeOverride }: WidgetWrapperProps) {
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [healthStatus, setHealthStatus] = useState<WidgetHealthStatus>('idle');
   const { updateWidgetConfig, removeWidget } = useDashboardStore();
 
   const widgetEntry = getWidgetByType(widget.type);
@@ -46,9 +48,40 @@ export function WidgetWrapper({ widget, isEditing, onConfigChangeOverride }: Wid
     }
   };
 
+  useEffect(() => {
+    const onHealthChange = (event: Event) => {
+      const customEvent = event as CustomEvent<{ widgetId: string; status: WidgetHealthStatus }>;
+      if (customEvent.detail?.widgetId === widget.id) {
+        setHealthStatus(customEvent.detail.status);
+      }
+    };
+
+    window.addEventListener('widget-health-change', onHealthChange);
+    return () => window.removeEventListener('widget-health-change', onHealthChange);
+  }, [widget.id]);
+
+  const healthLabel: Record<WidgetHealthStatus, string> = {
+    idle: 'No recent data yet',
+    loading: 'Loading data',
+    ok: 'Healthy',
+    stale: 'Using cached data',
+    error: 'Fetch error',
+  };
+
+  const healthClass: Record<WidgetHealthStatus, string> = {
+    idle: classes.healthIdle,
+    loading: classes.healthLoading,
+    ok: classes.healthOk,
+    stale: classes.healthStale,
+    error: classes.healthError,
+  };
+
   return (
     <>
-      <Paper className={`${classes.wrapper} ${isTransparent ? classes.transparent : ''} ${isEditing ? classes.editing : ''}`}>
+      <Paper
+        className={`${classes.wrapper} ${isTransparent ? classes.transparent : ''} ${isEditing ? classes.editing : ''}`}
+        data-widget-id={widget.id}
+      >
         {isEditing && (
           <>
             <div className={classes.toolbar}>
@@ -65,6 +98,11 @@ export function WidgetWrapper({ widget, isEditing, onConfigChangeOverride }: Wid
                   <div className={classes.sizeIndicator}>
                     <IconArrowsMaximize size={12} />
                     <Text size="xs">{widget.layout.w}×{widget.layout.h}</Text>
+                  </div>
+                </Tooltip>
+                <Tooltip label={`Data status: ${healthLabel[healthStatus]}`} position="bottom">
+                  <div className={`${classes.healthIndicator} ${healthClass[healthStatus]}`}>
+                    <IconCircleFilled size={8} />
                   </div>
                 </Tooltip>
                 {SettingsComponent && (

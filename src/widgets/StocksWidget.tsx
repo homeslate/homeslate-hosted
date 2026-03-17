@@ -18,6 +18,7 @@ import {
 } from '@tabler/icons-react';
 import type { WidgetProps, WidgetConfig } from '../types/widget';
 import { useStocks } from '../hooks/useStocks';
+import { WidgetDataStatus } from '../components/WidgetDataStatus';
 import { popularStocks, popularIndices, type StockQuote } from '../services/stocks';
 import classes from './StocksWidget.module.css';
 
@@ -70,10 +71,11 @@ function StockRow({ quote, showChange, showDayRange }: {
 export function StocksWidget({ widget }: WidgetProps<StocksConfig>) {
   const { symbols, apiKey, showChange, showDayRange, transparentBackground } = widget.config;
 
-  const { quotes, isLoading, errors, refresh } = useStocks({
+  const { quotes, isLoading, errors, refresh, lastUpdated } = useStocks({
     symbols,
     apiKey,
   });
+  const hasAnyError = errors.size > 0;
 
   // No API key configured
   if (!apiKey) {
@@ -140,6 +142,12 @@ export function StocksWidget({ widget }: WidgetProps<StocksConfig>) {
           </Button>
         </Group>
       </div>
+      <WidgetDataStatus
+        widgetId={widget.id}
+        lastUpdated={lastUpdated}
+        error={hasAnyError ? 'stale' : null}
+        isLoading={isLoading}
+      />
 
       <div className={classes.stocksList}>
         <Stack gap="xs">

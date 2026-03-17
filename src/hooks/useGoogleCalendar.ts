@@ -14,6 +14,7 @@ import {
   useCalendarCacheStore,
   calendarCacheKey,
 } from '../store/calendarCacheStore';
+import { getNextPollDelay } from './polling';
 
 interface UseGoogleCalendarOptions {
   // clientId is kept in the type for config backward-compatibility but is no
@@ -30,6 +31,7 @@ interface UseGoogleCalendarResult {
   error: string | null;
   calendars: GoogleCalendar[];
   events: ParsedCalendarEvent[];
+  lastUpdated: number | null;
   refresh: () => void;
   addEvent: (calendarId: string, event: CalendarEventInput) => Promise<void>;
   editEvent: (calendarId: string, eventId: string, event: CalendarEventInput) => Promise<void>;
@@ -53,6 +55,8 @@ export function useGoogleCalendar({
   const [error, setError] = useState<string | null>(null);
   const [calendars, setCalendars] = useState<GoogleCalendar[]>(cached?.calendars ?? []);
   const [events, setEvents] = useState<ParsedCalendarEvent[]>(cached?.events ?? []);
+  const [lastUpdated, setLastUpdated] = useState<number | null>(cached?.fetchedAt ?? null);
+  const [consecutiveFailures, setConsecutiveFailures] = useState(0);
 
   const fetchCalendars = useCallback(async () => {
     if (!accessToken) return;
@@ -86,6 +90,8 @@ export function useGoogleCalendar({
   const fetchEvents = useCallback(async (force = false) => {
     if (!accessToken || selectedCalendarIds.length === 0) {
       setEvents([]);
+      setLastUpdated(null);
+      setConsecutiveFailures(0);
       return;
     }
     if (!force) {
@@ -93,6 +99,7 @@ export function useGoogleCalendar({
       if (existing && Date.now() - existing.fetchedAt < refreshInterval) {
         setCalendars(existing.calendars);
         setEvents(existing.events);
+        setLastUpdated(existing.fetchedAt);
         setIsLoading(false);
         return;
       }
@@ -106,7 +113,10 @@ export function useGoogleCalendar({
       ]);
       setCalendars(calendarList);
       setEvents(eventList);
-      setEntry(cacheKey, { calendars: calendarList, events: eventList, fetchedAt: Date.now() });
+      const fetchedAt = Date.now();
+      setEntry(cacheKey, { calendars: calendarList, events: eventList, fetchedAt });
+      setLastUpdated(fetchedAt);
+      setConsecutiveFailures(0);
     };
     try {
       await doFetch(accessToken);
@@ -124,6 +134,7 @@ export function useGoogleCalendar({
         }
       }
       setError(err instanceof Error ? err.message : 'Failed to fetch events');
+      setConsecutiveFailures((prev) => prev + 1);
     } finally {
       setIsLoading(false);
     }
@@ -140,9 +151,12 @@ export function useGoogleCalendar({
 
   useEffect(() => {
     if (!isAuthenticated || selectedCalendarIds.length === 0) return;
-    const interval = setInterval(() => void fetchEvents(true), refreshInterval);
-    return () => clearInterval(interval);
-  }, [isAuthenticated, selectedCalendarIds, fetchEvents, refreshInterval]);
+    const interval = setTimeout(
+      () => void fetchEvents(true),
+      getNextPollDelay(refreshInterval, consecutiveFailures)
+    );
+    return () => clearTimeout(interval);
+  }, [isAuthenticated, selectedCalendarIds, fetchEvents, refreshInterval, consecutiveFailures]);
 
   const refresh = useCallback(() => {
     void fetchCalendars();
@@ -195,6 +209,7 @@ export function useGoogleCalendar({
     error,
     calendars,
     events,
+    lastUpdated,
     refresh,
     addEvent,
     editEvent,

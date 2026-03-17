@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { fetchScoreboard, type SportGame, type SportsTeam } from '../services/sports';
+import { getNextPollDelay } from './polling';
 
 interface UseScoresOptions {
   leagueId: string;
@@ -37,6 +38,7 @@ interface UseScoresResult {
   isLoading: boolean;
   isLoadingMore: boolean;
   error: string | null;
+  lastUpdated: number | null;
   refresh: () => void;
   loadMore: () => Promise<void>;
 }
@@ -70,6 +72,8 @@ export function useScores({
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [lastUpdated, setLastUpdated] = useState<number | null>(null);
+  const [consecutiveFailures, setConsecutiveFailures] = useState(0);
   const [oldestFetchedDate, setOldestFetchedDate] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
@@ -87,8 +91,11 @@ export function useScores({
       const sorted = filterAndSortGames(fetchedGames, favoriteTeamIds);
       setGames(sorted);
       setAllTeams(teams);
+      setLastUpdated(Date.now());
+      setConsecutiveFailures(0);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch scores');
+      setConsecutiveFailures((prev) => prev + 1);
     } finally {
       setIsLoading(false);
     }
@@ -131,9 +138,9 @@ export function useScores({
 
   useEffect(() => {
     if (!leagueId) return;
-    const interval = setInterval(fetchData, refreshInterval);
-    return () => clearInterval(interval);
-  }, [fetchData, refreshInterval, leagueId]);
+    const interval = setTimeout(fetchData, getNextPollDelay(refreshInterval, consecutiveFailures));
+    return () => clearTimeout(interval);
+  }, [fetchData, refreshInterval, leagueId, consecutiveFailures]);
 
-  return { games, allTeams, leagueLogo, isLoading, isLoadingMore, error, refresh: fetchData, loadMore };
+  return { games, allTeams, leagueLogo, isLoading, isLoadingMore, error, lastUpdated, refresh: fetchData, loadMore };
 }

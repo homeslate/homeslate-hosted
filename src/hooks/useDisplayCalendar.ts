@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import type { GoogleCalendar, ParsedCalendarEvent, CalendarEventInput } from '../services/googleCalendar';
+import { getNextPollDelay } from './polling';
 
 const REFRESH_INTERVAL_MS = 5 * 60 * 1000;
 
@@ -15,6 +16,7 @@ interface UseDisplayCalendarResult {
   error: string | null;
   calendars: GoogleCalendar[];
   events: ParsedCalendarEvent[];
+  lastUpdated: number | null;
   refresh: () => void;
   addEvent: (calendarId: string, event: CalendarEventInput) => Promise<void>;
   editEvent: (calendarId: string, eventId: string, event: CalendarEventInput) => Promise<void>;
@@ -27,6 +29,7 @@ const EMPTY_RESULT: UseDisplayCalendarResult = {
   error: null,
   calendars: [],
   events: [],
+  lastUpdated: null,
   refresh: () => {},
   addEvent: async () => {},
   editEvent: async () => {},
@@ -58,12 +61,16 @@ export function useDisplayCalendar({
   const [error, setError] = useState<string | null>(null);
   const [calendars, setCalendars] = useState<GoogleCalendar[]>([]);
   const [events, setEvents] = useState<ParsedCalendarEvent[]>([]);
+  const [lastUpdated, setLastUpdated] = useState<number | null>(null);
+  const [consecutiveFailures, setConsecutiveFailures] = useState(0);
   const selectedCalendarIdsKey = selectedCalendarIds.join(',');
 
   const fetchData = useCallback(async () => {
     if (!displayId || selectedCalendarIdsKey.length === 0) {
       setCalendars([]);
       setEvents([]);
+      setLastUpdated(null);
+      setConsecutiveFailures(0);
       setIsLoading(false);
       return;
     }
@@ -79,8 +86,6 @@ export function useDisplayCalendar({
       const data = await res.json();
       if (!res.ok) {
         setError(data.error ?? 'Failed to load calendar');
-        setCalendars([]);
-        setEvents([]);
         return;
       }
       const calList = (data.calendars ?? []).map((c: { id: string; summary?: string; backgroundColor?: string }) => ({
@@ -90,10 +95,11 @@ export function useDisplayCalendar({
       }));
       setCalendars(calList);
       setEvents((data.events ?? []).map(parseEventFromServer));
+      setLastUpdated(Date.now());
+      setConsecutiveFailures(0);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load calendar');
-      setCalendars([]);
-      setEvents([]);
+      setConsecutiveFailures((prev) => prev + 1);
     } finally {
       setIsLoading(false);
     }
@@ -105,6 +111,7 @@ export function useDisplayCalendar({
       setError(null);
       setCalendars([]);
       setEvents([]);
+      setLastUpdated(null);
       return;
     }
     fetchData();
@@ -112,9 +119,9 @@ export function useDisplayCalendar({
 
   useEffect(() => {
     if (!displayId || selectedCalendarIdsKey.length === 0) return;
-    const t = setInterval(fetchData, REFRESH_INTERVAL_MS);
-    return () => clearInterval(t);
-  }, [displayId, selectedCalendarIdsKey, fetchData]);
+    const t = setTimeout(fetchData, getNextPollDelay(REFRESH_INTERVAL_MS, consecutiveFailures));
+    return () => clearTimeout(t);
+  }, [displayId, selectedCalendarIdsKey, fetchData, consecutiveFailures]);
 
   if (!displayId) return EMPTY_RESULT;
 
@@ -124,6 +131,7 @@ export function useDisplayCalendar({
     error,
     calendars,
     events,
+    lastUpdated,
     refresh: fetchData,
     addEvent: async () => {}, // display-only: no write
     editEvent: async () => {},
