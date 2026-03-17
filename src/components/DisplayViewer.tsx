@@ -7,11 +7,13 @@ import { DisplayProvider } from '../contexts/DisplayContext';
 import type { DashboardLayout, StickyNote, WidgetDefinition } from '../types/widget';
 import type { TodoItem } from '../widgets/TodoWidget';
 import type { ColorMode, DisplayTheme } from '../types/theme';
+import type { HolidayId } from '../holidays/registry';
 import { themeToVars } from '../themes/utils';
 import { apiClient } from '../services/apiClient';
 import type { NotesPatchRequest, TodosPatchRequest } from '../types/api';
 import { BackgroundSlideshow } from './BackgroundSlideshow';
 import { Dashboard } from './Dashboard';
+import { HolidayEffects } from './HolidayEffects';
 import classes from './DisplayViewer.module.css';
 
 // Minimum horizontal distance (px) to register as a swipe.
@@ -27,6 +29,8 @@ interface DisplayConfig {
   theme?: DisplayTheme;
   colorMode?: ColorMode;
   stickyNotesEnabled?: boolean;
+  holidayEffectsEnabled?: boolean;
+  holidayPreviewId?: HolidayId;
 }
 
 interface Props {
@@ -407,6 +411,9 @@ export function DisplayViewer({ displayId, isPreview = false }: Props) {
       style={themeVars as React.CSSProperties}
     >
       {activeLayout && <BackgroundSlideshow layout={activeLayout} />}
+      {config?.holidayEffectsEnabled && (
+        <HolidayEffects previewHolidayId={config.holidayPreviewId} />
+      )}
       {/* Render the dashboard read-only using local state, not the store */}
       {config && (
         <ViewerDashboard

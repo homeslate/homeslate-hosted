@@ -21,6 +21,19 @@ const ConfigBodySchema = z
     theme: z.record(z.string(), z.unknown()).optional(),
     colorMode: z.enum(['light', 'dark']).optional(),
     stickyNotesEnabled: z.boolean().optional(),
+    holidayEffectsEnabled: z.boolean().optional(),
+    holidayPreviewId: z
+      .enum([
+        'new-years-day',
+        'valentines-day',
+        'st-patricks-day',
+        'independence-day',
+        'halloween',
+        'thanksgiving',
+        'christmas',
+        'new-years-eve',
+      ])
+      .optional(),
   })
   .passthrough();
 

@@ -48,9 +48,20 @@ export function ViewEditorPage() {
       if (
         d.layouts !== prev.layouts ||
         d.theme !== prev.theme ||
-        d.stickyNotesEnabled !== prev.stickyNotesEnabled
+        d.stickyNotesEnabled !== prev.stickyNotesEnabled ||
+        d.holidayEffectsEnabled !== prev.holidayEffectsEnabled ||
+        d.holidayPreviewId !== prev.holidayPreviewId
       ) {
-        const { layouts, activeLayoutId, rotationEnabled, rotationIntervalMs, theme: displayTheme, stickyNotesEnabled } = d;
+        const {
+          layouts,
+          activeLayoutId,
+          rotationEnabled,
+          rotationIntervalMs,
+          theme: displayTheme,
+          stickyNotesEnabled,
+          holidayEffectsEnabled,
+          holidayPreviewId,
+        } = d;
         const payload: ConfigUpsertRequest = {
           layouts,
           activeLayoutId,
@@ -58,6 +69,8 @@ export function ViewEditorPage() {
           rotationIntervalMs,
           theme: displayTheme,
           stickyNotesEnabled,
+          holidayEffectsEnabled,
+          holidayPreviewId,
         };
         void apiClient
           .put<unknown, ConfigUpsertRequest>('/api/config', {

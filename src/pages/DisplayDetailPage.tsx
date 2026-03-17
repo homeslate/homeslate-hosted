@@ -62,6 +62,8 @@ import { InviteModal } from '../components/InviteModal';
 import { useAuth } from '../contexts/AuthContext';
 import { useDashboardStore } from '../store/dashboardStore';
 import { ThemePicker } from '../components/ThemePicker';
+import { HOLIDAY_PREVIEW_OPTIONS } from '../holidays/registry';
+import type { HolidayId } from '../holidays/registry';
 import { getWidgetByType } from '../widgets/registry';
 import type { ColorMode, DisplayTheme } from '../types/theme';
 import type { DashboardLayout, WidgetDefinition } from '../types/widget';
@@ -341,6 +343,8 @@ export function DisplayDetailPage() {
     setColorMode,
     setPasscodeEnabled,
     setStickyNotesEnabled,
+    setHolidayEffectsEnabled,
+    setHolidayPreviewId,
     openPreview,
   } = useDashboardStore();
   const display = displays.find((d) => d.id === selectedDisplayId);
@@ -369,7 +373,17 @@ export function DisplayDetailPage() {
 
   const saveConfig = (overrides: Partial<typeof display> = {}) => {
     if (!accessToken) return;
-    const { layouts, activeLayoutId, rotationEnabled, rotationIntervalMs, theme: displayTheme, colorMode: savedColorMode, stickyNotesEnabled } = {
+    const {
+      layouts,
+      activeLayoutId,
+      rotationEnabled,
+      rotationIntervalMs,
+      theme: displayTheme,
+      colorMode: savedColorMode,
+      stickyNotesEnabled,
+      holidayEffectsEnabled,
+      holidayPreviewId,
+    } = {
       ...display,
       ...overrides,
     };
@@ -381,6 +395,8 @@ export function DisplayDetailPage() {
       theme: displayTheme,
       colorMode: savedColorMode,
       stickyNotesEnabled,
+      holidayEffectsEnabled,
+      holidayPreviewId,
     };
     void apiClient
       .put<unknown, ConfigUpsertRequest>('/api/config', {
@@ -829,6 +845,50 @@ export function DisplayDetailPage() {
                 }}
               />
             </Group>
+          </Paper>
+        </section>
+
+        {/* Holiday Effects section */}
+        <section className={classes.section}>
+          <Title order={5} className={classes.sectionTitle} mb="md">Holiday Effects</Title>
+          <Paper className={classes.settingsCard} p="md" radius="md">
+            <Stack gap="md">
+              <Group justify="space-between">
+                <Stack gap={2}>
+                  <Text size="sm" fw={500}>Enable holiday UI</Text>
+                  <Text size="xs" c="dimmed">
+                    Show holiday-specific visuals on matching dates (for example: St. Patrick&apos;s Day)
+                  </Text>
+                </Stack>
+                <Switch
+                  checked={display.holidayEffectsEnabled ?? false}
+                  onChange={(e) => {
+                    setHolidayEffectsEnabled(display.id, e.currentTarget.checked);
+                    saveConfig({ holidayEffectsEnabled: e.currentTarget.checked });
+                  }}
+                />
+              </Group>
+              <Stack gap={2}>
+                <Text size="sm" fw={500}>Preview holiday</Text>
+                <Text size="xs" c="dimmed">
+                  Force a holiday theme for testing. Auto uses the current date.
+                </Text>
+              </Stack>
+              <Select
+                data={[
+                  { value: 'auto', label: 'Auto (today)' },
+                  ...HOLIDAY_PREVIEW_OPTIONS,
+                ]}
+                value={display.holidayPreviewId ?? 'auto'}
+                onChange={(value) => {
+                  const nextValue: HolidayId | undefined =
+                    value && value !== 'auto' ? (value as HolidayId) : undefined;
+                  setHolidayPreviewId(display.id, nextValue);
+                  saveConfig({ holidayPreviewId: nextValue });
+                }}
+                size="sm"
+              />
+            </Stack>
           </Paper>
         </section>
 

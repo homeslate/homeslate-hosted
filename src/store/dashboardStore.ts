@@ -3,6 +3,7 @@ import { persist } from 'zustand/middleware';
 import { v4 as uuidv4 } from 'uuid';
 import type { DashboardLayout, WidgetDefinition, WidgetConfig, StickyNote } from '../types/widget';
 import type { ColorMode, DisplayTheme } from '../types/theme';
+import type { HolidayId } from '../holidays/registry';
 
 export interface Display {
   id: string;        // displays.id (server UUID, primary key)
@@ -17,6 +18,8 @@ export interface Display {
   colorMode?: ColorMode;
   passcodeEnabled?: boolean; // whether a viewer passcode is set on the server
   stickyNotesEnabled?: boolean;
+  holidayEffectsEnabled?: boolean;
+  holidayPreviewId?: HolidayId;
   isOwner?: boolean; // false when this is a display shared with the user by someone else
 }
 
@@ -34,6 +37,8 @@ export interface RemoteDisplay {
     theme?: DisplayTheme;
     colorMode?: ColorMode;
     stickyNotesEnabled?: boolean;
+    holidayEffectsEnabled?: boolean;
+    holidayPreviewId?: HolidayId;
   } | null;
 }
 
@@ -66,6 +71,8 @@ interface DashboardState {
   setLayoutBackground: (layoutId: string, updates: Partial<Pick<import('../types/widget').DashboardLayout, 'backgroundImage' | 'backgroundImageSize' | 'backgroundOverlayOpacity' | 'backgroundPhotos' | 'backgroundInterval'>>) => void;
   setPasscodeEnabled: (displayId: string, enabled: boolean) => void;
   setStickyNotesEnabled: (displayId: string, enabled: boolean) => void;
+  setHolidayEffectsEnabled: (displayId: string, enabled: boolean) => void;
+  setHolidayPreviewId: (displayId: string, holidayId: HolidayId | undefined) => void;
 
   // Per-display layout/view actions (act on selectedDisplayId)
   createLayout: (name: string) => void;
@@ -223,6 +230,8 @@ export const useDashboardStore = create<DashboardState>()(
             colorMode: config.colorMode ?? existing?.colorMode,
             passcodeEnabled: remote.passcode_enabled ?? existing?.passcodeEnabled ?? false,
             stickyNotesEnabled: config.stickyNotesEnabled ?? existing?.stickyNotesEnabled ?? false,
+            holidayEffectsEnabled: config.holidayEffectsEnabled ?? existing?.holidayEffectsEnabled ?? false,
+            holidayPreviewId: config.holidayPreviewId ?? existing?.holidayPreviewId,
             isOwner: remote.is_owner ?? existing?.isOwner ?? true,
           };
         });
@@ -352,6 +361,24 @@ export const useDashboardStore = create<DashboardState>()(
           displays: updateDisplay(state.displays, displayId, (d) => ({
             ...d,
             stickyNotesEnabled: enabled,
+          })),
+        }));
+      },
+
+      setHolidayEffectsEnabled: (displayId: string, enabled: boolean) => {
+        set((state) => ({
+          displays: updateDisplay(state.displays, displayId, (d) => ({
+            ...d,
+            holidayEffectsEnabled: enabled,
+          })),
+        }));
+      },
+
+      setHolidayPreviewId: (displayId: string, holidayId: HolidayId | undefined) => {
+        set((state) => ({
+          displays: updateDisplay(state.displays, displayId, (d) => ({
+            ...d,
+            holidayPreviewId: holidayId,
           })),
         }));
       },

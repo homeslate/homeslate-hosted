@@ -1,5 +1,6 @@
 import type { StickyNote } from './widget';
 import type { ColorMode, DisplayTheme } from './theme';
+import type { HolidayId } from '../holidays/registry';
 
 export interface ApiOkResponse {
   ok: true;
@@ -45,6 +46,8 @@ export interface ConfigUpsertRequest {
   theme?: DisplayTheme | Record<string, unknown>;
   colorMode?: ColorMode;
   stickyNotesEnabled?: boolean;
+  holidayEffectsEnabled?: boolean;
+  holidayPreviewId?: HolidayId;
 }
 
 export interface InviteSummaryDto {
