@@ -150,9 +150,9 @@ export function GoogleCalendarDayWidget({ widget }: WidgetProps<GoogleCalendarDa
   const { selectedCalendarIds, maxEvents, daysAhead, transparentBackground } = widget.config;
   const displayId = useDisplayId();
   const isPreviewDisplay = useIsPreviewDisplay();
-  const displayData = useDisplayCalendar({ displayId, selectedCalendarIds, daysAhead });
-  const googleData = useGoogleCalendar({ selectedCalendarIds, daysAhead });
   const isDisplayMode = !!displayId && !isPreviewDisplay;
+  const displayData = useDisplayCalendar({ displayId, selectedCalendarIds, daysAhead });
+  const googleData = useGoogleCalendar({ selectedCalendarIds, daysAhead, enabled: !isDisplayMode });
   const {
     isAuthenticated,
     isLoading,

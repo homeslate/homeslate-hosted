@@ -11,7 +11,6 @@ import {
   Select,
   Slider,
   Box,
-  Divider,
   Tabs,
   Alert,
   Image,
@@ -19,12 +18,10 @@ import {
   Loader,
   Progress,
   Anchor,
-  Modal,
 } from '@mantine/core';
 import {
   IconChevronLeft, IconChevronRight, IconX, IconUpload, IconPhoto,
   IconLink, IconBrandGoogle, IconPlus, IconTrash, IconExternalLink,
-  IconSettings,
 } from '@tabler/icons-react';
 import { getWidgetTypes } from '../widgets/registry';
 import { useDashboardStore } from '../store/dashboardStore';
@@ -140,7 +137,7 @@ interface BgSettingsProps {
   updateBg: (updates: Partial<Pick<DashboardLayout, 'backgroundImage' | 'backgroundImageSize' | 'backgroundOverlayOpacity' | 'backgroundPhotos' | 'backgroundInterval'>>) => void;
 }
 
-function BgSettings({ view, updateBg }: BgSettingsProps) {
+export function BgSettings({ view, updateBg }: BgSettingsProps) {
   const photos: Photo[] = useMemo(() => view.backgroundPhotos ?? [], [view.backgroundPhotos]);
   const interval = view.backgroundInterval ?? 10;
 
@@ -459,17 +456,8 @@ function BgSettings({ view, updateBg }: BgSettingsProps) {
 
 export function WidgetPanel() {
   const [collapsed, setCollapsed] = useState(false);
-  const [bgSettingsOpen, setBgSettingsOpen] = useState(false);
-  const { addWidget, setLayoutBackground, displays, selectedDisplayId, selectedViewId } = useDashboardStore();
+  const { addWidget } = useDashboardStore();
   const widgetTypes = getWidgetTypes();
-
-  const display = displays.find((d) => d.id === selectedDisplayId);
-  const view = display?.layouts.find((l) => l.id === selectedViewId);
-
-  const updateBg = (updates: Parameters<typeof setLayoutBackground>[1]) => {
-    if (!selectedViewId) return;
-    setLayoutBackground(selectedViewId, updates);
-  };
 
   const handleAddWidget = (type: string) => {
     const widgetDef = widgetTypes.find((w) => w.type === type);
@@ -541,38 +529,8 @@ export function WidgetPanel() {
               );
             })}
           </Stack>
-
-          <Divider my="md" />
-
-          <Text size="xs" fw={600} c="dimmed" className={classes.panelTitle}>
-            VIEW BACKGROUND
-          </Text>
-
-          <Button
-            size="xs"
-            variant="default"
-            leftSection={<IconSettings size={13} />}
-            onClick={() => setBgSettingsOpen(true)}
-            fullWidth
-          >
-            Background Settings
-          </Button>
         </div>
       )}
-
-      <Modal
-        opened={bgSettingsOpen}
-        onClose={() => setBgSettingsOpen(false)}
-        title="View Background"
-        size="md"
-      >
-        {view && (
-          <Stack gap="md">
-            <BgSettings view={view} updateBg={updateBg} />
-            <Button onClick={() => setBgSettingsOpen(false)}>Done</Button>
-          </Stack>
-        )}
-      </Modal>
     </aside>
   );
 }

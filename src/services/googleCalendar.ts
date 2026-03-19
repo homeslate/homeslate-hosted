@@ -99,6 +99,13 @@ let accessToken: string | null = null;
 let tokenExpiry: number | null = null;
 let tokenClient: GoogleTokenClient | null = null;
 
+function clearCachedToken(): void {
+  accessToken = null;
+  tokenExpiry = null;
+  localStorage.removeItem(TOKEN_KEY);
+  localStorage.removeItem(TOKEN_EXPIRY_KEY);
+}
+
 function getOauth2Api(): GoogleOauth2Api | null {
   if (typeof google === 'undefined') return null;
   return google.accounts?.oauth2 ?? null;
@@ -235,10 +242,7 @@ export function clearGoogleAuth(): void {
   if (accessToken && oauth2) {
     oauth2.revoke(accessToken, () => {});
   }
-  accessToken = null;
-  tokenExpiry = null;
-  localStorage.removeItem(TOKEN_KEY);
-  localStorage.removeItem(TOKEN_EXPIRY_KEY);
+  clearCachedToken();
 }
 
 /**
@@ -253,8 +257,7 @@ export async function fetchCalendarList(token: string): Promise<GoogleCalendar[]
 
   if (!response.ok) {
     if (response.status === 401) {
-      accessToken = null;
-      tokenExpiry = null;
+      clearCachedToken();
       throw new Error('Token expired. Please sign in again.');
     }
     throw new Error(`Failed to fetch calendars: ${response.statusText}`);
@@ -293,8 +296,7 @@ export async function fetchCalendarEvents(
 
   if (!response.ok) {
     if (response.status === 401) {
-      accessToken = null;
-      tokenExpiry = null;
+      clearCachedToken();
       throw new Error('Token expired. Please sign in again.');
     }
     throw new Error(`Failed to fetch events: ${response.statusText}`);
@@ -427,8 +429,7 @@ export async function createCalendarEvent(
 
   if (!response.ok) {
     if (response.status === 401) {
-      accessToken = null;
-      tokenExpiry = null;
+      clearCachedToken();
       throw new Error('Token expired. Please sign in again.');
     }
     throw new Error(`Failed to create event: ${response.statusText}`);
@@ -459,8 +460,7 @@ export async function updateCalendarEvent(
 
   if (!response.ok) {
     if (response.status === 401) {
-      accessToken = null;
-      tokenExpiry = null;
+      clearCachedToken();
       throw new Error('Token expired. Please sign in again.');
     }
     throw new Error(`Failed to update event: ${response.statusText}`);
@@ -488,8 +488,7 @@ export async function deleteCalendarEvent(
 
   if (!response.ok) {
     if (response.status === 401) {
-      accessToken = null;
-      tokenExpiry = null;
+      clearCachedToken();
       throw new Error('Token expired. Please sign in again.');
     }
     if (response.status === 410) return; // already deleted

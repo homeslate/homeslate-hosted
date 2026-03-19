@@ -46,7 +46,7 @@ interface DashboardState {
   displays: Display[];
   selectedDisplayId: string | null;
   selectedViewId: string | null;
-  previewDisplayId: string | null; // in-app preview mode (not persisted)
+  preview: PreviewState | null; // in-app preview mode (not persisted)
 
   // Sync
   setDisplays: (remoteDisplays: RemoteDisplay[]) => void;
@@ -60,7 +60,7 @@ interface DashboardState {
   // Navigation
   selectDisplay: (id: string | null) => void;
   selectView: (id: string | null) => void;
-  openPreview: (displayId: string) => void;
+  openPreview: (preview: PreviewState) => void;
   closePreview: () => void;
 
   // Per-display settings (act on selectedDisplayId)
@@ -95,6 +95,14 @@ interface DashboardState {
   addNote: (layoutId: string, note: StickyNote) => void;
   removeNote: (layoutId: string, noteId: string) => void;
   updateNote: (layoutId: string, noteId: string, updates: Partial<StickyNote>) => void;
+}
+
+export interface PreviewState {
+  displayId: string;
+  // When set, preview is locked to this view (no auto-rotation).
+  layoutId?: string;
+  // Force auto-rotation while previewing from display-level management page.
+  forceRotation?: boolean;
 }
 
 const createDefaultLayout = (): DashboardLayout => ({
@@ -186,7 +194,7 @@ export const useDashboardStore = create<DashboardState>()(
       displays: [],
       selectedDisplayId: null,
       selectedViewId: null,
-      previewDisplayId: null,
+      preview: null,
 
       setDisplays: (remoteDisplays: RemoteDisplay[]) => {
         const { displays } = get();
@@ -294,12 +302,12 @@ export const useDashboardStore = create<DashboardState>()(
         set({ selectedViewId: id });
       },
 
-      openPreview: (displayId: string) => {
-        set({ previewDisplayId: displayId });
+      openPreview: (preview: PreviewState) => {
+        set({ preview });
       },
 
       closePreview: () => {
-        set({ previewDisplayId: null });
+        set({ preview: null });
       },
 
       setRotationEnabled: (enabled: boolean) => {
@@ -665,7 +673,7 @@ export const useDashboardStore = create<DashboardState>()(
         displays: state.displays,
         selectedDisplayId: state.selectedDisplayId,
         selectedViewId: state.selectedViewId,
-        // previewDisplayId is intentionally excluded — it's ephemeral UI state
+        // preview is intentionally excluded — it's ephemeral UI state
       }),
       migrate: (persistedState: unknown, version: number) => {
         if (version === 4) return persistedState;

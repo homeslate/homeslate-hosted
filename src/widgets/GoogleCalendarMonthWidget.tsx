@@ -109,10 +109,10 @@ export function GoogleCalendarMonthWidget({ widget }: WidgetProps<GoogleCalendar
   const { selectedCalendarIds, daysAhead, transparentBackground } = widget.config;
   const displayId = useDisplayId();
   const isPreviewDisplay = useIsPreviewDisplay();
-  const displayData = useDisplayCalendar({ displayId, selectedCalendarIds, daysAhead });
-  const googleData = useGoogleCalendar({ selectedCalendarIds, daysAhead });
-  const { isAuthenticated } = useAuth();
   const isDisplayMode = !!displayId && !isPreviewDisplay;
+  const displayData = useDisplayCalendar({ displayId, selectedCalendarIds, daysAhead });
+  const googleData = useGoogleCalendar({ selectedCalendarIds, daysAhead, enabled: !isDisplayMode });
+  const { isAuthenticated } = useAuth();
   const { isLoading, events, calendars, lastUpdated, error, refresh, addEvent } = isDisplayMode ? displayData : googleData;
 
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());

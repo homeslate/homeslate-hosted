@@ -17,6 +17,15 @@
   z-index: 10;
 }
 
+.pageActions {
+  flex-shrink: 0;
+  display: flex;
+  justify-content: flex-end;
+  padding: 0.75rem 1.5rem;
+  border-bottom: 1px solid var(--theme-surface-border, var(--mantine-color-default-border));
+  background: var(--theme-surface-bg, var(--mantine-color-default));
+}
+
 .body {
   flex: 1;
   display: flex;

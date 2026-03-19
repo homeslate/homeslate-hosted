@@ -36,11 +36,18 @@ interface DisplayConfig {
 interface Props {
   displayId: string;
   isPreview?: boolean;
+  previewLayoutId?: string;
+  forceRotation?: boolean;
 }
 
 const POLL_INTERVAL_MS = 30_000;
 
-export function DisplayViewer({ displayId, isPreview = false }: Props) {
+export function DisplayViewer({
+  displayId,
+  isPreview = false,
+  previewLayoutId,
+  forceRotation = false,
+}: Props) {
   const [config, setConfig] = useState<DisplayConfig | null>(null);
   const [activeLayoutId, setActiveLayoutId] = useState<string | null>(null);
   // localColorMode is null when following the config value; set to override locally
@@ -90,6 +97,10 @@ export function DisplayViewer({ displayId, isPreview = false }: Props) {
             setConfig(cfg);
             const visibleLayouts = cfg.layouts.filter((l) => !l.hidden);
             setActiveLayoutId((prev) => {
+              if (previewLayoutId) {
+                const previewLayout = cfg.layouts.find((l) => l.id === previewLayoutId);
+                if (previewLayout) return previewLayout.id;
+              }
               // Keep the current view if it's still visible (e.g. on a poll refresh)
               if (prev && visibleLayouts.find((l) => l.id === prev)) return prev;
               // Otherwise always start on the first visible layout
@@ -127,7 +138,7 @@ export function DisplayViewer({ displayId, isPreview = false }: Props) {
     load();
     const interval = setInterval(load, POLL_INTERVAL_MS);
     return () => clearInterval(interval);
-  }, [displayId, passcode]);
+  }, [displayId, passcode, previewLayoutId]);
 
   // Debounced note write-back
   const writeNotes = useCallback(
@@ -248,6 +259,7 @@ export function DisplayViewer({ displayId, isPreview = false }: Props) {
   // Auto-rotation
   const navigate = useCallback((direction: 'next' | 'prev') => {
     if (!config) return;
+    if (previewLayoutId) return;
     const visibleLayouts = config.layouts.filter((l) => !l.hidden);
     if (visibleLayouts.length <= 1) return;
     setActiveLayoutId((curr) => {
@@ -259,27 +271,32 @@ export function DisplayViewer({ displayId, isPreview = false }: Props) {
           : (currentIdx - 1 + visibleLayouts.length) % visibleLayouts.length;
       return visibleLayouts[next].id;
     });
-  }, [config]);
+  }, [config, previewLayoutId]);
+
+  const visibleCount = config?.layouts.filter((l) => !l.hidden).length ?? 0;
+  const rotationEnabled = previewLayoutId
+    ? false
+    : (forceRotation || Boolean(config?.rotationEnabled));
+  const rotationIntervalMs = config?.rotationIntervalMs ?? 30_000;
 
   useEffect(() => {
     if (rotationRef.current) clearInterval(rotationRef.current);
-    const visibleCount = config?.layouts.filter((l) => !l.hidden).length ?? 0;
-    if (config?.rotationEnabled && visibleCount > 1) {
-      rotationRef.current = setInterval(() => navigate('next'), config.rotationIntervalMs);
+    if (rotationEnabled && visibleCount > 1) {
+      rotationRef.current = setInterval(() => navigate('next'), rotationIntervalMs);
     }
     return () => {
       if (rotationRef.current) clearInterval(rotationRef.current);
     };
-  }, [config, navigate]);
+  }, [navigate, rotationEnabled, rotationIntervalMs, visibleCount]);
 
   // Reset the rotation timer (called after a manual swipe).
   const resetRotation = useCallback(() => {
     if (rotationRef.current) clearInterval(rotationRef.current);
     const visibleLayouts = config?.layouts.filter((l) => !l.hidden) ?? [];
-    if (config?.rotationEnabled && visibleLayouts.length > 1) {
-      rotationRef.current = setInterval(() => navigate('next'), config.rotationIntervalMs);
+    if (rotationEnabled && visibleLayouts.length > 1) {
+      rotationRef.current = setInterval(() => navigate('next'), rotationIntervalMs);
     }
-  }, [config, navigate]);
+  }, [config, navigate, rotationEnabled, rotationIntervalMs]);
 
   // Swipe to change views — uses native Touch Events with passive:false so we
   // can call preventDefault() once a horizontal gesture is confirmed, preventing
@@ -296,6 +313,7 @@ export function DisplayViewer({ displayId, isPreview = false }: Props) {
     const onTouchStart = (e: TouchEvent) => {
       const visibleCount = config?.layouts.filter((l) => !l.hidden).length ?? 0;
       if (!config || visibleCount <= 1) return;
+      if (previewLayoutId) return;
       const t = e.touches[0];
       startX = t.clientX;
       startY = t.clientY;
@@ -343,7 +361,7 @@ export function DisplayViewer({ displayId, isPreview = false }: Props) {
       el.removeEventListener('touchmove', onTouchMove);
       el.removeEventListener('touchend', onTouchEnd);
     };
-  }, [config, navigate, resetRotation]);
+  }, [config, navigate, previewLayoutId, resetRotation]);
 
   // Show PIN entry screen if passcode is required and not yet verified
   if (passcodeRequired) {
@@ -393,7 +411,7 @@ export function DisplayViewer({ displayId, isPreview = false }: Props) {
   // View indicator dots — only show visible layouts
   const allLayouts = config?.layouts ?? [];
   const layouts = allLayouts.filter((l) => !l.hidden);
-  const showDots = layouts.length > 1;
+  const showDots = !previewLayoutId && layouts.length > 1;
 
   // Effective color mode: local toggle > config's colorMode > theme default
   const effectiveColorMode: ColorMode =

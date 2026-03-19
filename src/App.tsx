@@ -78,7 +78,7 @@ if (_initialDisplayParam) {
 function AppInner() {
   const { isAuthenticated } = useAuth();
   const { pathname } = useLocation();
-  const { previewDisplayId, closePreview } = useDashboardStore();
+  const { preview, closePreview } = useDashboardStore();
   useWakeLock();
 
   // Unauthenticated pairing page for headless displays (no keyboard/mouse).
@@ -104,10 +104,15 @@ function AppInner() {
   if (!isAuthenticated) return <Suspense fallback={<PageLoader />}><AuthPage /></Suspense>;
 
   // In-app preview mode: render the viewer with an exit button overlay
-  if (previewDisplayId) {
+  if (preview) {
     return (
       <div style={{ position: 'relative', width: '100%', height: '100%' }}>
-        <DisplayViewer displayId={previewDisplayId} isPreview />
+        <DisplayViewer
+          displayId={preview.displayId}
+          isPreview
+          previewLayoutId={preview.layoutId}
+          forceRotation={preview.forceRotation}
+        />
         <div style={{ position: 'fixed', top: 12, right: 12, zIndex: 9999 }}>
           <Tooltip label="Exit preview" position="left" withArrow>
             <ActionIcon

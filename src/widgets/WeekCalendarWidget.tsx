@@ -189,10 +189,10 @@ export function WeekCalendarWidget({ widget }: WidgetProps<WeekCalendarConfig>) 
   const { selectedCalendarIds, viewMode, weekStartsOn, startHour, endHour, transparentBackground } = widget.config;
   const displayId = useDisplayId();
   const isPreviewDisplay = useIsPreviewDisplay();
-  const displayData = useDisplayCalendar({ displayId, selectedCalendarIds, daysAhead: 14 });
-  const googleData = useGoogleCalendar({ selectedCalendarIds, daysAhead: 14 });
-  const { isAuthenticated } = useAuth();
   const isDisplayMode = !!displayId && !isPreviewDisplay;
+  const displayData = useDisplayCalendar({ displayId, selectedCalendarIds, daysAhead: 14 });
+  const googleData = useGoogleCalendar({ selectedCalendarIds, daysAhead: 14, enabled: !isDisplayMode });
+  const { isAuthenticated } = useAuth();
   const { events, calendars, addEvent } = isDisplayMode ? displayData : googleData;
 
   // ── Create-event form state ──

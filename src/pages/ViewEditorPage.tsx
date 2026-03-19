@@ -1,16 +1,19 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Group,
   Text,
   ActionIcon,
   Tooltip,
+  Button,
   Avatar,
   Menu,
   Breadcrumbs,
   Anchor,
+  Modal,
+  Stack,
 } from '@mantine/core';
-import { IconArrowLeft, IconDeviceTv, IconLogout, IconCloudCheck, IconSun, IconMoon } from '@tabler/icons-react';
+import { IconArrowLeft, IconDeviceTv, IconLogout, IconCloudCheck, IconSun, IconMoon, IconSettings } from '@tabler/icons-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useDashboardStore } from '../store/dashboardStore';
 import { useTheme, themeToVars } from '../contexts/ThemeContext';
@@ -19,7 +22,7 @@ import type { ColorMode } from '../types/theme';
 import { apiClient } from '../services/apiClient';
 import type { ConfigUpsertRequest } from '../types/api';
 import { Dashboard } from '../components/Dashboard';
-import { WidgetPanel } from '../components/WidgetPanel';
+import { WidgetPanel, BgSettings } from '../components/WidgetPanel';
 import classes from './ViewEditorPage.module.css';
 
 export function ViewEditorPage() {
@@ -31,10 +34,12 @@ export function ViewEditorPage() {
     selectedViewId,
     openPreview,
     setColorMode,
+    setLayoutBackground,
   } = useDashboardStore();
   const { theme, colorMode } = useTheme();
   const display = displays.find((d) => d.id === selectedDisplayId);
   const view = display?.layouts.find((l) => l.id === selectedViewId);
+  const [bgSettingsOpen, setBgSettingsOpen] = useState(false);
 
   // Subscribe to store changes and save immediately on each action.
   // We read state directly from the subscription callback so we always
@@ -95,6 +100,11 @@ export function ViewEditorPage() {
     <Text key="view" size="sm" c="dimmed">{view.name}</Text>,
   ];
 
+  const updateBg = (updates: Parameters<typeof setLayoutBackground>[1]) => {
+    if (!selectedViewId) return;
+    setLayoutBackground(selectedViewId, updates);
+  };
+
   return (
     <div className={classes.root} style={themeToVars(theme, colorMode) as React.CSSProperties}>
       <header className={classes.header}>
@@ -121,14 +131,6 @@ export function ViewEditorPage() {
               {colorMode === 'dark' ? <IconSun size={18} /> : <IconMoon size={18} />}
             </ActionIcon>
           </Tooltip>
-            <Tooltip label="Preview display">
-              <ActionIcon
-                variant="subtle"
-                onClick={() => openPreview(display.displayId)}
-              >
-                <IconDeviceTv size={18} />
-              </ActionIcon>
-            </Tooltip>
           <Menu position="bottom-end" withArrow shadow="md">
             <Menu.Target>
               <Tooltip label={user?.name ?? ''}>
@@ -151,6 +153,25 @@ export function ViewEditorPage() {
         </Group>
       </header>
 
+      <div className={classes.pageActions}>
+        <Group gap="sm">
+          <Button
+            variant="default"
+            leftSection={<IconSettings size={16} />}
+            onClick={() => setBgSettingsOpen(true)}
+          >
+            Background Settings
+          </Button>
+          <Button
+            variant="light"
+            leftSection={<IconDeviceTv size={16} />}
+            onClick={() => openPreview({ displayId: display.displayId, layoutId: view.id })}
+          >
+            Preview This View
+          </Button>
+        </Group>
+      </div>
+
       <div className={classes.body}>
         <WidgetPanel />
         <main className={classes.main} style={themeToVars(theme, colorMode) as React.CSSProperties}>
@@ -158,6 +179,17 @@ export function ViewEditorPage() {
           <Dashboard layoutId={selectedViewId ?? undefined} isEditing={true} />
         </main>
       </div>
+      <Modal
+        opened={bgSettingsOpen}
+        onClose={() => setBgSettingsOpen(false)}
+        title="View Background"
+        size="md"
+      >
+        <Stack gap="md">
+          <BgSettings view={view} updateBg={updateBg} />
+          <Button onClick={() => setBgSettingsOpen(false)}>Done</Button>
+        </Stack>
+      </Modal>
     </div>
   );
 }

@@ -661,14 +661,6 @@ export function DisplayDetailPage() {
               {colorMode === 'dark' ? <IconSun size={18} /> : <IconMoon size={18} />}
             </ActionIcon>
           </Tooltip>
-          <Tooltip label="Preview display">
-            <ActionIcon
-              variant="subtle"
-              onClick={() => openPreview(display.displayId)}
-            >
-              <IconDeviceTv size={18} />
-            </ActionIcon>
-          </Tooltip>
           <Menu position="bottom-end" withArrow shadow="md">
             <Menu.Target>
               <Tooltip label={user?.name ?? ''}>
@@ -692,6 +684,15 @@ export function DisplayDetailPage() {
       </header>
 
       <main className={classes.main}>
+        <Group justify="flex-end" mb="md">
+          <Button
+            variant="light"
+            leftSection={<IconDeviceTv size={16} />}
+            onClick={() => openPreview({ displayId: display.displayId, forceRotation: true })}
+          >
+            Preview Auto-Rotation
+          </Button>
+        </Group>
         {/* Views section */}
         <section className={classes.section}>
           <Group justify="space-between" mb="md">

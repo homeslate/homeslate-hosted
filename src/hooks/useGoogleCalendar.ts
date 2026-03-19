@@ -23,6 +23,7 @@ interface UseGoogleCalendarOptions {
   selectedCalendarIds: string[];
   daysAhead?: number;
   refreshInterval?: number;
+  enabled?: boolean;
 }
 
 interface UseGoogleCalendarResult {
@@ -44,6 +45,7 @@ export function useGoogleCalendar({
   selectedCalendarIds,
   daysAhead = 30,
   refreshInterval = 5 * 60 * 1000,
+  enabled = true,
 }: UseGoogleCalendarOptions): UseGoogleCalendarResult {
   const { accessToken, isAuthenticated, refreshAccessToken } = useAuth();
   const { getEntry, setEntry } = useCalendarCacheStore();
@@ -51,7 +53,7 @@ export function useGoogleCalendar({
 
   // Seed local state from cache immediately so there's no loading flash on remount.
   const cached = getEntry(cacheKey);
-  const [isLoading, setIsLoading] = useState(!cached);
+  const [isLoading, setIsLoading] = useState(enabled && !cached);
   const [error, setError] = useState<string | null>(null);
   const [calendars, setCalendars] = useState<GoogleCalendar[]>(cached?.calendars ?? []);
   const [events, setEvents] = useState<ParsedCalendarEvent[]>(cached?.events ?? []);
@@ -59,6 +61,7 @@ export function useGoogleCalendar({
   const [consecutiveFailures, setConsecutiveFailures] = useState(0);
 
   const fetchCalendars = useCallback(async () => {
+    if (!enabled) return;
     if (!accessToken) return;
     const doFetch = async (token: string) => {
       const result = await fetchCalendarList(token);
@@ -85,9 +88,10 @@ export function useGoogleCalendar({
       }
       setError(err instanceof Error ? err.message : 'Failed to fetch calendars');
     }
-  }, [accessToken, cacheKey, getEntry, setEntry, refreshAccessToken]);
+  }, [enabled, accessToken, cacheKey, getEntry, setEntry, refreshAccessToken]);
 
   const fetchEvents = useCallback(async (force = false) => {
+    if (!enabled) return;
     if (!accessToken || selectedCalendarIds.length === 0) {
       setEvents([]);
       setLastUpdated(null);
@@ -138,30 +142,42 @@ export function useGoogleCalendar({
     } finally {
       setIsLoading(false);
     }
-  }, [accessToken, selectedCalendarIds, daysAhead, cacheKey, refreshInterval, getEntry, setEntry, refreshAccessToken]);
+  }, [enabled, accessToken, selectedCalendarIds, daysAhead, cacheKey, refreshInterval, getEntry, setEntry, refreshAccessToken]);
 
   // Always fetch calendar list when authenticated (needed for settings dropdown even when none selected)
   useEffect(() => {
+    if (!enabled) return;
     if (isAuthenticated) void fetchCalendars();
-  }, [isAuthenticated, fetchCalendars]);
+  }, [enabled, isAuthenticated, fetchCalendars]);
 
   useEffect(() => {
+    if (!enabled) return;
     if (isAuthenticated && selectedCalendarIds.length > 0) void fetchEvents();
-  }, [isAuthenticated, selectedCalendarIds, fetchEvents]);
+  }, [enabled, isAuthenticated, selectedCalendarIds, fetchEvents]);
 
   useEffect(() => {
+    if (!enabled) return;
     if (!isAuthenticated || selectedCalendarIds.length === 0) return;
     const interval = setTimeout(
       () => void fetchEvents(true),
       getNextPollDelay(refreshInterval, consecutiveFailures)
     );
     return () => clearTimeout(interval);
-  }, [isAuthenticated, selectedCalendarIds, fetchEvents, refreshInterval, consecutiveFailures]);
+  }, [enabled, isAuthenticated, selectedCalendarIds, fetchEvents, refreshInterval, consecutiveFailures]);
+
+  useEffect(() => {
+    if (!enabled) {
+      setIsLoading(false);
+      setError(null);
+      setConsecutiveFailures(0);
+    }
+  }, [enabled]);
 
   const refresh = useCallback(() => {
+    if (!enabled) return;
     void fetchCalendars();
     void fetchEvents(true);
-  }, [fetchCalendars, fetchEvents]);
+  }, [enabled, fetchCalendars, fetchEvents]);
 
   const withTokenRetry = useCallback(
     async <T>(fn: (token: string) => Promise<T>): Promise<T> => {
