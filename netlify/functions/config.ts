@@ -3,6 +3,7 @@ import { eq, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { getDb, displays, displayConfigs, displayCollaborators, users } from '../../src/db';
 import type { ConfigUpsertRequest } from '../../src/types/api';
+import { isThemeDocumentCandidate, validateThemeDocument } from '../../src/themes/themeDocumentValidation';
 import { AUTH_JSON_HEADERS, errorResponse, jsonResponse, optionsResponse } from './_shared/http';
 import { requireGoogleId } from './_shared/googleAuth';
 
@@ -19,6 +20,8 @@ const ConfigBodySchema = z
     rotationEnabled: z.boolean(),
     rotationIntervalMs: z.number().int().positive(),
     theme: z.record(z.string(), z.unknown()).optional(),
+    themeDocuments: z.array(z.unknown()).optional(),
+    activeThemeDocumentId: z.string().nullable().optional(),
     colorMode: z.enum(['light', 'dark']).optional(),
     stickyNotesEnabled: z.boolean().optional(),
     holidayEffectsEnabled: z.boolean().optional(),
@@ -62,7 +65,48 @@ export const handler: Handler = async (event) => {
           details: parsedConfig.error.flatten(),
         });
       }
-      const config: ConfigUpsertRequest = parsedConfig.data;
+      if (parsedConfig.data.theme !== undefined && isThemeDocumentCandidate(parsedConfig.data.theme)) {
+        const validation = validateThemeDocument(parsedConfig.data.theme);
+        if (!validation.ok) {
+          return errorResponse(400, 'Invalid theme document payload', AUTH_JSON_HEADERS, {
+            details: {
+              issues: validation.issues,
+            },
+          });
+        }
+      }
+      if (parsedConfig.data.themeDocuments !== undefined) {
+        const issues = parsedConfig.data.themeDocuments.flatMap((document, index) => {
+          const validation = validateThemeDocument(document);
+          if (validation.ok) return [];
+          return validation.issues.map((issue) => ({
+            path: `themeDocuments[${index}].${issue.path}`,
+            message: issue.message,
+          }));
+        });
+        if (issues.length > 0) {
+          return errorResponse(400, 'Invalid theme documents payload', AUTH_JSON_HEADERS, {
+            details: { issues },
+          });
+        }
+      }
+      if (
+        parsedConfig.data.themeDocuments !== undefined &&
+        parsedConfig.data.activeThemeDocumentId !== undefined &&
+        parsedConfig.data.activeThemeDocumentId !== null
+      ) {
+        const activeThemeDocumentId = parsedConfig.data.activeThemeDocumentId;
+        const ids = parsedConfig.data.themeDocuments
+          .map((document) => (typeof document === 'object' && document && 'id' in document ? (document as { id?: unknown }).id : undefined))
+          .filter((id): id is string => typeof id === 'string');
+        if (!ids.includes(activeThemeDocumentId)) {
+          return errorResponse(400, 'activeThemeDocumentId must exist in themeDocuments', AUTH_JSON_HEADERS);
+        }
+      }
+      const config: ConfigUpsertRequest = {
+        ...parsedConfig.data,
+        themeDocuments: parsedConfig.data.themeDocuments as ConfigUpsertRequest['themeDocuments'],
+      };
       const db = getDb();
 
       const ownerRows = await db

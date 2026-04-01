@@ -1,4 +1,4 @@
-# Kitchen Display Roadmap
+# Homeslate Roadmap
 
 Simple roadmap focused on milestones and clear prioritization.
 

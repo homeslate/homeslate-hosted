@@ -5,7 +5,7 @@ import App from './App.tsx'
 
 // PWA: register service worker with auto-update and periodic checks.
 // Without importing virtual:pwa-register, the browser won't reload when a new version is available.
-// For a long-running kitchen display, check for updates every 30 minutes.
+// For a long-running display, check for updates every 30 minutes.
 if (import.meta.env.PROD) {
   const CHECK_INTERVAL_MS = 30 * 60 * 1000
   registerSW({

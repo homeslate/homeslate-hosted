@@ -47,7 +47,7 @@ export function DisplayListPage() {
   const [renaming, setRenaming] = useState(false);
 
   const handleNewDisplay = async () => {
-    const name = prompt('Display name:', 'Kitchen Display');
+    const name = prompt('Display name:', 'Homeslate');
     if (!name?.trim() || !accessToken) return;
     setCreating(true);
     try {

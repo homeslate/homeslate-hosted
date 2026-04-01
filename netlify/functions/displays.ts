@@ -109,7 +109,7 @@ export const handler: Handler = async (event) => {
   if (event.httpMethod === 'POST') {
     try {
       const { name } = JSON.parse(event.body ?? '{}') as { name?: string };
-      const displayName = name?.trim() || 'Kitchen Display';
+      const displayName = name?.trim() || 'Homeslate';
 
       const [user] = await db
         .select({ id: users.id })

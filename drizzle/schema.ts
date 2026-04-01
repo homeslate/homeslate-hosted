@@ -20,7 +20,7 @@ export const displays = pgTable("displays", {
 	id: uuid().defaultRandom().primaryKey().notNull(),
 	userId: uuid("user_id").notNull(),
 	displayId: uuid("display_id").defaultRandom().notNull(),
-	name: text().default('Kitchen Display').notNull(),
+	name: text().default('Homeslate').notNull(),
 	createdAt: timestamp("created_at", { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
 	passcodeHash: text("passcode_hash"),
 }, (table) => [

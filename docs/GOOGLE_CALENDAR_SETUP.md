@@ -1,6 +1,6 @@
 # Google Calendar Setup Guide
 
-This guide walks you through setting up Google Calendar integration for the Kitchen Display app.
+This guide walks you through setting up Google Calendar integration for the Homeslate app.
 
 ## Overview
 
@@ -13,7 +13,7 @@ The Google Calendar widget uses OAuth 2.0 to securely access your Google Calenda
 1. Go to [Google Cloud Console](https://console.cloud.google.com/)
 2. Click the project dropdown at the top of the page
 3. Click **"New Project"**
-4. Enter a project name (e.g., "Kitchen Display")
+4. Enter a project name (e.g., "Homeslate")
 5. Click **"Create"**
 
 ![Create Project](https://developers.google.com/static/workspace/images/create-project.png)
@@ -34,7 +34,7 @@ The Google Calendar widget uses OAuth 2.0 to securely access your Google Calenda
 
 | Field | Value |
 |-------|-------|
-| App name | Kitchen Display |
+| App name | Homeslate |
 | User support email | Your email |
 | Developer contact email | Your email |
 
@@ -66,7 +66,7 @@ While your app is in "Testing" mode, only specified users can authenticate.
 
 | Field | Value |
 |-------|-------|
-| Name | Kitchen Display Web Client |
+| Name | Homeslate Web Client |
 | Authorized JavaScript origins | `http://localhost:5173` (for development) |
 | | `http://localhost:5174` |
 | | `http://localhost:5175` |
@@ -77,11 +77,11 @@ While your app is in "Testing" mode, only specified users can authenticate.
 
 4. Click **"Create"**
 
-5. **Copy the Client ID** - You'll need this for the Kitchen Display app
+5. **Copy the Client ID** - You'll need this for the Homeslate app
 
 The Client ID looks like: `123456789-abcdefg.apps.googleusercontent.com`
 
-## Step 5: Configure Kitchen Display
+## Step 5: Configure Homeslate
 
 1. Add a **Google Calendar** widget to your dashboard
 2. Open the widget settings (gear icon)

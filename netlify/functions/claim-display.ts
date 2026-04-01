@@ -61,7 +61,7 @@ export const handler: Handler = async (event) => {
 
     const [created] = await db
       .insert(displays)
-      .values({ userId: user.id, name: 'Kitchen Display' })
+      .values({ userId: user.id, name: 'Homeslate' })
       .returning({
         id: displays.id,
         displayId: displays.displayId,

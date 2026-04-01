@@ -15,9 +15,9 @@ export function AuthPage() {
               <IconLayoutDashboard size={48} />
             </div>
             <Stack align="center" gap={4}>
-              <Title order={2} className={classes.title}>Kitchen Display</Title>
+              <Title order={2} className={classes.title}>Homeslate</Title>
               <Text c="dimmed" size="sm" ta="center">
-                Manage your kitchen displays from any device
+                Manage your home displays from any device
               </Text>
             </Stack>
             <Button

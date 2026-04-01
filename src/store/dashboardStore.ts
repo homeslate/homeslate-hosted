@@ -3,6 +3,7 @@ import { persist } from 'zustand/middleware';
 import { v4 as uuidv4 } from 'uuid';
 import type { DashboardLayout, WidgetDefinition, WidgetConfig, StickyNote } from '../types/widget';
 import type { ColorMode, DisplayTheme } from '../types/theme';
+import type { ThemeDocument } from '../themes/themeDocumentValidation';
 import type { HolidayId } from '../holidays/registry';
 
 export interface Display {
@@ -14,6 +15,8 @@ export interface Display {
   rotationEnabled: boolean;
   rotationIntervalMs: number;
   theme?: DisplayTheme;
+  themeDocuments?: ThemeDocument[];
+  activeThemeDocumentId?: string | null;
   /** Active color mode for the display. Defaults to the theme's isDark value when absent. */
   colorMode?: ColorMode;
   passcodeEnabled?: boolean; // whether a viewer passcode is set on the server
@@ -35,6 +38,8 @@ export interface RemoteDisplay {
     rotationEnabled: boolean;
     rotationIntervalMs: number;
     theme?: DisplayTheme;
+    themeDocuments?: ThemeDocument[];
+    activeThemeDocumentId?: string | null;
     colorMode?: ColorMode;
     stickyNotesEnabled?: boolean;
     holidayEffectsEnabled?: boolean;
@@ -166,7 +171,7 @@ function findAvailablePosition(
   return { x: 0, y: 0 };
 }
 
-const createDefaultDisplay = (name = 'Kitchen Display'): Display => {
+const createDefaultDisplay = (name = 'Homeslate'): Display => {
   const layout = createDefaultLayout();
   return {
     id: uuidv4(),
@@ -235,6 +240,8 @@ export const useDashboardStore = create<DashboardState>()(
             rotationEnabled: config.rotationEnabled ?? existing?.rotationEnabled ?? false,
             rotationIntervalMs: config.rotationIntervalMs ?? existing?.rotationIntervalMs ?? 30000,
             theme: config.theme ?? existing?.theme,
+            themeDocuments: config.themeDocuments ?? existing?.themeDocuments,
+            activeThemeDocumentId: config.activeThemeDocumentId ?? existing?.activeThemeDocumentId ?? null,
             colorMode: config.colorMode ?? existing?.colorMode,
             passcodeEnabled: remote.passcode_enabled ?? existing?.passcodeEnabled ?? false,
             stickyNotesEnabled: config.stickyNotesEnabled ?? existing?.stickyNotesEnabled ?? false,
@@ -667,7 +674,7 @@ export const useDashboardStore = create<DashboardState>()(
       },
     }),
     {
-      name: 'kitchen-display-storage',
+      name: 'homeslate-storage',
       version: 4,
       partialize: (state) => ({
         displays: state.displays,

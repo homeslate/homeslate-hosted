@@ -39,6 +39,9 @@ import {
   IconSun,
   IconMoon,
   IconMoodSmile,
+  IconLayoutGrid,
+  IconSettings,
+  IconPalette,
 } from '@tabler/icons-react';
 import { IconPickerModal } from '../components/IconPickerModal';
 import {
@@ -61,11 +64,11 @@ import { ShareDisplayModal } from '../components/ShareDisplayModal';
 import { InviteModal } from '../components/InviteModal';
 import { useAuth } from '../contexts/AuthContext';
 import { useDashboardStore } from '../store/dashboardStore';
-import { ThemePicker } from '../components/ThemePicker';
+import { ThemeDocumentManager } from '../components/ThemeDocumentManager';
 import { HOLIDAY_PREVIEW_OPTIONS } from '../holidays/registry';
 import type { HolidayId } from '../holidays/registry';
 import { getWidgetByType } from '../widgets/registry';
-import type { ColorMode, DisplayTheme } from '../types/theme';
+import type { ColorMode } from '../types/theme';
 import type { DashboardLayout, WidgetDefinition } from '../types/widget';
 import { apiClient, ApiError } from '../services/apiClient';
 import type { ConfigUpsertRequest, DisplayPasscodeRequest, DisplayRenameRequest } from '../types/api';
@@ -81,6 +84,7 @@ const INTERVAL_OPTIONS = [
 ];
 
 const PRESET_VIEW_NAMES = ['Morning', 'Evening', 'Weekend'] as const;
+type ManagementPage = 'views' | 'settings' | 'theme';
 
 function cloneConfig<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T;
@@ -339,7 +343,6 @@ export function DisplayDetailPage() {
     setLayoutIcon,
     setRotationEnabled,
     setRotationIntervalMs,
-    setDisplayTheme,
     setColorMode,
     setPasscodeEnabled,
     setStickyNotesEnabled,
@@ -364,6 +367,7 @@ export function DisplayDetailPage() {
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [newViewOpen, setNewViewOpen] = useState(false);
   const [newViewName, setNewViewName] = useState('New View');
+  const [activePage, setActivePage] = useState<ManagementPage>('views');
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
@@ -379,6 +383,8 @@ export function DisplayDetailPage() {
       rotationEnabled,
       rotationIntervalMs,
       theme: displayTheme,
+      themeDocuments,
+      activeThemeDocumentId,
       colorMode: savedColorMode,
       stickyNotesEnabled,
       holidayEffectsEnabled,
@@ -393,6 +399,8 @@ export function DisplayDetailPage() {
       rotationEnabled,
       rotationIntervalMs,
       theme: displayTheme,
+      themeDocuments,
+      activeThemeDocumentId,
       colorMode: savedColorMode,
       stickyNotesEnabled,
       holidayEffectsEnabled,
@@ -504,6 +512,11 @@ export function DisplayDetailPage() {
   };
 
   const visibleLayoutCount = display.layouts.filter((l) => !l.hidden).length;
+  const navItems: Array<{ key: ManagementPage; label: string; icon: React.ComponentType<{ size?: number }> }> = [
+    { key: 'views', label: 'Views', icon: IconLayoutGrid },
+    { key: 'settings', label: 'Settings', icon: IconSettings },
+    { key: 'theme', label: 'Themes', icon: IconPalette },
+  ];
 
   return (
     <>
@@ -684,225 +697,252 @@ export function DisplayDetailPage() {
       </header>
 
       <main className={classes.main}>
-        <Group justify="flex-end" mb="md">
-          <Button
-            variant="light"
-            leftSection={<IconDeviceTv size={16} />}
-            onClick={() => openPreview({ displayId: display.displayId, forceRotation: true })}
-          >
-            Preview Auto-Rotation
-          </Button>
-        </Group>
-        {/* Views section */}
-        <section className={classes.section}>
-          <Group justify="space-between" mb="md">
-            <Title order={5} className={classes.sectionTitle}>Views</Title>
-            <Group gap="xs">
-              <Button size="xs" variant="default" onClick={handleAddPresetViews}>
-                Add Preset Views
-              </Button>
-              <Button leftSection={<IconPlus size={14} />} size="xs" variant="light" onClick={handleNewView}>
-                New View
-              </Button>
-            </Group>
-          </Group>
-          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-            <SortableContext items={display.layouts.map((l) => l.id)} strategy={verticalListSortingStrategy}>
-              <Stack gap="xs">
-                {display.layouts.map((layout) => (
-                  <SortableViewCard
-                    key={layout.id}
-                    layout={layout}
-                    onSelect={() => navigate(`/displays/${display.id}/views/${layout.id}`)}
-                    onDelete={() => handleDeleteView(layout.id)}
-                    onRename={(name) => handleRenameView(layout.id, name)}
-                    onToggleHidden={() => handleToggleHidden(layout.id)}
-                    onSetIcon={(icon) => setLayoutIcon(layout.id, icon)}
-                  />
-                ))}
-              </Stack>
-            </SortableContext>
-          </DndContext>
-        </section>
-
-        {/* Settings section */}
-        <section className={classes.section}>
-          <Title order={5} className={classes.sectionTitle} mb="md">Settings</Title>
-          <Paper className={classes.settingsCard} p="md" radius="md">
-            <Stack gap="md">
-              <Group justify="space-between">
-                <Stack gap={2}>
-                  <Text size="sm" fw={500}>Auto-rotate views</Text>
-                  <Text size="xs" c="dimmed">Automatically cycle through visible views</Text>
-                </Stack>
-                <Switch
-                  checked={display.rotationEnabled}
-                  disabled={visibleLayoutCount <= 1}
-                  onChange={(e) => {
-                    setRotationEnabled(e.currentTarget.checked);
-                    saveConfig({ rotationEnabled: e.currentTarget.checked });
-                  }}
-                />
-              </Group>
-              {display.rotationEnabled && visibleLayoutCount > 1 && (
-                <Select
-                  label="Rotation interval"
-                  data={INTERVAL_OPTIONS}
-                  value={String(display.rotationIntervalMs)}
-                  onChange={(v) => {
-                    if (!v) return;
-                    setRotationIntervalMs(Number(v));
-                    saveConfig({ rotationIntervalMs: Number(v) });
-                  }}
-                  size="sm"
-                />
-              )}
-              {visibleLayoutCount <= 1 && (
-                <Text size="xs" c="dimmed">
-                  {display.layouts.length <= 1
-                    ? 'Add a second view to enable auto-rotation'
-                    : 'Show at least two views to enable auto-rotation'}
-                </Text>
-              )}
-            </Stack>
-          </Paper>
-        </section>
-
-        {/* Viewer Passcode section */}
-        <section className={classes.section}>
-          <Title order={5} className={classes.sectionTitle} mb="md">Viewer Passcode</Title>
-          <Paper className={classes.settingsCard} p="md" radius="md">
-            <Stack gap="md">
-              <Group justify="space-between">
-                <Stack gap={2}>
-                  <Group gap={6}>
-                    {display.passcodeEnabled
-                      ? <IconLock size={14} />
-                      : <IconLockOpen size={14} />}
-                    <Text size="sm" fw={500}>
-                      {display.passcodeEnabled ? 'Passcode is set' : 'No passcode'}
-                    </Text>
+        <aside className={classes.nav}>
+          <Stack gap={6}>
+            {navItems.map((item) => {
+              const Icon = item.icon;
+              return (
+                <UnstyledButton
+                  key={item.key}
+                  className={`${classes.navItem} ${activePage === item.key ? classes.navItemActive : ''}`}
+                  onClick={() => setActivePage(item.key)}
+                >
+                  <Group gap="xs" wrap="nowrap">
+                    <Icon size={16} />
+                    <Text size="sm" fw={500}>{item.label}</Text>
                   </Group>
-                  <Text size="xs" c="dimmed">
-                    Require a 4-digit PIN before the display can be viewed
-                  </Text>
-                </Stack>
-                {display.passcodeEnabled && (
+                </UnstyledButton>
+              );
+            })}
+          </Stack>
+        </aside>
+
+        <section className={classes.content}>
+          {activePage === 'views' && (
+            <>
+              <Group justify="space-between" mb="md">
+                <Title order={5} className={classes.sectionTitle}>Views</Title>
+                <Group gap="xs">
                   <Button
-                    size="xs"
-                    variant="subtle"
-                    color="red"
-                    loading={pinSaving}
-                    onClick={() => handleSavePin(null)}
+                    variant="light"
+                    leftSection={<IconDeviceTv size={16} />}
+                    onClick={() => openPreview({ displayId: display.displayId, forceRotation: true })}
                   >
-                    Remove PIN
+                    Preview Auto-Rotation
                   </Button>
-                )}
-              </Group>
-              <Stack gap={6}>
-                <Text size="xs" c="dimmed">
-                  {display.passcodeEnabled ? 'Set a new PIN:' : 'Set a PIN:'}
-                </Text>
-                <Group gap="sm" align="flex-start">
-                  <PinInput
-                    length={4}
-                    type="number"
-                    value={pinInput}
-                    onChange={(val) => { setPinInput(val); setPinError(null); }}
-                    error={!!pinError}
-                    placeholder="·"
-                  />
-                  <Button
-                    size="sm"
-                    disabled={pinInput.length !== 4}
-                    loading={pinSaving}
-                    onClick={() => handleSavePin(pinInput)}
-                  >
-                    {display.passcodeEnabled ? 'Change PIN' : 'Enable PIN'}
+                  <Button size="xs" variant="default" onClick={handleAddPresetViews}>
+                    Add Preset Views
+                  </Button>
+                  <Button leftSection={<IconPlus size={14} />} size="xs" variant="light" onClick={handleNewView}>
+                    New View
                   </Button>
                 </Group>
-                {pinError && <Text size="xs" c="red">{pinError}</Text>}
-              </Stack>
-            </Stack>
-          </Paper>
-        </section>
-
-        {/* Sticky Notes section */}
-        <section className={classes.section}>
-          <Title order={5} className={classes.sectionTitle} mb="md">Sticky Notes</Title>
-          <Paper className={classes.settingsCard} p="md" radius="md">
-            <Group justify="space-between">
-              <Stack gap={2}>
-                <Text size="sm" fw={500}>Enable sticky notes</Text>
-                <Text size="xs" c="dimmed">
-                  Show a "+" button to add floating notes on each view — visible in editor and kiosk mode
-                </Text>
-              </Stack>
-              <Switch
-                checked={display.stickyNotesEnabled ?? false}
-                onChange={(e) => {
-                  setStickyNotesEnabled(display.id, e.currentTarget.checked);
-                  saveConfig({ stickyNotesEnabled: e.currentTarget.checked });
-                }}
-              />
-            </Group>
-          </Paper>
-        </section>
-
-        {/* Holiday Effects section */}
-        <section className={classes.section}>
-          <Title order={5} className={classes.sectionTitle} mb="md">Holiday Effects</Title>
-          <Paper className={classes.settingsCard} p="md" radius="md">
-            <Stack gap="md">
-              <Group justify="space-between">
-                <Stack gap={2}>
-                  <Text size="sm" fw={500}>Enable holiday UI</Text>
-                  <Text size="xs" c="dimmed">
-                    Show holiday-specific visuals on matching dates (for example: St. Patrick&apos;s Day)
-                  </Text>
-                </Stack>
-                <Switch
-                  checked={display.holidayEffectsEnabled ?? false}
-                  onChange={(e) => {
-                    setHolidayEffectsEnabled(display.id, e.currentTarget.checked);
-                    saveConfig({ holidayEffectsEnabled: e.currentTarget.checked });
-                  }}
-                />
               </Group>
-              <Stack gap={2}>
-                <Text size="sm" fw={500}>Preview holiday</Text>
-                <Text size="xs" c="dimmed">
-                  Force a holiday theme for testing. Auto uses the current date.
-                </Text>
-              </Stack>
-              <Select
-                data={[
-                  { value: 'auto', label: 'Auto (today)' },
-                  ...HOLIDAY_PREVIEW_OPTIONS,
-                ]}
-                value={display.holidayPreviewId ?? 'auto'}
-                onChange={(value) => {
-                  const nextValue: HolidayId | undefined =
-                    value && value !== 'auto' ? (value as HolidayId) : undefined;
-                  setHolidayPreviewId(display.id, nextValue);
-                  saveConfig({ holidayPreviewId: nextValue });
-                }}
-                size="sm"
-              />
-            </Stack>
-          </Paper>
-        </section>
+              <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+                <SortableContext items={display.layouts.map((l) => l.id)} strategy={verticalListSortingStrategy}>
+                  <Stack gap="xs">
+                    {display.layouts.map((layout) => (
+                      <SortableViewCard
+                        key={layout.id}
+                        layout={layout}
+                        onSelect={() => navigate(`/displays/${display.id}/views/${layout.id}`)}
+                        onDelete={() => handleDeleteView(layout.id)}
+                        onRename={(name) => handleRenameView(layout.id, name)}
+                        onToggleHidden={() => handleToggleHidden(layout.id)}
+                        onSetIcon={(icon) => setLayoutIcon(layout.id, icon)}
+                      />
+                    ))}
+                  </Stack>
+                </SortableContext>
+              </DndContext>
+            </>
+          )}
 
-        {/* Theme section */}
-        <section className={classes.section}>
-          <Title order={5} className={classes.sectionTitle} mb="md">Theme</Title>
-          <ThemePicker
-            value={display.theme}
-            onChange={(theme: DisplayTheme) => {
-              setDisplayTheme(display.id, theme);
-              saveConfig({ theme });
-            }}
-          />
+          {activePage === 'settings' && (
+            <Stack gap="lg">
+              <section className={classes.section}>
+                <Title order={5} className={classes.sectionTitle} mb="md">Viewer Passcode</Title>
+                <Paper className={classes.settingsCard} p="md" radius="md">
+                  <Stack gap="md">
+                    <Group justify="space-between">
+                      <Stack gap={2}>
+                        <Group gap={6}>
+                          {display.passcodeEnabled
+                            ? <IconLock size={14} />
+                            : <IconLockOpen size={14} />}
+                          <Text size="sm" fw={500}>
+                            {display.passcodeEnabled ? 'Passcode is set' : 'No passcode'}
+                          </Text>
+                        </Group>
+                        <Text size="xs" c="dimmed">
+                          Require a 4-digit PIN before the display can be viewed
+                        </Text>
+                      </Stack>
+                      {display.passcodeEnabled && (
+                        <Button
+                          size="xs"
+                          variant="subtle"
+                          color="red"
+                          loading={pinSaving}
+                          onClick={() => handleSavePin(null)}
+                        >
+                          Remove PIN
+                        </Button>
+                      )}
+                    </Group>
+                    <Stack gap={6}>
+                      <Text size="xs" c="dimmed">
+                        {display.passcodeEnabled ? 'Set a new PIN:' : 'Set a PIN:'}
+                      </Text>
+                      <Group gap="sm" align="flex-start">
+                        <PinInput
+                          length={4}
+                          type="number"
+                          value={pinInput}
+                          onChange={(val) => { setPinInput(val); setPinError(null); }}
+                          error={!!pinError}
+                          placeholder="·"
+                        />
+                        <Button
+                          size="sm"
+                          disabled={pinInput.length !== 4}
+                          loading={pinSaving}
+                          onClick={() => handleSavePin(pinInput)}
+                        >
+                          {display.passcodeEnabled ? 'Change PIN' : 'Enable PIN'}
+                        </Button>
+                      </Group>
+                      {pinError && <Text size="xs" c="red">{pinError}</Text>}
+                    </Stack>
+                  </Stack>
+                </Paper>
+              </section>
+
+              <section className={classes.section}>
+                <Title order={5} className={classes.sectionTitle} mb="md">Sticky Notes</Title>
+                <Paper className={classes.settingsCard} p="md" radius="md">
+                  <Group justify="space-between">
+                    <Stack gap={2}>
+                      <Text size="sm" fw={500}>Enable sticky notes</Text>
+                      <Text size="xs" c="dimmed">
+                        Show a "+" button to add floating notes on each view - visible in editor and kiosk mode
+                      </Text>
+                    </Stack>
+                    <Switch
+                      checked={display.stickyNotesEnabled ?? false}
+                      onChange={(e) => {
+                        setStickyNotesEnabled(display.id, e.currentTarget.checked);
+                        saveConfig({ stickyNotesEnabled: e.currentTarget.checked });
+                      }}
+                    />
+                  </Group>
+                </Paper>
+              </section>
+
+              <section className={classes.section}>
+                <Title order={5} className={classes.sectionTitle} mb="md">Holiday Effects</Title>
+                <Paper className={classes.settingsCard} p="md" radius="md">
+                  <Stack gap="md">
+                    <Group justify="space-between">
+                      <Stack gap={2}>
+                        <Text size="sm" fw={500}>Enable holiday UI</Text>
+                        <Text size="xs" c="dimmed">
+                          Show holiday-specific visuals on matching dates (for example: St. Patrick&apos;s Day)
+                        </Text>
+                      </Stack>
+                      <Switch
+                        checked={display.holidayEffectsEnabled ?? false}
+                        onChange={(e) => {
+                          setHolidayEffectsEnabled(display.id, e.currentTarget.checked);
+                          saveConfig({ holidayEffectsEnabled: e.currentTarget.checked });
+                        }}
+                      />
+                    </Group>
+                    <Stack gap={2}>
+                      <Text size="sm" fw={500}>Preview holiday</Text>
+                      <Text size="xs" c="dimmed">
+                        Force a holiday theme for testing. Auto uses the current date.
+                      </Text>
+                    </Stack>
+                    <Select
+                      data={[
+                        { value: 'auto', label: 'Auto (today)' },
+                        ...HOLIDAY_PREVIEW_OPTIONS,
+                      ]}
+                      value={display.holidayPreviewId ?? 'auto'}
+                      onChange={(value) => {
+                        const nextValue: HolidayId | undefined =
+                          value && value !== 'auto' ? (value as HolidayId) : undefined;
+                        setHolidayPreviewId(display.id, nextValue);
+                        saveConfig({ holidayPreviewId: nextValue });
+                      }}
+                      size="sm"
+                    />
+                  </Stack>
+                </Paper>
+              </section>
+
+              <section className={classes.section}>
+                <Title order={5} className={classes.sectionTitle} mb="md">Auto-Rotate</Title>
+                <Paper className={classes.settingsCard} p="md" radius="md">
+                  <Stack gap="md">
+                    <Group justify="space-between">
+                      <Stack gap={2}>
+                        <Text size="sm" fw={500}>Auto-rotate views</Text>
+                        <Text size="xs" c="dimmed">Automatically cycle through visible views</Text>
+                      </Stack>
+                      <Switch
+                        checked={display.rotationEnabled}
+                        disabled={visibleLayoutCount <= 1}
+                        onChange={(e) => {
+                          setRotationEnabled(e.currentTarget.checked);
+                          saveConfig({ rotationEnabled: e.currentTarget.checked });
+                        }}
+                      />
+                    </Group>
+                    {display.rotationEnabled && visibleLayoutCount > 1 && (
+                      <Select
+                        label="Rotation interval"
+                        data={INTERVAL_OPTIONS}
+                        value={String(display.rotationIntervalMs)}
+                        onChange={(v) => {
+                          if (!v) return;
+                          setRotationIntervalMs(Number(v));
+                          saveConfig({ rotationIntervalMs: Number(v) });
+                        }}
+                        size="sm"
+                      />
+                    )}
+                    {visibleLayoutCount <= 1 && (
+                      <Text size="xs" c="dimmed">
+                        {display.layouts.length <= 1
+                          ? 'Add a second view to enable auto-rotation'
+                          : 'Show at least two views to enable auto-rotation'}
+                      </Text>
+                    )}
+                  </Stack>
+                </Paper>
+              </section>
+            </Stack>
+          )}
+
+          {activePage === 'theme' && (
+            <section className={classes.section}>
+              <Title order={5} className={classes.sectionTitle} mb="md">Themes</Title>
+              <ThemeDocumentManager
+                documents={display.themeDocuments}
+                activeThemeDocumentId={display.activeThemeDocumentId}
+                onChange={(themeDocuments, activeThemeDocumentId) => {
+                  upsertDisplay({
+                    ...display,
+                    themeDocuments,
+                    activeThemeDocumentId,
+                  });
+                  saveConfig({ themeDocuments, activeThemeDocumentId });
+                }}
+              />
+            </section>
+          )}
         </section>
       </main>
     </div>

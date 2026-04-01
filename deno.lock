@@ -37,6 +37,7 @@
         "npm:eslint-plugin-react-refresh@~0.4.24",
         "npm:eslint@^9.39.1",
         "npm:globals@^16.5.0",
+        "npm:netlify-cli@^24.2.0",
         "npm:postcss-preset-mantine@^1.18.0",
         "npm:postcss-simple-vars@^7.0.1",
         "npm:postcss@^8.5.6",
@@ -50,6 +51,7 @@
         "npm:uuid@13",
         "npm:vite-plugin-pwa@^1.2.0",
         "npm:vite@^7.2.4",
+        "npm:zod@^4.3.6",
         "npm:zustand@^5.0.9"
       ]
     }

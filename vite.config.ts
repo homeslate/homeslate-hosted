@@ -37,9 +37,9 @@ export default defineConfig(() => ({
       minify: false,
       includeAssets: ['icon.svg', 'vite.svg', 'icons/*.png'],
       manifest: {
-        name: 'Kitchen Display',
-        short_name: 'Kitchen',
-        description: 'Smart kitchen dashboard',
+        name: 'Homeslate',
+        short_name: 'Homeslate',
+        description: 'Smart home display platform',
         theme_color: '#1a1b1e',
         background_color: '#1a1b1e',
         display: 'standalone',

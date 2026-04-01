@@ -81,7 +81,7 @@ export const handler: Handler = async (event) => {
       .limit(1);
 
     if (!existingDisplay) {
-      await db.insert(displays).values({ userId: user.id, name: 'Kitchen Display' });
+      await db.insert(displays).values({ userId: user.id, name: 'Homeslate' });
     }
 
     // Redeem any pending invites for this email (idempotent)

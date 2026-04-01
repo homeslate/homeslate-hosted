@@ -1,5 +1,6 @@
 import type { StickyNote } from './widget';
 import type { ColorMode, DisplayTheme } from './theme';
+import type { ThemeDocument } from '../themes/themeDocumentValidation';
 import type { HolidayId } from '../holidays/registry';
 
 export interface ApiOkResponse {
@@ -44,6 +45,8 @@ export interface ConfigUpsertRequest {
   rotationEnabled: boolean;
   rotationIntervalMs: number;
   theme?: DisplayTheme | Record<string, unknown>;
+  themeDocuments?: ThemeDocument[];
+  activeThemeDocumentId?: string | null;
   colorMode?: ColorMode;
   stickyNotesEnabled?: boolean;
   holidayEffectsEnabled?: boolean;

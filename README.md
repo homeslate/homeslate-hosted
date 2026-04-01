@@ -1,6 +1,6 @@
-# Kitchen Display
+# Homeslate
 
-A customizable family kitchen display application built with React, Vite, and Mantine. Create beautiful dashboard layouts with drag-and-drop widgets.
+A customizable home display platform built with React, Vite, and Mantine. Create beautiful dashboard layouts with drag-and-drop widgets for any screen around your home.
 
 ## Features
 
@@ -220,7 +220,7 @@ docs/
 
 ## Deployment
 
-For a dedicated kitchen display:
+For a dedicated display:
 1. Build the app: `npm run build`
 2. Deploy to any static hosting (Vercel, Netlify, GitHub Pages)
 3. Open on your display device (tablet, old laptop, Raspberry Pi)
