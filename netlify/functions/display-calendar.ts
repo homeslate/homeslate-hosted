@@ -11,6 +11,7 @@ const CORS = {
 const GOOGLE_API_BASE = 'https://www.googleapis.com/calendar/v3';
 
 interface TokenRow {
+  user_id: string;
   refresh_token: string | null;
   access_token: string | null;
   access_token_expires_at: string | null;
@@ -44,7 +45,7 @@ function toCandidate(row: TokenRow | undefined, source: TokenCandidate['source']
   return [{ ...row, source }];
 }
 
-async function getAccessToken(refreshToken: string): Promise<string> {
+async function exchangeRefreshForAccess(refreshToken: string): Promise<{ access_token: string; expires_in: number }> {
   const clientId = process.env.GOOGLE_CLIENT_ID;
   const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
   if (!clientId || !clientSecret) throw new Error('Missing Google OAuth credentials');
@@ -60,8 +61,8 @@ async function getAccessToken(refreshToken: string): Promise<string> {
     }),
   });
   if (!res.ok) throw new Error('Failed to refresh token');
-  const data = (await res.json()) as { access_token: string };
-  return data.access_token;
+  const data = (await res.json()) as { access_token: string; expires_in?: number };
+  return { access_token: data.access_token, expires_in: data.expires_in ?? 3600 };
 }
 
 interface GoogleCalendarEvent {
@@ -156,6 +157,7 @@ export const handler: Handler = async (event) => {
   try {
     const ownerResult = await db.execute(sql`
       SELECT
+        u.id AS user_id,
         u.refresh_token AS refresh_token,
         u.access_token AS access_token,
         u.access_token_expires_at AS access_token_expires_at
@@ -172,6 +174,7 @@ export const handler: Handler = async (event) => {
     try {
       const collabResult = await db.execute(sql`
         SELECT
+          u.id AS user_id,
           u.refresh_token AS refresh_token,
           u.access_token AS access_token,
           u.access_token_expires_at AS access_token_expires_at
@@ -197,8 +200,16 @@ export const handler: Handler = async (event) => {
     for (const candidate of tokenCandidates) {
       if (candidate.refresh_token) {
         try {
-          token = await getAccessToken(candidate.refresh_token);
+          const exchanged = await exchangeRefreshForAccess(candidate.refresh_token);
+          token = exchanged.access_token;
           chosenSource = candidate.source;
+          const expiresAt = new Date(Date.now() + exchanged.expires_in * 1000).toISOString();
+          await db.execute(sql`
+            UPDATE users
+            SET access_token = ${exchanged.access_token},
+                access_token_expires_at = ${expiresAt}::timestamptz
+            WHERE id = ${candidate.user_id}::uuid
+          `);
           break;
         } catch {
           refreshFailures.push(candidate.source);

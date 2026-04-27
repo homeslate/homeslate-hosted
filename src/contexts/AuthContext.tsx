@@ -58,7 +58,6 @@ interface GoogleOauth2Api {
     callback: (response: GoogleTokenClientResponse) => void;
     access_type?: 'offline';
   }) => GoogleTokenClient;
-  revoke: (token: string, callback: () => void) => void;
 }
 
 interface WindowWithGoogle extends Window {
@@ -227,10 +226,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const fetchAndStoreUser = useCallback(
     async (token: string, refreshToken?: string): Promise<AuthUser> => {
+      const refreshForServer =
+        refreshToken ?? (typeof localStorage !== 'undefined' ? localStorage.getItem(REFRESH_TOKEN_KEY) : null);
       const res = await fetch('/api/me', {
-        headers: { 
+        headers: {
           Authorization: `Bearer ${token}`,
-          ...(refreshToken ? { 'X-Refresh-Token': refreshToken } : {}),
+          ...(refreshForServer ? { 'X-Refresh-Token': refreshForServer } : {}),
         },
       });
       if (!res.ok) throw new Error('Failed to fetch user');
@@ -316,13 +317,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     tokenClientRef.current.requestAccessToken({ prompt: 'consent' });
   }, [fetchAndStoreUser, storeToken]);
 
+  // Do not call Google's token revoke here: revocation invalidates the refresh
+  // token for this OAuth client, which breaks server-side calendar fetch for
+  // registered displays (`/api/display-calendar`) even though those devices
+  // never use this browser session. Users can revoke the app in Google Account
+  // settings if they want to disconnect entirely.
   const signOut = useCallback(() => {
-    const oauth2 = (window as WindowWithGoogle).google?.accounts?.oauth2;
-    if (accessToken && oauth2) {
-      oauth2.revoke(accessToken, () => {});
-    }
     clearSession();
-  }, [accessToken, clearSession]);
+  }, [clearSession]);
 
   return (
     <AuthContext.Provider

@@ -85,7 +85,6 @@ interface GoogleOauth2Api {
     scope: string;
     callback: (response: GoogleTokenResponse) => void;
   }) => GoogleTokenClient;
-  revoke: (token: string, callback: () => void) => void;
 }
 
 interface GoogleIdentityServices {
@@ -235,13 +234,10 @@ export function getAccessToken(): string | null {
 }
 
 /**
- * Clear stored token (sign out)
+ * Clear cached calendar token in this tab (does not revoke with Google — same
+ * rationale as AuthContext.signOut: server-held tokens power kiosk displays).
  */
 export function clearGoogleAuth(): void {
-  const oauth2 = getOauth2Api();
-  if (accessToken && oauth2) {
-    oauth2.revoke(accessToken, () => {});
-  }
   clearCachedToken();
 }
 
