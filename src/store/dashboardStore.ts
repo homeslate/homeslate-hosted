@@ -2,8 +2,8 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { v4 as uuidv4 } from 'uuid';
 import type { DashboardLayout, WidgetDefinition, WidgetConfig, StickyNote } from '../types/widget';
-import type { ColorMode, DisplayTheme } from '../types/theme';
-import type { ThemeDocument } from '../themes/themeDocumentValidation';
+import type { ColorMode } from '../types/theme';
+import type { ThemeDocument } from '../types/theme';
 import type { HolidayId } from '../holidays/registry';
 
 export interface Display {
@@ -14,16 +14,14 @@ export interface Display {
   activeLayoutId: string | null;
   rotationEnabled: boolean;
   rotationIntervalMs: number;
-  theme?: DisplayTheme;
-  themeDocuments?: ThemeDocument[];
-  activeThemeDocumentId?: string | null;
-  /** Active color mode for the display. Defaults to the theme's isDark value when absent. */
+  themes: ThemeDocument[];
+  activeThemeId: string | null;
   colorMode?: ColorMode;
-  passcodeEnabled?: boolean; // whether a viewer passcode is set on the server
+  passcodeEnabled?: boolean;
   stickyNotesEnabled?: boolean;
   holidayEffectsEnabled?: boolean;
   holidayPreviewId?: HolidayId;
-  isOwner?: boolean; // false when this is a display shared with the user by someone else
+  isOwner?: boolean;
 }
 
 export interface RemoteDisplay {
@@ -37,9 +35,8 @@ export interface RemoteDisplay {
     activeLayoutId: string | null;
     rotationEnabled: boolean;
     rotationIntervalMs: number;
-    theme?: DisplayTheme;
-    themeDocuments?: ThemeDocument[];
-    activeThemeDocumentId?: string | null;
+    themes?: ThemeDocument[];
+    activeThemeId?: string | null;
     colorMode?: ColorMode;
     stickyNotesEnabled?: boolean;
     holidayEffectsEnabled?: boolean;
@@ -71,7 +68,11 @@ interface DashboardState {
   // Per-display settings (act on selectedDisplayId)
   setRotationEnabled: (enabled: boolean) => void;
   setRotationIntervalMs: (ms: number) => void;
-  setDisplayTheme: (displayId: string, theme: DisplayTheme) => void;
+  setThemes: (displayId: string, themes: ThemeDocument[], activeThemeId: string | null) => void;
+  setActiveTheme: (displayId: string, themeId: string) => void;
+  saveTheme: (displayId: string, theme: ThemeDocument) => void;
+  deleteTheme: (displayId: string, themeId: string) => void;
+  duplicateTheme: (displayId: string, themeId: string) => void;
   setColorMode: (displayId: string, mode: ColorMode) => void;
   setLayoutBackground: (layoutId: string, updates: Partial<Pick<import('../types/widget').DashboardLayout, 'backgroundImage' | 'backgroundImageSize' | 'backgroundOverlayOpacity' | 'backgroundPhotos' | 'backgroundInterval'>>) => void;
   setPasscodeEnabled: (displayId: string, enabled: boolean) => void;
@@ -108,6 +109,8 @@ export interface PreviewState {
   layoutId?: string;
   // Force auto-rotation while previewing from display-level management page.
   forceRotation?: boolean;
+  // Color mode to use in preview (overrides display config).
+  colorMode?: ColorMode;
 }
 
 const createDefaultLayout = (): DashboardLayout => ({
@@ -181,6 +184,8 @@ const createDefaultDisplay = (name = 'Homeslate'): Display => {
     activeLayoutId: layout.id,
     rotationEnabled: false,
     rotationIntervalMs: 30000,
+    themes: [],
+    activeThemeId: null,
   };
 };
 
@@ -210,6 +215,8 @@ export const useDashboardStore = create<DashboardState>()(
             activeLayoutId: null,
             rotationEnabled: false,
             rotationIntervalMs: 30000,
+            themes: [],
+            activeThemeId: null,
           };
           const layouts = config.layouts.length > 0 ? config.layouts : [createDefaultLayout()];
           const activeLayoutId = config.activeLayoutId ?? layouts[0].id;
@@ -239,9 +246,8 @@ export const useDashboardStore = create<DashboardState>()(
             activeLayoutId,
             rotationEnabled: config.rotationEnabled ?? existing?.rotationEnabled ?? false,
             rotationIntervalMs: config.rotationIntervalMs ?? existing?.rotationIntervalMs ?? 30000,
-            theme: config.theme ?? existing?.theme,
-            themeDocuments: config.themeDocuments ?? existing?.themeDocuments,
-            activeThemeDocumentId: config.activeThemeDocumentId ?? existing?.activeThemeDocumentId ?? null,
+            themes: config.themes ?? existing?.themes ?? [],
+            activeThemeId: config.activeThemeId ?? existing?.activeThemeId ?? null,
             colorMode: config.colorMode ?? existing?.colorMode,
             passcodeEnabled: remote.passcode_enabled ?? existing?.passcodeEnabled ?? false,
             stickyNotesEnabled: config.stickyNotesEnabled ?? existing?.stickyNotesEnabled ?? false,
@@ -278,6 +284,8 @@ export const useDashboardStore = create<DashboardState>()(
           activeLayoutId: layout.id,
           rotationEnabled: false,
           rotationIntervalMs: 30000,
+          themes: [],
+          activeThemeId: null,
         };
         set((state) => ({ displays: [...state.displays, newDisplay] }));
       },
@@ -339,9 +347,60 @@ export const useDashboardStore = create<DashboardState>()(
         }));
       },
 
-      setDisplayTheme: (displayId: string, theme: DisplayTheme) => {
+      setThemes: (displayId, themes, activeThemeId) => {
         set((state) => ({
-          displays: updateDisplay(state.displays, displayId, (d) => ({ ...d, theme })),
+          displays: updateDisplay(state.displays, displayId, (d) => ({
+            ...d,
+            themes,
+            activeThemeId,
+          })),
+        }));
+      },
+
+      setActiveTheme: (displayId, themeId) => {
+        set((state) => ({
+          displays: updateDisplay(state.displays, displayId, (d) => ({
+            ...d,
+            activeThemeId: themeId,
+            themes: d.themes.map((t) => ({ ...t, isActive: t.id === themeId })),
+          })),
+        }));
+      },
+
+      saveTheme: (displayId, theme) => {
+        set((state) => ({
+          displays: updateDisplay(state.displays, displayId, (d) => {
+            const idx = d.themes.findIndex((t) => t.id === theme.id);
+            const themes = idx >= 0
+              ? d.themes.map((t, i) => (i === idx ? theme : t))
+              : [...d.themes, theme];
+            return { ...d, themes };
+          }),
+        }));
+      },
+
+      deleteTheme: (displayId, themeId) => {
+        set((state) => ({
+          displays: updateDisplay(state.displays, displayId, (d) => ({
+            ...d,
+            themes: d.themes.filter((t) => t.id !== themeId),
+          })),
+        }));
+      },
+
+      duplicateTheme: (displayId, themeId) => {
+        set((state) => ({
+          displays: updateDisplay(state.displays, displayId, (d) => {
+            const source = d.themes.find((t) => t.id === themeId);
+            if (!source) return d;
+            const newTheme: ThemeDocument = {
+              ...source,
+              id: `${source.id}_copy_${Date.now()}`,
+              name: `${source.name} (Copy)`,
+              isActive: false,
+            };
+            return { ...d, themes: [...d.themes, newTheme] };
+          }),
         }));
       },
 
@@ -675,7 +734,7 @@ export const useDashboardStore = create<DashboardState>()(
     }),
     {
       name: 'homeslate-storage',
-      version: 4,
+      version: 5,
       partialize: (state) => ({
         displays: state.displays,
         selectedDisplayId: state.selectedDisplayId,
@@ -683,8 +742,22 @@ export const useDashboardStore = create<DashboardState>()(
         // preview is intentionally excluded — it's ephemeral UI state
       }),
       migrate: (persistedState: unknown, version: number) => {
-        if (version === 4) return persistedState;
-        if (version === 3) return persistedState; // colorMode field added (optional, no migration needed)
+        if (version === 5) return persistedState;
+
+        // Strip legacy theme fields. We don't translate legacy DisplayTheme
+        // objects — themes start empty and the viewer falls back to the
+        // bundled default until the user picks/creates one.
+        const stripDisplay = (d: Record<string, unknown>): Record<string, unknown> => {
+          const { theme: _theme, themeDocuments: _td, activeThemeDocumentId: _atd, ...rest } = d;
+          void _theme; void _td; void _atd;
+          return { ...rest, themes: [], activeThemeId: null };
+        };
+
+        if (version === 4 || version === 3 || version === 2) {
+          const state = persistedState as { displays?: Array<Record<string, unknown>> };
+          return { ...state, displays: (state.displays ?? []).map(stripDisplay) };
+        }
+
         if (version === 0 || version === 1) {
           // Migrate from old flat shape: {layouts, activeLayoutId, rotationEnabled, rotationIntervalMs, isEditing}
           const old = persistedState as {
@@ -706,7 +779,6 @@ export const useDashboardStore = create<DashboardState>()(
             selectedViewId: null,
           };
         }
-        // v2 → v3: theme field added (optional, no migration needed)
         return persistedState;
       },
     }

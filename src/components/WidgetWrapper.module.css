@@ -1,9 +1,9 @@
 .wrapper {
   height: 100%;
   position: relative;
-  background: var(--theme-surface-bg);
+  background: var(--token-surface-card);
   backdrop-filter: blur(10px);
-  border: 1px solid var(--theme-surface-border);
+  border: 1px solid var(--token-border-default);
   overflow: hidden;
   transition: box-shadow 0.2s ease, border-color 0.2s ease;
 }
@@ -15,20 +15,20 @@
 }
 
 .wrapper.transparent:hover {
-  border-color: var(--theme-surface-border);
+  border-color: var(--token-border-default);
 }
 
 .wrapper:hover {
-  box-shadow: 0 0 20px var(--theme-glow);
+  box-shadow: 0 0 20px var(--token-glow);
 }
 
 .editing {
-  border: 2px dashed rgba(var(--theme-accent-rgb), 0.5);
+  border: 2px dashed rgba(var(--token-color-brand-500-rgb), 0.5);
 }
 
 .editing:hover {
-  border-color: rgba(var(--theme-accent-rgb), 0.8);
-  box-shadow: 0 0 20px rgba(var(--theme-accent-rgb), 0.2);
+  border-color: rgba(var(--token-color-brand-500-rgb), 0.8);
+  box-shadow: 0 0 20px rgba(var(--token-color-brand-500-rgb), 0.2);
 }
 
 /* Size indicator in bottom right */
@@ -39,7 +39,7 @@
   right: 0;
   width: 24px;
   height: 24px;
-  background: linear-gradient(135deg, transparent 50%, rgba(var(--theme-accent-rgb), 0.3) 50%);
+  background: linear-gradient(135deg, transparent 50%, rgba(var(--token-color-brand-500-rgb), 0.3) 50%);
   z-index: 5;
   pointer-events: none;
   opacity: 0;
@@ -91,13 +91,13 @@
 .dragHandle {
   cursor: grab;
   padding: 0.25rem;
-  color: var(--theme-text-muted, var(--mantine-color-dimmed));
+  color: var(--token-text-muted, var(--mantine-color-dimmed));
   display: flex;
   align-items: center;
 }
 
 .dragHandle:hover {
-  color: var(--theme-text, var(--mantine-color-text));
+  color: var(--token-text-primary, var(--mantine-color-text));
 }
 
 .dragHandle:active {
@@ -105,12 +105,12 @@
 }
 
 .toolbarButton {
-  color: var(--theme-text-muted, var(--mantine-color-dimmed));
+  color: var(--token-text-muted, var(--mantine-color-dimmed));
   background: light-dark(rgba(0, 0, 0, 0.06), rgba(255, 255, 255, 0.08));
 }
 
 .toolbarButton:hover {
-  color: var(--theme-text, var(--mantine-color-text));
+  color: var(--token-text-primary, var(--mantine-color-text));
   background: light-dark(rgba(0, 0, 0, 0.1), rgba(255, 255, 255, 0.15));
 }
 
@@ -123,7 +123,7 @@
 .widgetName {
   font-weight: 500;
   opacity: 0.8;
-  color: var(--theme-text, var(--mantine-color-text));
+  color: var(--token-text-primary, var(--mantine-color-text));
   white-space: nowrap;
 }
 
@@ -139,9 +139,9 @@
   align-items: center;
   gap: 4px;
   padding: 2px 6px;
-  background: rgba(var(--theme-accent-rgb), 0.2);
+  background: rgba(var(--token-color-brand-500-rgb), 0.2);
   border-radius: 4px;
-  color: var(--theme-text, var(--mantine-color-text));
+  color: var(--token-text-primary, var(--mantine-color-text));
   font-size: 10px;
   cursor: default;
 }

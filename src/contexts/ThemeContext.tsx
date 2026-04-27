@@ -1,31 +1,60 @@
-import { createContext, useContext } from 'react';
-import type { ColorMode, DisplayTheme } from '../types/theme';
-import { defaultTheme } from '../themes';
+import { createContext, useCallback, useContext, useMemo } from 'react';
+import type { ColorMode, ResolvedTheme, ThemeDocument } from '../types/theme';
+import { defaultThemeDocument, resolveTheme, themeToVars } from '../themes';
+import { pickActiveDocument } from '../themes/defaults';
 import { useDashboardStore } from '../store/dashboardStore';
-import { themeToVars, getBackgroundStyle } from '../themes/utils';
+import { getBackgroundStyle } from '../themes/utils';
 
 interface ThemeContextValue {
-  theme: DisplayTheme;
-  /** Active color mode for the current display */
+  document: ThemeDocument;
+  resolved: ResolvedTheme;
+  vars: Record<string, string>;
   colorMode: ColorMode;
+  setColorMode: (mode: ColorMode) => void;
 }
 
+const initialResolved = resolveTheme(defaultThemeDocument, 'dark');
+
 const ThemeContext = createContext<ThemeContextValue>({
-  theme: defaultTheme,
+  document: defaultThemeDocument,
+  resolved: initialResolved,
+  vars: themeToVars(initialResolved),
   colorMode: 'dark',
+  setColorMode: () => {},
 });
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const { displays, selectedDisplayId } = useDashboardStore();
-  const display = displays.find((d) => d.id === selectedDisplayId);
-  const theme = display?.theme ?? defaultTheme;
+  const displays = useDashboardStore((state) => state.displays);
+  const selectedDisplayId = useDashboardStore((state) => state.selectedDisplayId);
+  const storeSetColorMode = useDashboardStore((state) => state.setColorMode);
 
-  // Effective color mode: explicit per-display override > theme's isDark default
-  const colorMode: ColorMode =
-    display?.colorMode ?? (theme.isDark === false ? 'light' : 'dark');
+  const display = displays.find((d) => d.id === selectedDisplayId);
+
+  const document = useMemo(() => {
+    const themes = display?.themes ?? [];
+    const activeThemeId = display?.activeThemeId ?? null;
+    return pickActiveDocument(themes, activeThemeId);
+  }, [display?.themes, display?.activeThemeId]);
+
+  const colorMode: ColorMode = display?.colorMode ?? 'dark';
+
+  const resolved = useMemo(
+    () => resolveTheme(document, colorMode),
+    [document, colorMode],
+  );
+
+  const vars = useMemo(() => themeToVars(resolved), [resolved]);
+
+  const setColorMode = useCallback(
+    (mode: ColorMode) => {
+      if (selectedDisplayId) storeSetColorMode(selectedDisplayId, mode);
+    },
+    [selectedDisplayId, storeSetColorMode],
+  );
 
   return (
-    <ThemeContext.Provider value={{ theme, colorMode }}>
+    <ThemeContext.Provider
+      value={{ document, resolved, vars, colorMode, setColorMode }}>
       {children}
     </ThemeContext.Provider>
   );

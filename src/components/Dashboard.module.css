@@ -31,7 +31,7 @@
   height: 36px;
   border-radius: 50%;
   border: none;
-  background: rgba(var(--theme-accent-rgb), 0.85);
+  background: rgba(var(--token-color-brand-500-rgb), 0.85);
   color: #fff;
   font-size: 22px;
   line-height: 1;
@@ -45,7 +45,7 @@
 }
 
 .addNoteBtn:hover {
-  background: var(--theme-accent);
+  background: var(--token-color-brand-500$1);
   transform: scale(1.1);
 }
 
@@ -74,7 +74,7 @@
   font-size: 1.5rem;
   font-weight: 500;
   margin-bottom: 0.5rem;
-  background: linear-gradient(135deg, var(--theme-accent) 0%, var(--theme-accent-secondary) 100%);
+  background: linear-gradient(135deg, var(--token-color-brand-500$1) 0%, var(--token-color-brand-600) 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -102,8 +102,8 @@
 
 /* Override react-grid-layout styles */
 :global(.react-grid-item.react-grid-placeholder) {
-  background: rgba(var(--theme-accent-rgb), 0.2) !important;
-  border: 2px dashed rgba(var(--theme-accent-rgb), 0.5) !important;
+  background: rgba(var(--token-color-brand-500-rgb), 0.2) !important;
+  border: 2px dashed rgba(var(--token-color-brand-500-rgb), 0.5) !important;
   border-radius: var(--mantine-radius-md);
 }
 
@@ -199,7 +199,7 @@
   width: 10px;
   height: 10px;
   border-radius: 2px;
-  background: rgba(var(--theme-accent-rgb), 0.6);
+  background: rgba(var(--token-color-brand-500-rgb), 0.6);
   transition: all 0.2s ease;
 }
 
@@ -233,7 +233,7 @@
   top: 50%;
   transform: translateY(-50%);
   border-radius: 2px;
-  background: rgba(var(--theme-accent-rgb), 0.6);
+  background: rgba(var(--token-color-brand-500-rgb), 0.6);
   transition: all 0.2s ease;
 }
 
@@ -254,7 +254,7 @@
   left: 50%;
   transform: translateX(-50%);
   border-radius: 2px;
-  background: rgba(var(--theme-accent-rgb), 0.6);
+  background: rgba(var(--token-color-brand-500-rgb), 0.6);
   transition: all 0.2s ease;
 }
 
@@ -268,7 +268,7 @@
 
 /* Hover effects for all handles */
 :global(.react-resizable-handle:hover::after) {
-  background: var(--theme-accent);
+  background: var(--token-color-brand-500$1);
   transform: scale(1.2);
 }
 

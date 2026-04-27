@@ -6,9 +6,9 @@ import { useWakeLock } from '../hooks/useWakeLock';
 import { DisplayProvider } from '../contexts/DisplayContext';
 import type { DashboardLayout, StickyNote, WidgetDefinition } from '../types/widget';
 import type { TodoItem } from '../widgets/TodoWidget';
-import type { ColorMode, DisplayTheme } from '../types/theme';
+import type { ColorMode, ThemeDocument } from '../types/theme';
 import type { HolidayId } from '../holidays/registry';
-import { themeToVars } from '../themes/utils';
+import { resolveTheme, themeToVars, pickActiveDocument } from '../themes';
 import { apiClient } from '../services/apiClient';
 import type { NotesPatchRequest, TodosPatchRequest } from '../types/api';
 import { BackgroundSlideshow } from './BackgroundSlideshow';
@@ -16,9 +16,7 @@ import { Dashboard } from './Dashboard';
 import { HolidayEffects } from './HolidayEffects';
 import classes from './DisplayViewer.module.css';
 
-// Minimum horizontal distance (px) to register as a swipe.
 const SWIPE_THRESHOLD = 60;
-// Once the angle exceeds this ratio (dx/dy), we lock the gesture as horizontal.
 const SWIPE_ANGLE_RATIO = 1.2;
 
 interface DisplayConfig {
@@ -26,7 +24,8 @@ interface DisplayConfig {
   activeLayoutId: string | null;
   rotationEnabled: boolean;
   rotationIntervalMs: number;
-  theme?: DisplayTheme;
+  themes?: ThemeDocument[];
+  activeThemeId?: string | null;
   colorMode?: ColorMode;
   stickyNotesEnabled?: boolean;
   holidayEffectsEnabled?: boolean;
@@ -38,6 +37,7 @@ interface Props {
   isPreview?: boolean;
   previewLayoutId?: string;
   forceRotation?: boolean;
+  colorMode?: ColorMode;
 }
 
 const POLL_INTERVAL_MS = 30_000;
@@ -47,10 +47,10 @@ export function DisplayViewer({
   isPreview = false,
   previewLayoutId,
   forceRotation = false,
+  colorMode,
 }: Props) {
   const [config, setConfig] = useState<DisplayConfig | null>(null);
   const [activeLayoutId, setActiveLayoutId] = useState<string | null>(null);
-  // localColorMode is null when following the config value; set to override locally
   const [localColorMode, setLocalColorMode] = useState<ColorMode | null>(null);
   const [passcodeRequired, setPasscodeRequired] = useState(false);
   const [passcode, setPasscode] = useState<string | null>(null);
@@ -61,19 +61,27 @@ export function DisplayViewer({
   const rootRef = useRef<HTMLDivElement>(null);
   const [progressKey, setProgressKey] = useState(0);
 
-  // Sticky notes state per layout
   const [viewerNotesByLayout, setViewerNotesByLayout] = useState<Record<string, StickyNote[]>>({});
   const pendingWrite = useRef<Record<string, boolean>>({});
   const writeDebounceRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
 
-  // Todo items state per layout:widget (display viewer can add/remove items)
   const [viewerTodoItemsByKey, setViewerTodoItemsByKey] = useState<Record<string, TodoItem[]>>({});
   const pendingTodoWrite = useRef<Record<string, boolean>>({});
   const todoWriteDebounceRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
 
   useWakeLock();
 
-  // Load and poll config
+  const tokenVars = useMemo(() => {
+    const themes = config?.themes;
+    if (!themes?.length) {
+      return {};
+    }
+    const themeDoc = pickActiveDocument(themes, config?.activeThemeId ?? null);
+    const effectiveMode = localColorMode ?? colorMode ?? config?.colorMode ?? 'dark';
+    const resolvedTheme = resolveTheme(themeDoc, effectiveMode);
+    return themeToVars(resolvedTheme);
+  }, [config, colorMode, localColorMode]);
+
   useEffect(() => {
     const load = () => {
       apiClient
@@ -84,7 +92,6 @@ export function DisplayViewer({
         .then((data: { config?: DisplayConfig | null; passcodeRequired?: boolean }) => {
           setPinVerifying(false);
           if (data.passcodeRequired) {
-            // Only flag as an error if we actually tried a passcode and it was rejected
             if (passcode !== null) setPinError(true);
             setPasscodeRequired(true);
             setPasscode(null);
@@ -102,12 +109,9 @@ export function DisplayViewer({
                 const previewLayout = cfg.layouts.find((l) => l.id === previewLayoutId);
                 if (previewLayout) return previewLayout.id;
               }
-              // Keep the current view if it's still visible (e.g. on a poll refresh)
               if (prev && visibleLayouts.find((l) => l.id === prev)) return prev;
-              // Otherwise always start on the first visible layout
               return visibleLayouts[0]?.id ?? cfg.layouts[0]?.id ?? null;
             });
-            // Sync notes from server for non-pending layouts
             setViewerNotesByLayout((prev) => {
               const next = { ...prev };
               for (const layout of cfg.layouts) {
@@ -117,7 +121,6 @@ export function DisplayViewer({
               }
               return next;
             });
-            // Sync todo items from server for non-pending widgets
             setViewerTodoItemsByKey((prev) => {
               const next = { ...prev };
               for (const layout of cfg.layouts) {
@@ -141,7 +144,6 @@ export function DisplayViewer({
     return () => clearInterval(interval);
   }, [displayId, passcode, previewLayoutId]);
 
-  // Debounced note write-back
   const writeNotes = useCallback(
     (layoutId: string, notes: StickyNote[]) => {
       if (writeDebounceRef.current[layoutId]) clearTimeout(writeDebounceRef.current[layoutId]);
@@ -204,7 +206,6 @@ export function DisplayViewer({
     [activeLayoutId, writeNotes]
   );
 
-  // Debounced todo write-back
   const writeTodos = useCallback(
     (layoutId: string, widgetId: string, items: TodoItem[]) => {
       const key = `${layoutId}:${widgetId}`;
@@ -238,7 +239,6 @@ export function DisplayViewer({
     [activeLayoutId, writeTodos]
   );
 
-  // Merge todo overrides into layouts for display
   const layoutList = config?.layouts;
   const mergedLayouts = useMemo(() => {
     if (!layoutList) return [];
@@ -257,7 +257,6 @@ export function DisplayViewer({
     }));
   }, [layoutList, viewerTodoItemsByKey]);
 
-  // Auto-rotation
   const navigate = useCallback((direction: 'next' | 'prev') => {
     if (!config) return;
     if (previewLayoutId) return;
@@ -291,7 +290,6 @@ export function DisplayViewer({
     };
   }, [navigate, rotationEnabled, rotationIntervalMs, visibleCount]);
 
-  // Reset the rotation timer (called after a manual swipe).
   const resetRotation = useCallback(() => {
     if (rotationRef.current) clearInterval(rotationRef.current);
     const visibleLayouts = config?.layouts.filter((l) => !l.hidden) ?? [];
@@ -301,16 +299,12 @@ export function DisplayViewer({
     }
   }, [config, navigate, rotationEnabled, rotationIntervalMs]);
 
-  // Swipe to change views — uses native Touch Events with passive:false so we
-  // can call preventDefault() once a horizontal gesture is confirmed, preventing
-  // the browser from stealing it as a scroll or back-navigation gesture.
   useEffect(() => {
     const el = rootRef.current;
     if (!el) return;
 
     let startX = 0;
     let startY = 0;
-    // null = undecided, 'h' = horizontal lock, 'v' = vertical (pass through)
     let direction: 'h' | 'v' | null = null;
 
     const onTouchStart = (e: TouchEvent) => {
@@ -330,13 +324,11 @@ export function DisplayViewer({
       const dy = t.clientY - startY;
 
       if (direction === null) {
-        // Determine gesture axis once movement is unambiguous
         if (Math.abs(dx) > 5 || Math.abs(dy) > 5) {
           direction = Math.abs(dx) > Math.abs(dy) * SWIPE_ANGLE_RATIO ? 'h' : 'v';
         }
       }
 
-      // Block browser scroll/swipe-back only for horizontal gestures
       if (direction === 'h') {
         e.preventDefault();
       }
@@ -366,7 +358,6 @@ export function DisplayViewer({
     };
   }, [config, navigate, previewLayoutId, resetRotation]);
 
-  // Show PIN entry screen if passcode is required and not yet verified
   if (passcodeRequired) {
     const handleSubmit = (pin: string) => {
       if (pin.length === 4) {
@@ -411,17 +402,12 @@ export function DisplayViewer({
     );
   }
 
-  // View indicator dots — only show visible layouts
   const allLayouts = config?.layouts ?? [];
   const layouts = allLayouts.filter((l) => !l.hidden);
   const showDots = !previewLayoutId && layouts.length > 1;
 
-  // Effective color mode: local toggle > config's colorMode > theme default
   const effectiveColorMode: ColorMode =
-    localColorMode ??
-    config?.colorMode ??
-    (config?.theme?.isDark === false ? 'light' : 'dark');
-  const themeVars = config?.theme ? themeToVars(config.theme, effectiveColorMode) : {};
+    localColorMode ?? colorMode ?? config?.colorMode ?? 'dark';
   const activeLayout = config?.layouts.find((l) => l.id === activeLayoutId);
 
   return (
@@ -429,13 +415,12 @@ export function DisplayViewer({
       <div
         ref={rootRef}
         className={classes.root}
-        style={themeVars as React.CSSProperties}
+        style={tokenVars as React.CSSProperties}
       >
         {activeLayout && <BackgroundSlideshow layout={activeLayout} />}
         {config?.holidayEffectsEnabled && (
           <HolidayEffects previewHolidayId={config.holidayPreviewId} />
         )}
-        {/* Render the dashboard read-only using local state, not the store */}
         {config && (
           <ViewerDashboard
             layouts={mergedLayouts}
@@ -505,7 +490,6 @@ export function DisplayViewer({
             </div>
           </>
         )}
-        {/* Light/dark mode toggle — shown in the top-right corner */}
         {config && (
           <div className={classes.colorModeToggle}>
             <Tooltip
@@ -530,7 +514,6 @@ export function DisplayViewer({
   );
 }
 
-// Internal read-only dashboard that renders a layout without using the store
 function ViewerDashboard({
   layouts,
   activeLayoutId,

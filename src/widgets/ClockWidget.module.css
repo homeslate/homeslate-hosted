@@ -7,8 +7,8 @@
   justify-content: center;
   background: linear-gradient(
     135deg,
-    rgba(var(--theme-accent-rgb), 0.1) 0%,
-    rgba(var(--theme-accent-rgb), 0.05) 100%
+    rgba(var(--token-color-brand-500-rgb), 0.1) 0%,
+    rgba(var(--token-color-brand-500-rgb), 0.05) 100%
   );
   border-radius: var(--mantine-radius-md);
 }
@@ -22,11 +22,11 @@
   font-weight: 300;
   letter-spacing: 0.05em;
   line-height: 1;
-  background: linear-gradient(135deg, var(--theme-accent) 0%, var(--theme-accent-secondary) 100%);
+  background: linear-gradient(135deg, var(--token-color-brand-500$1) 0%, var(--token-color-brand-600) 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
-  text-shadow: 0 0 40px var(--theme-glow);
+  text-shadow: 0 0 40px var(--token-glow);
 }
 
 .date {

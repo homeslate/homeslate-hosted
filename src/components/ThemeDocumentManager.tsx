@@ -26,10 +26,27 @@ import {
   IconX,
 } from '@tabler/icons-react';
 import type { ColorMode } from '../types/theme';
-import type { ThemeDocument, ThemeValidationIssue } from '../themes/themeDocumentValidation';
-import { validateThemeDocument } from '../themes/themeDocumentValidation';
-import { themeDocumentToPreviewVars } from '../themes/themeDocumentPreview';
-import { createThemeDocumentFromPreset, getPresetById, THEME_PRESET_OPTIONS } from '../themes/themeDocumentPresets';
+import type { ThemeDocument } from '../types/theme';
+import {
+  validateThemeDocument,
+  type ThemeValidationIssue,
+} from '../themes/themeDocumentValidation';
+import { getPresetById, THEME_PRESET_OPTIONS, resolveTheme, themeToVars } from '../themes';
+
+function createThemeDocumentFromPreset(presetId: string, name: string): ThemeDocument {
+  const base = getPresetById(presetId);
+  return {
+    ...base,
+    id: `custom_${Date.now()}`,
+    name,
+    isActive: false,
+  };
+}
+
+function themeDocumentToPreviewVars(doc: ThemeDocument, mode: ColorMode) {
+  const resolved = resolveTheme(doc, mode);
+  return themeToVars(resolved);
+}
 import classes from './ThemeDocumentManager.module.css';
 
 interface ThemeDocumentManagerProps {
@@ -57,7 +74,7 @@ function formatIssues(issues: ThemeValidationIssue[]): string {
 }
 
 export function ThemeDocumentManager({ documents, activeThemeDocumentId, onChange }: ThemeDocumentManagerProps) {
-  const themeDocuments = documents ?? [];
+  const themeDocuments = useMemo(() => documents ?? [], [documents]);
 
   /** Row highlight in the library (which theme actions apply to). */
   const [libraryFocusId, setLibraryFocusId] = useState<string | null>(themeDocuments[0]?.id ?? null);
@@ -175,8 +192,7 @@ export function ThemeDocumentManager({ documents, activeThemeDocumentId, onChang
   };
 
   const createNewTheme = () => {
-    const preset = getPresetById(presetId);
-    const rawDoc = createThemeDocumentFromPreset(preset, themeName);
+    const rawDoc = createThemeDocumentFromPreset(presetId, themeName);
     const ids = new Set(themeDocuments.map((doc) => doc.id));
     const id = uniqueId(rawDoc.id, ids);
     const now = new Date().toISOString();
@@ -229,6 +245,7 @@ export function ThemeDocumentManager({ documents, activeThemeDocumentId, onChang
     const nextActiveId = activeThemeDocumentId ?? editingThemeId;
 
     onChange(withActiveFlags(nextDocs, nextActiveId), nextActiveId);
+    setEditorValue(JSON.stringify(normalizedDoc, null, 2));
     setSaveError(null);
     setSaveSuccess(`Saved "${normalizedDoc.name}".`);
   };

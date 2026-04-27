@@ -19,6 +19,20 @@ function hashPin(pin: string): string {
   return createHash('sha256').update(pin).digest('hex');
 }
 
+function stripLegacyThemeFields(config: unknown): unknown {
+  if (!config || typeof config !== 'object') return config;
+  const {
+    theme: _t,
+    themeDocuments: _td,
+    activeThemeDocumentId: _atd,
+    ...rest
+  } = config as Record<string, unknown>;
+  void _t;
+  void _td;
+  void _atd;
+  return rest;
+}
+
 // Public endpoint — returns the display config for a given display_id (public polling UUID).
 // If the display has a passcode set, the caller must supply ?passcode=<4-digit-pin>.
 // Returns { passcodeRequired: true } (HTTP 401) when passcode is missing/wrong.
@@ -104,7 +118,7 @@ export const handler: Handler = async (event) => {
     return {
       statusCode: 200,
       headers: CORS,
-      body: JSON.stringify({ config, updated_at: updatedAt }),
+      body: JSON.stringify({ config: stripLegacyThemeFields(config), updated_at: updatedAt }),
     };
   } catch (err) {
     console.error('Display fetch error:', err);

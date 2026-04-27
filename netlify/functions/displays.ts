@@ -21,6 +21,20 @@ function hashPin(pin: string): string {
   return createHash('sha256').update(pin).digest('hex');
 }
 
+function stripLegacyThemeFields(config: unknown): unknown {
+  if (!config || typeof config !== 'object') return config;
+  const {
+    theme: _t,
+    themeDocuments: _td,
+    activeThemeDocumentId: _atd,
+    ...rest
+  } = config as Record<string, unknown>;
+  void _t;
+  void _td;
+  void _atd;
+  return rest;
+}
+
 export const handler: Handler = async (event) => {
   if (event.httpMethod === 'OPTIONS') {
     return optionsResponse(AUTH_JSON_HEADERS);
@@ -83,7 +97,7 @@ export const handler: Handler = async (event) => {
         name: r.name,
         created_at: r.createdAt,
         passcode_enabled: r.passcodeEnabled,
-        config: r.config,
+        config: stripLegacyThemeFields(r.config),
         config_updated_at: r.configUpdatedAt,
         is_owner: r.isOwner,
       }));

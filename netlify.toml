@@ -15,10 +15,3 @@
   from = "/api/*"
   to = "/.netlify/functions/:splat"
   status = 200
-
-# SPA fallback — must be global [[redirects]]; context.* redirect tables are ignored
-# by Netlify for netlify.toml (redirects are always global). Order: specific rules first.
-[[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200

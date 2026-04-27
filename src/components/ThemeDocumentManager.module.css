@@ -174,8 +174,8 @@
   flex: 1;
   min-height: 240px;
   padding: 1rem;
-  background: var(--theme-bg);
-  font-family: var(--theme-font-family);
+  background: var(--token-surface-canvas);
+  font-family: var(--token-font-base);
 }
 
 .previewToolbar {
@@ -185,9 +185,9 @@
   padding: 0.5rem 0.75rem;
   margin-bottom: 0.75rem;
   border-radius: 8px;
-  background: var(--theme-surface-bg);
-  border: 1px solid var(--theme-surface-border);
-  color: var(--theme-text);
+  background: var(--token-surface-card);
+  border: 1px solid var(--token-border-default);
+  color: var(--token-text-primary);
   font-size: 0.75rem;
   font-weight: 600;
 }
@@ -195,20 +195,20 @@
 .previewWidget {
   border-radius: 12px;
   padding: 1rem;
-  background: var(--theme-surface-bg);
-  border: 1px solid var(--theme-surface-border);
-  box-shadow: 0 0 16px var(--theme-glow);
+  background: var(--token-surface-card);
+  border: 1px solid var(--token-border-default);
+  box-shadow: 0 0 16px var(--token-glow);
 }
 
 .previewWidgetTitle {
-  color: var(--theme-text);
+  color: var(--token-text-primary);
   font-size: 1rem;
   font-weight: 600;
   margin: 0 0 0.25rem;
 }
 
 .previewWidgetMuted {
-  color: var(--theme-text-muted);
+  color: var(--token-text-muted);
   font-size: 0.8rem;
   margin: 0 0 1rem;
 }
@@ -219,8 +219,8 @@
   border-radius: 8px;
   font-size: 0.8rem;
   font-weight: 500;
-  border: 1px solid var(--theme-accent);
-  background: var(--theme-accent);
+  border: 1px solid var(--token-color-brand-500$1);
+  background: var(--token-color-brand-500$1);
   color: #fff;
   cursor: default;
 }

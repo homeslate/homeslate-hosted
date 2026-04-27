@@ -351,9 +351,7 @@ export function DisplayDetailPage() {
     openPreview,
   } = useDashboardStore();
   const display = displays.find((d) => d.id === selectedDisplayId);
-  // Effective color mode for this display
-  const colorMode: ColorMode =
-    display?.colorMode ?? (display?.theme?.isDark === false ? 'light' : 'dark');
+  const colorMode: ColorMode = display?.colorMode ?? 'dark';
   const [editingName, setEditingName] = useState(false);
   const [nameValue, setNameValue] = useState(display?.name ?? '');
   const [shareOpen, setShareOpen] = useState(false);
@@ -382,9 +380,8 @@ export function DisplayDetailPage() {
       activeLayoutId,
       rotationEnabled,
       rotationIntervalMs,
-      theme: displayTheme,
-      themeDocuments,
-      activeThemeDocumentId,
+      themes,
+      activeThemeId,
       colorMode: savedColorMode,
       stickyNotesEnabled,
       holidayEffectsEnabled,
@@ -398,9 +395,8 @@ export function DisplayDetailPage() {
       activeLayoutId,
       rotationEnabled,
       rotationIntervalMs,
-      theme: displayTheme,
-      themeDocuments,
-      activeThemeDocumentId,
+      themes,
+      activeThemeId,
       colorMode: savedColorMode,
       stickyNotesEnabled,
       holidayEffectsEnabled,
@@ -726,7 +722,7 @@ export function DisplayDetailPage() {
                   <Button
                     variant="light"
                     leftSection={<IconDeviceTv size={16} />}
-                    onClick={() => openPreview({ displayId: display.displayId, forceRotation: true })}
+                    onClick={() => openPreview({ displayId: display.displayId, forceRotation: true, colorMode })}
                   >
                     Preview Auto-Rotation
                   </Button>
@@ -930,15 +926,15 @@ export function DisplayDetailPage() {
             <section className={classes.section}>
               <Title order={5} className={classes.sectionTitle} mb="md">Themes</Title>
               <ThemeDocumentManager
-                documents={display.themeDocuments}
-                activeThemeDocumentId={display.activeThemeDocumentId}
-                onChange={(themeDocuments, activeThemeDocumentId) => {
+                documents={display.themes}
+                activeThemeDocumentId={display.activeThemeId}
+                onChange={(themes, activeThemeId) => {
                   upsertDisplay({
                     ...display,
-                    themeDocuments,
-                    activeThemeDocumentId,
+                    themes,
+                    activeThemeId,
                   });
-                  saveConfig({ themeDocuments, activeThemeDocumentId });
+                  saveConfig({ themes, activeThemeId });
                 }}
               />
             </section>

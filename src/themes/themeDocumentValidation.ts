@@ -362,6 +362,31 @@ const themeDocumentSchema = z
   })
   .strict();
 
+const ALIAS_RE = /^\{([\w.]+)\}$/;
+
+function findAliasIssues(
+  doc: unknown,
+  prefix: string[] = [],
+): ThemeValidationIssue[] {
+  if (!doc || typeof doc !== "object") return [];
+  const issues: ThemeValidationIssue[] = [];
+  const record = doc as Record<string, unknown>;
+  if (typeof record.$value === "string") {
+    const v = record.$value;
+    if ((v.includes("{") || v.includes("}")) && !ALIAS_RE.test(v)) {
+      issues.push({
+        path: prefix.join(".") || "$",
+        message: `Malformed alias reference: ${JSON.stringify(v)}`,
+      });
+    }
+  }
+  for (const [key, value] of Object.entries(record)) {
+    if (key === "$value" || key === "$type" || key === "$description") continue;
+    issues.push(...findAliasIssues(value, [...prefix, key]));
+  }
+  return issues;
+}
+
 export type ThemeDocument = z.infer<typeof themeDocumentSchema>;
 
 export interface ThemeValidationIssue {
@@ -428,16 +453,20 @@ function normalizeTokenTypeCascade(value: unknown, inheritedType?: string): unkn
 export function validateThemeDocument(input: unknown): ThemeValidationResult {
   const normalized = normalizeTokenTypeCascade(input);
   const parsed = themeDocumentSchema.safeParse(normalized);
-  if (parsed.success) {
-    return { ok: true, data: parsed.data, issues: [] };
+  if (!parsed.success) {
+    const issues: ThemeValidationIssue[] = parsed.error.issues.map((issue) => ({
+      path: issuePath(issue.path),
+      message: issue.message,
+    }));
+    return { ok: false, issues };
   }
 
-  const issues: ThemeValidationIssue[] = parsed.error.issues.map((issue) => ({
-    path: issuePath(issue.path),
-    message: issue.message,
-  }));
+  const aliasIssues = findAliasIssues(parsed.data.tokens);
+  if (aliasIssues.length > 0) {
+    return { ok: false, issues: aliasIssues };
+  }
 
-  return { ok: false, issues };
+  return { ok: true, data: parsed.data, issues: [] };
 }
 
 export function isThemeDocumentCandidate(input: unknown): input is UnknownRecord {

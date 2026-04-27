@@ -1,6 +1,6 @@
 .root {
   height: 100vh;
-  background: var(--theme-bg, var(--mantine-color-body));
+  background: var(--token-surface-canvas, var(--mantine-color-body));
   display: flex;
   flex-direction: column;
 }
@@ -10,8 +10,8 @@
   align-items: center;
   justify-content: space-between;
   padding: 0.75rem 1.5rem;
-  background: var(--theme-surface-bg, var(--mantine-color-default));
-  border-bottom: 1px solid var(--theme-surface-border, var(--mantine-color-default-border));
+  background: var(--token-surface-card, var(--mantine-color-default));
+  border-bottom: 1px solid var(--token-border-default, var(--mantine-color-default-border));
   height: 56px;
   flex-shrink: 0;
   z-index: 10;
@@ -22,8 +22,8 @@
   display: flex;
   justify-content: flex-end;
   padding: 0.75rem 1.5rem;
-  border-bottom: 1px solid var(--theme-surface-border, var(--mantine-color-default-border));
-  background: var(--theme-surface-bg, var(--mantine-color-default));
+  border-bottom: 1px solid var(--token-border-default, var(--mantine-color-default-border));
+  background: var(--token-surface-card, var(--mantine-color-default));
 }
 
 .body {
@@ -38,6 +38,6 @@
   flex-direction: column;
   overflow: hidden;
   min-width: 0;
-  background: var(--theme-bg);
+  background: var(--token-surface-canvas);
   position: relative;
 }

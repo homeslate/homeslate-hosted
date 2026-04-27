@@ -38,6 +38,10 @@ if (import.meta.env.DEV && navigator.serviceWorker?.controller) {
   });
 }
 
+// Boot fallback: render auth/pair pages with a minimal --token-* set until ThemeProvider
+// runs and stamps the full namespace on the viewer root. See App.css :root[data-theme-fallback].
+document.documentElement.dataset.themeFallback = ''
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <App />

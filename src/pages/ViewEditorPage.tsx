@@ -16,7 +16,7 @@ import {
 import { IconArrowLeft, IconDeviceTv, IconLogout, IconCloudCheck, IconSun, IconMoon, IconSettings } from '@tabler/icons-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useDashboardStore } from '../store/dashboardStore';
-import { useTheme, themeToVars } from '../contexts/ThemeContext';
+import { useTheme } from '../contexts/ThemeContext';
 import { BackgroundSlideshow } from '../components/BackgroundSlideshow';
 import type { ColorMode } from '../types/theme';
 import { apiClient } from '../services/apiClient';
@@ -36,7 +36,7 @@ export function ViewEditorPage() {
     setColorMode,
     setLayoutBackground,
   } = useDashboardStore();
-  const { theme, colorMode } = useTheme();
+  const { vars: themeVars, colorMode } = useTheme();
   const display = displays.find((d) => d.id === selectedDisplayId);
   const view = display?.layouts.find((l) => l.id === selectedViewId);
   const [bgSettingsOpen, setBgSettingsOpen] = useState(false);
@@ -52,7 +52,9 @@ export function ViewEditorPage() {
       if (!d || !prev) return;
       if (
         d.layouts !== prev.layouts ||
-        d.theme !== prev.theme ||
+        d.themes !== prev.themes ||
+        d.activeThemeId !== prev.activeThemeId ||
+        d.colorMode !== prev.colorMode ||
         d.stickyNotesEnabled !== prev.stickyNotesEnabled ||
         d.holidayEffectsEnabled !== prev.holidayEffectsEnabled ||
         d.holidayPreviewId !== prev.holidayPreviewId
@@ -62,7 +64,9 @@ export function ViewEditorPage() {
           activeLayoutId,
           rotationEnabled,
           rotationIntervalMs,
-          theme: displayTheme,
+          themes,
+          activeThemeId,
+          colorMode: savedColorMode,
           stickyNotesEnabled,
           holidayEffectsEnabled,
           holidayPreviewId,
@@ -72,7 +76,9 @@ export function ViewEditorPage() {
           activeLayoutId,
           rotationEnabled,
           rotationIntervalMs,
-          theme: displayTheme,
+          themes,
+          activeThemeId,
+          colorMode: savedColorMode,
           stickyNotesEnabled,
           holidayEffectsEnabled,
           holidayPreviewId,
@@ -106,7 +112,7 @@ export function ViewEditorPage() {
   };
 
   return (
-    <div className={classes.root} style={themeToVars(theme, colorMode) as React.CSSProperties}>
+    <div className={classes.root} style={themeVars as React.CSSProperties}>
       <header className={classes.header}>
         <Group gap="sm">
           <Tooltip label="Back to display">
@@ -165,7 +171,7 @@ export function ViewEditorPage() {
           <Button
             variant="light"
             leftSection={<IconDeviceTv size={16} />}
-            onClick={() => openPreview({ displayId: display.displayId, layoutId: view.id })}
+            onClick={() => openPreview({ displayId: display.displayId, layoutId: view.id, colorMode })}
           >
             Preview This View
           </Button>
@@ -174,7 +180,7 @@ export function ViewEditorPage() {
 
       <div className={classes.body}>
         <WidgetPanel />
-        <main className={classes.main} style={themeToVars(theme, colorMode) as React.CSSProperties}>
+        <main className={classes.main} style={themeVars as React.CSSProperties}>
           <BackgroundSlideshow layout={view} />
           <Dashboard layoutId={selectedViewId ?? undefined} isEditing={true} />
         </main>

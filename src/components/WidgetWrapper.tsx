@@ -26,6 +26,18 @@ export function WidgetWrapper({ widget, isEditing, onConfigChangeOverride }: Wid
   const [healthStatus, setHealthStatus] = useState<WidgetHealthStatus>('idle');
   const { updateWidgetConfig, removeWidget } = useDashboardStore();
 
+  useEffect(() => {
+    const onHealthChange = (event: Event) => {
+      const customEvent = event as CustomEvent<{ widgetId: string; status: WidgetHealthStatus }>;
+      if (customEvent.detail?.widgetId === widget.id) {
+        setHealthStatus(customEvent.detail.status);
+      }
+    };
+
+    window.addEventListener('widget-health-change', onHealthChange);
+    return () => window.removeEventListener('widget-health-change', onHealthChange);
+  }, [widget.id]);
+
   const widgetEntry = getWidgetByType(widget.type);
 
   if (!widgetEntry) {
@@ -47,18 +59,6 @@ export function WidgetWrapper({ widget, isEditing, onConfigChangeOverride }: Wid
       updateWidgetConfig(widget.id, config);
     }
   };
-
-  useEffect(() => {
-    const onHealthChange = (event: Event) => {
-      const customEvent = event as CustomEvent<{ widgetId: string; status: WidgetHealthStatus }>;
-      if (customEvent.detail?.widgetId === widget.id) {
-        setHealthStatus(customEvent.detail.status);
-      }
-    };
-
-    window.addEventListener('widget-health-change', onHealthChange);
-    return () => window.removeEventListener('widget-health-change', onHealthChange);
-  }, [widget.id]);
 
   const healthLabel: Record<WidgetHealthStatus, string> = {
     idle: 'No recent data yet',

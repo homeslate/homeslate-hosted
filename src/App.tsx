@@ -1,12 +1,13 @@
 import { MantineProvider, createTheme, ActionIcon, Tooltip, Loader, Center } from '@mantine/core';
 import { IconX } from '@tabler/icons-react';
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense, useMemo, type ReactNode } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useWakeLock } from './hooks/useWakeLock';
 import { AuthProvider } from './contexts/AuthContext';
 import { useAuth } from './contexts/AuthContext';
-import { ThemeProvider } from './contexts/ThemeContext';
+import { ThemeProvider, useTheme } from './contexts/ThemeContext';
 import { useDashboardStore } from './store/dashboardStore';
+import { mantineThemeFromResolved } from './themes/mantineBridge';
 import { ManagementLayout } from './components/ManagementLayout';
 import '@mantine/core/styles.css';
 import '@mantine/dates/styles.css';
@@ -30,7 +31,7 @@ function PageLoader() {
   );
 }
 
-const mantineTheme = createTheme({
+const DEFAULT_MANTINE_THEME = createTheme({
   primaryColor: 'indigo',
   fontFamily: '"Outfit", "Inter", -apple-system, BlinkMacSystemFont, sans-serif',
   headings: {
@@ -57,12 +58,21 @@ const mantineTheme = createTheme({
   },
 });
 
-function useCurrentDisplayColorScheme(): 'light' | 'dark' {
-  const { selectedDisplayId, displays } = useDashboardStore();
-  const display = displays.find((d) => d.id === selectedDisplayId);
-  // colorMode overrides the theme's isDark default
-  if (display?.colorMode) return display.colorMode;
-  return display?.theme?.isDark === false ? 'light' : 'dark';
+function MantineBridge({ children }: { children: ReactNode }) {
+  const { resolved, colorMode } = useTheme();
+  const theme = useMemo(
+    () =>
+      createTheme({
+        ...DEFAULT_MANTINE_THEME,
+        ...mantineThemeFromResolved(resolved),
+      }),
+    [resolved],
+  );
+  return (
+    <MantineProvider theme={theme} forceColorScheme={colorMode}>
+      {children}
+    </MantineProvider>
+  );
 }
 
 // If the URL has ?display=<uuid>, persist it so it survives OAuth redirects.
@@ -112,6 +122,7 @@ function AppInner() {
           isPreview
           previewLayoutId={preview.layoutId}
           forceRotation={preview.forceRotation}
+          colorMode={preview.colorMode}
         />
         <div style={{ position: 'fixed', top: 12, right: 12, zIndex: 9999 }}>
           <Tooltip label="Exit preview" position="left" withArrow>
@@ -145,18 +156,16 @@ function AppInner() {
 }
 
 function App() {
-  const colorScheme = useCurrentDisplayColorScheme();
-
   return (
-    <MantineProvider theme={mantineTheme} forceColorScheme={colorScheme}>
-      <AuthProvider>
-        <ThemeProvider>
+    <AuthProvider>
+      <ThemeProvider>
+        <MantineBridge>
           <BrowserRouter>
             <AppInner />
           </BrowserRouter>
-        </ThemeProvider>
-      </AuthProvider>
-    </MantineProvider>
+        </MantineBridge>
+      </ThemeProvider>
+    </AuthProvider>
   );
 }
 

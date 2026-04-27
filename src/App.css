@@ -1,57 +1,59 @@
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Space+Grotesk:wght@300;400;500;600;700&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=Nunito:wght@300;400;500;600;700&family=Sora:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500&family=Space+Mono:wght@400;700&display=swap');
 
 :root {
-  /* Legacy aliases */
-  --gradient-primary: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  --gradient-accent: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-  --glass-bg: rgba(30, 30, 40, 0.6);
-  --glass-border: rgba(255, 255, 255, 0.08);
-
-  /* Theme defaults (Cosmos) — overridden by ThemeProvider inline styles */
-  --theme-bg:
+  /* Theme defaults (Cosmos) */
+  --token-surface-canvas:
     radial-gradient(ellipse at 20% 20%, rgba(99, 102, 241, 0.15) 0%, transparent 50%),
     radial-gradient(ellipse at 80% 80%, rgba(168, 85, 247, 0.1) 0%, transparent 50%),
     radial-gradient(ellipse at 50% 50%, rgba(16, 185, 129, 0.05) 0%, transparent 50%),
     #0a0a0f;
-  --theme-accent: #6366f1;
-  --theme-accent-rgb: 99, 102, 241;
-  --theme-accent-secondary: #a855f7;
-  --theme-surface-bg: rgba(30, 30, 40, 0.6);
-  --theme-surface-border: rgba(255, 255, 255, 0.08);
-  --theme-text: #e8e8f0;
-  --theme-text-muted: #6c6c7e;
-  --theme-glow: rgba(99, 102, 241, 0.3);
-  --theme-font-family: 'Outfit', 'Inter', sans-serif;
+  --token-color-brand-500: #6366f1;
+  --token-color-brand-500-rgb: 99, 102, 241;
+  --token-color-brand-600: #a855f7;
+  --token-surface-card: rgba(30, 30, 40, 0.6);
+  --token-border-default: rgba(255, 255, 255, 0.08);
+  --token-text-primary: #e8e8f0;
+  --token-text-muted: #6c6c7e;
+  --token-glow: rgba(99, 102, 241, 0.3);
+  --token-font-base: 'Outfit', 'Inter', sans-serif;
+}
+
+:root[data-theme-fallback] {
+  /* Minimal fallback tokens when ThemeContext hasn't loaded */
+  --token-surface-canvas: #0a0a0f;
+  --token-surface-card: rgba(30, 30, 40, 0.6);
+  --token-surface-overlay: rgba(30, 30, 40, 0.6);
+  --token-text-primary: #e8e8f0;
+  --token-text-muted: #6c6c7e;
+  --token-border-default: rgba(255, 255, 255, 0.08);
+  --token-color-brand-500: #6366f1;
+  --token-color-brand-500-rgb: 99, 102, 241;
+  --token-focus-ring: rgba(99, 102, 241, 0.3);
+  --token-glow: rgba(99, 102, 241, 0.3);
+  --token-interactive-primary-bg: #6366f1;
+  --token-interactive-primary-fg: #ffffff;
+  --token-font-base: 'Inter', sans-serif;
 }
 
 * {
   box-sizing: border-box;
-  /* Allow panning/scrolling inside scrollable children but block double-tap
-     zoom and long-press context menus on non-interactive elements. */
   touch-action: manipulation;
-  /* Prevent the OS text-selection magnifier from appearing on long-press. */
   -webkit-user-select: none;
   user-select: none;
-  /* Suppress the grey tap-highlight rectangle on Android Chrome. */
   -webkit-tap-highlight-color: transparent;
 }
 
-/* Re-enable text selection for actual text content */
 p, span, h1, h2, h3, h4, h5, h6, label, li, td, th, input, textarea {
   -webkit-user-select: text;
   user-select: text;
 }
 
 html {
-  /* Prevent the page from rubber-band scrolling / bouncing in the browser
-     chrome when installed as a PWA. */
   overscroll-behavior: none;
 }
 
 html, body, #root {
   height: 100%;
-  /* Use dvh so the layout fills the real visual viewport on Android,
-     accounting for the disappearing browser toolbar. */
   min-height: 100dvh;
   margin: 0;
   padding: 0;
@@ -59,12 +61,8 @@ html, body, #root {
 }
 
 body {
-  /* Use the active theme background so the body matches the display — the
-     ThemeProvider injects --theme-bg as an inline style on the page root,
-     but the body itself needs a sensible fallback. */
-  background: var(--theme-bg, #0a0a0f);
+  background: var(--token-surface-canvas, #0a0a0f);
   background-attachment: fixed;
-  /* Prevent body-level overscroll glow/bounce on Android. */
   overscroll-behavior: none;
 }
 
@@ -97,7 +95,6 @@ body {
   overflow: hidden;
 }
 
-/* Scrollbar styling */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
@@ -117,13 +114,11 @@ body {
   background: rgba(255, 255, 255, 0.25);
 }
 
-/* Selection styling */
 ::selection {
   background: rgba(99, 102, 241, 0.4);
   color: white;
 }
 
-/* Animations */
 @keyframes fadeIn {
   from {
     opacity: 0;
@@ -153,7 +148,6 @@ body {
   }
 }
 
-/* Utility classes */
 .animate-in {
   animation: fadeIn 0.3s ease-out forwards;
 }

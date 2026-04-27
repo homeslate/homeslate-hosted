@@ -1,6 +1,17 @@
-export { PRESET_THEMES, FONT_OPTIONS } from './presets';
-export { themeToVars, hexToRgb } from './utils';
-export { PRESET_THEMES as default } from './presets';
+export {
+  DEFAULT_THEME_DOCUMENTS,
+  THEME_PRESET_OPTIONS,
+  getPresetById,
+  pickActiveDocument,
+} from "./defaults";
+export { themeToVars, hexToRgb, getBackgroundStyle } from "./utils";
+export { resolveTheme, ThemeResolutionError } from "./resolver";
+export { mantineThemeFromResolved } from "./mantineBridge";
+export {
+  validateThemeDocument,
+  isThemeDocumentCandidate,
+} from "./themeDocumentValidation";
+export type { ThemeDocument } from "./themeDocumentValidation";
 
-import { PRESET_THEMES } from './presets';
-export const defaultTheme = PRESET_THEMES[0]; // Cosmos
+import { DEFAULT_THEME_DOCUMENTS } from "./defaults";
+export const defaultThemeDocument = DEFAULT_THEME_DOCUMENTS[0];
