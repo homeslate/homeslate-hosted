@@ -1,8 +1,9 @@
-import { useCallback } from 'react';
+import { useCallback, useEffect, useState, type ChangeEvent } from 'react';
 import { Stack, Group, Switch, TextInput, Select, ActionIcon, Text, Paper } from '@mantine/core';
-import { TimeInput } from '@mantine/dates';
+import { TimeInput, type TimeInputProps } from '@mantine/dates';
 import { IconPlus, IconTrash } from '@tabler/icons-react';
 import { v4 as uuidv4 } from 'uuid';
+import { isValidTime } from './schedule';
 import { ALARM_TONE_OPTIONS, type AlarmDefinition, type AlarmToneId } from './types';
 import classes from './AlarmListEditor.module.css';
 
@@ -16,6 +17,34 @@ function summarizeDays(days: number[]): string {
     .sort((a, b) => a - b)
     .map((d) => DAY_NAMES_SHORT[d])
     .join(', ');
+}
+
+function AlarmTimeInput({
+  value,
+  onChange,
+  ...props
+}: { value: string; onChange: (time: string) => void } & Omit<TimeInputProps, 'value' | 'onChange'>) {
+  const [draft, setDraft] = useState(value);
+
+  useEffect(() => {
+    setDraft(value);
+  }, [value]);
+
+  const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const next = e.currentTarget.value;
+    setDraft(next);
+    if (isValidTime(next)) {
+      onChange(next);
+    }
+  };
+
+  const handleBlur = () => {
+    if (!isValidTime(draft)) {
+      setDraft(value);
+    }
+  };
+
+  return <TimeInput value={draft} onChange={handleChange} onBlur={handleBlur} {...props} />;
 }
 
 function createAlarm(): AlarmDefinition {
@@ -129,9 +158,9 @@ export function AlarmListEditor({ alarms, onChange, readOnly = false }: AlarmLis
                 </ActionIcon>
               </Group>
               <Group gap="xs" wrap="wrap">
-                <TimeInput
+                <AlarmTimeInput
                   value={alarm.time}
-                  onChange={(e) => updateAlarm(alarm.id, { time: e.currentTarget.value })}
+                  onChange={(time) => updateAlarm(alarm.id, { time })}
                   size="sm"
                   aria-label="Alarm time"
                   className={classes.timeInput}
