@@ -76,6 +76,8 @@ export function DisplayViewer({
 
   useWakeLock();
 
+  const alarms = useMemo(() => coerceAlarms(config?.alarms), [config?.alarms]);
+
   const tokenVars = useMemo(() => {
     const themes = config?.themes;
     if (!themes?.length) {
@@ -417,7 +419,7 @@ export function DisplayViewer({
 
   return (
     <DisplayProvider displayId={displayId} isPreview={isPreview}>
-      <AlarmsProvider alarms={coerceAlarms(config?.alarms)} readOnly>
+      <AlarmsProvider alarms={alarms} readOnly>
         <div
           ref={rootRef}
           className={classes.root}
@@ -516,7 +518,7 @@ export function DisplayViewer({
             </div>
           )}
           {!isPreview && (
-            <AlarmRuntime alarms={coerceAlarms(config?.alarms)} enabled={!passcodeRequired} />
+            <AlarmRuntime alarms={alarms} enabled={!passcodeRequired} />
           )}
         </div>
       </AlarmsProvider>

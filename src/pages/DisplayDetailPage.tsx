@@ -373,6 +373,8 @@ export function DisplayDetailPage() {
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
   );
 
+  const alarmsSaveDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   if (!display) return null;
 
   const saveConfig = (overrides: Partial<typeof display> = {}) => {
@@ -845,7 +847,10 @@ export function DisplayDetailPage() {
                       alarms={display.alarms ?? []}
                       onChange={(next) => {
                         setAlarms(display.id, next);
-                        saveConfig({ alarms: next });
+                        if (alarmsSaveDebounceRef.current) clearTimeout(alarmsSaveDebounceRef.current);
+                        alarmsSaveDebounceRef.current = setTimeout(() => {
+                          saveConfig({ alarms: next });
+                        }, 500);
                       }}
                     />
                   </Stack>

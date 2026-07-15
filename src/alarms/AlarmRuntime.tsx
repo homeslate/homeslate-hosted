@@ -71,12 +71,13 @@ export function AlarmRuntime({ alarms, enabled = true }: Props) {
       enqueue([...snoozeDue, ...scheduled]);
 
       // If active alarm was removed/disabled, drop it
-      setQueue((prev) =>
-        prev.filter((q) => {
+      setQueue((prev) => {
+        const next = prev.filter((q) => {
           const def = alarms.find((a) => a.id === q.alarm.id);
           return Boolean(def?.enabled);
-        })
-      );
+        });
+        return next.length === prev.length ? prev : next;
+      });
     }, TICK_MS);
     return () => window.clearInterval(id);
   }, [alarms, enabled, enqueue]);
