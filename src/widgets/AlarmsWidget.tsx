@@ -10,12 +10,16 @@ export interface AlarmsConfig extends WidgetConfig {
 
 export function AlarmsWidget({ widget }: WidgetProps<AlarmsConfig>) {
   const { transparentBackground } = widget.config;
-  const { alarms, onAlarmsChange, readOnly } = useAlarms();
+  const { provided, alarms, onAlarmsChange, readOnly } = useAlarms();
 
   return (
     <Box className={`${classes.container} ${transparentBackground ? classes.transparent : ''}`}>
-      {onAlarmsChange ? (
-        <AlarmListEditor alarms={alarms} onChange={onAlarmsChange} readOnly={readOnly} />
+      {provided ? (
+        <AlarmListEditor
+          alarms={alarms}
+          onChange={onAlarmsChange ?? (() => {})}
+          readOnly={readOnly}
+        />
       ) : (
         <Stack className={classes.empty} gap={4}>
           <Text size="sm" c="dimmed" ta="center">
@@ -29,7 +33,7 @@ export function AlarmsWidget({ widget }: WidgetProps<AlarmsConfig>) {
 
 export function AlarmsWidgetSettings({ widget, onConfigChange }: WidgetProps<AlarmsConfig>) {
   const { transparentBackground } = widget.config;
-  const { alarms, onAlarmsChange, readOnly } = useAlarms();
+  const { provided, alarms, onAlarmsChange, readOnly } = useAlarms();
 
   return (
     <Stack gap="md">
@@ -45,7 +49,13 @@ export function AlarmsWidgetSettings({ widget, onConfigChange }: WidgetProps<Ala
         />
       </Group>
 
-      {onAlarmsChange && <AlarmListEditor alarms={alarms} onChange={onAlarmsChange} readOnly={readOnly} />}
+      {provided && (
+        <AlarmListEditor
+          alarms={alarms}
+          onChange={onAlarmsChange ?? (() => {})}
+          readOnly={readOnly}
+        />
+      )}
     </Stack>
   );
 }

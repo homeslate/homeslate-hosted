@@ -2,12 +2,14 @@ import { createContext, useContext, type ReactNode } from 'react';
 import type { AlarmDefinition } from './types';
 
 interface AlarmsContextValue {
+  provided: boolean;
   alarms: AlarmDefinition[];
   onAlarmsChange?: (alarms: AlarmDefinition[]) => void;
   readOnly: boolean;
 }
 
 const AlarmsContext = createContext<AlarmsContextValue>({
+  provided: false,
   alarms: [],
   readOnly: true,
 });
@@ -25,7 +27,7 @@ export function AlarmsProvider({
 }) {
   return (
     <AlarmsContext.Provider
-      value={{ alarms, onAlarmsChange, readOnly: readOnly || !onAlarmsChange }}
+      value={{ provided: true, alarms, onAlarmsChange, readOnly: readOnly || !onAlarmsChange }}
     >
       {children}
     </AlarmsContext.Provider>
