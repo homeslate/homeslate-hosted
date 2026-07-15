@@ -2,44 +2,43 @@
   display: flex;
   flex-direction: column;
   gap: 1rem;
-  min-height: min(70vh, 900px);
+  height: 100%;
+  min-height: 0;
 }
 
 .mainLayout {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 1rem;
   align-items: stretch;
   flex: 1;
   min-height: 0;
+  overflow: hidden;
 }
 
 .library {
-  flex: 1 1 100%;
+  flex: 0 0 240px;
   min-width: 0;
   display: flex;
   flex-direction: column;
-  max-height: min(70vh, 720px);
+  max-height: none;
 }
 
 .workspace {
-  flex: 1 1 100%;
+  flex: 1 1 auto;
   min-width: 0;
-  min-height: 420px;
+  min-height: 0;
   display: flex;
   flex-direction: column;
 }
 
 @media (min-width: 960px) {
   .library {
-    flex: 0 0 300px;
-    max-width: 300px;
-    max-height: none;
+    max-width: 240px;
   }
 
   .workspace {
-    flex: 1 1 calc(100% - 300px - 1rem);
-    min-height: 520px;
+    min-height: 0;
   }
 }
 
@@ -126,33 +125,67 @@
 }
 
 .editorPreviewRow {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: 1fr;
+  grid-template-areas:
+    "editor"
+    "preview";
   gap: 1rem;
-  align-items: stretch;
+  align-items: start;
   flex: 1;
   min-height: 0;
+  overflow: hidden;
 }
 
 .editorColumn {
-  flex: 1 1 100%;
+  grid-area: editor;
   min-width: 0;
+  max-height: 100%;
+  overflow-y: auto;
+  padding-right: 0.15rem;
 }
 
 .previewColumn {
-  flex: 1 1 100%;
+  grid-area: preview;
   min-width: 0;
+  max-height: 100%;
 }
 
-@media (min-width: 900px) {
-  .editorColumn {
-    flex: 1 1 calc(50% - 0.5rem);
-    max-width: calc(50% - 0.5rem);
+@media (min-width: 1120px) {
+  .editorPreviewRow {
+    grid-template-columns: minmax(320px, 0.72fr) minmax(520px, 1.28fr);
+    grid-template-areas: "editor preview";
   }
 
   .previewColumn {
-    flex: 1 1 calc(50% - 0.5rem);
-    max-width: calc(50% - 0.5rem);
+    position: sticky;
+    top: 1rem;
+  }
+}
+
+@media (max-width: 900px) {
+  .mainLayout {
+    flex-direction: column;
+    overflow: visible;
+  }
+
+  .library {
+    flex-basis: auto;
+    max-height: 280px;
+  }
+
+  .workspace {
+    min-height: 680px;
+  }
+
+  .editorPreviewRow {
+    overflow: visible;
+  }
+
+  .editorColumn,
+  .previewColumn {
+    max-height: none;
+    overflow: visible;
   }
 }
 
@@ -161,10 +194,159 @@
   min-height: 380px;
 }
 
+.editorTabsList {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--mantine-color-body);
+  padding-top: 0.15rem;
+}
+
+.colorTokenGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 0.75rem;
+}
+
+.widgetTokenIntro {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.widgetTokenSearch {
+  min-width: 0;
+  width: min(100%, 28rem);
+}
+
+.tokenSection {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--mantine-color-default-border);
+}
+
+.tokenSection:first-child {
+  padding-top: 0;
+  border-top: 0;
+}
+
+.colorTokenCard {
+  background: var(--mantine-color-body);
+}
+
+.tokenLabel {
+  min-width: 0;
+}
+
+.tokenCssVar {
+  margin-top: 0.2rem;
+}
+
+.colorValueRow {
+  align-items: flex-end;
+}
+
+.colorValueInput {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.colorPreviewChip {
+  width: 1rem;
+  height: 1rem;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--mantine-color-text) 20%, transparent);
+}
+
+.colorSourceActions {
+  flex: 0 0 auto;
+  padding-bottom: 0.05rem;
+}
+
+.paletteBrowserGrid {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  max-height: min(62vh, 34rem);
+  overflow-y: auto;
+  padding-right: 0.25rem;
+}
+
+.paletteFamilyRow {
+  display: grid;
+  grid-template-columns: minmax(7.5rem, 0.24fr) minmax(0, 1fr);
+  gap: 0.75rem;
+  align-items: center;
+  padding: 0.65rem;
+  border: 1px solid var(--mantine-color-default-border);
+  border-radius: var(--mantine-radius-md);
+  background: var(--mantine-color-body);
+}
+
+.paletteFamilyLabel {
+  min-width: 0;
+}
+
+.paletteShadeGrid {
+  display: grid;
+  grid-template-columns: repeat(11, minmax(2.6rem, 1fr));
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.paletteShadeButton {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: var(--mantine-color-text);
+  cursor: pointer;
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.2rem;
+  border-radius: var(--mantine-radius-sm);
+}
+
+.paletteShadeButton:hover,
+.paletteShadeButton:focus-visible {
+  background: var(--mantine-color-default-hover);
+  outline: none;
+}
+
+.paletteShadeChip {
+  width: 100%;
+  min-width: 1.75rem;
+  height: 1.65rem;
+  border-radius: var(--mantine-radius-xs);
+  border: 1px solid color-mix(in srgb, var(--mantine-color-text) 16%, transparent);
+}
+
+.paletteShadeLabel {
+  font-size: 0.625rem;
+  color: var(--mantine-color-dimmed);
+}
+
+@media (max-width: 760px) {
+  .paletteFamilyRow {
+    grid-template-columns: 1fr;
+  }
+
+  .paletteShadeGrid {
+    grid-template-columns: repeat(auto-fit, minmax(2.8rem, 1fr));
+  }
+}
+
+.previewViewSelect {
+  width: min(15rem, 42vw);
+}
+
 .previewShell {
   border-radius: var(--mantine-radius-md);
   border: 1px solid var(--mantine-color-default-border);
-  min-height: 380px;
+  min-height: min(560px, calc(100dvh - 180px));
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -172,10 +354,20 @@
 
 .previewCanvas {
   flex: 1;
-  min-height: 240px;
-  padding: 1rem;
+  min-height: min(520px, calc(100dvh - 220px));
+  padding: 0.75rem;
   background: var(--token-surface-canvas);
   font-family: var(--token-font-base);
+}
+
+.actualPreviewViewport {
+  position: relative;
+  width: 100%;
+  height: clamp(520px, calc(100dvh - 220px), 820px);
+  overflow: hidden;
+  border-radius: 12px;
+  background: var(--token-surface-canvas);
+  border: 1px solid var(--token-border-default);
 }
 
 .previewToolbar {
@@ -219,9 +411,9 @@
   border-radius: 8px;
   font-size: 0.8rem;
   font-weight: 500;
-  border: 1px solid var(--token-color-brand-500$1);
-  background: var(--token-color-brand-500$1);
-  color: #fff;
+  border: 1px solid var(--token-color-brand-500);
+  background: var(--token-color-brand-500);
+  color: var(--token-text-inverse);
   cursor: default;
 }
 

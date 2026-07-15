@@ -4,6 +4,16 @@ import type { ThemeDocument } from "../themes/themeDocumentValidation";
 
 export type { ThemeDocument };
 
+type ColorScale = Record<string, string>;
+type FoundationColorGroups = Record<string, ColorScale | undefined> & {
+  brand: ColorScale;
+  neutral: ColorScale;
+  success: ColorScale;
+  warning: ColorScale;
+  danger: ColorScale;
+  info?: ColorScale;
+};
+
 interface StateTriplet {
   bg: string;
   fg: string;
@@ -17,14 +27,7 @@ interface InteractiveTriplet extends StateTriplet {
 
 export interface ResolvedTheme {
   foundation: {
-    color: {
-      brand: Record<string, string>;
-      neutral: Record<string, string>;
-      success: Record<string, string>;
-      warning: Record<string, string>;
-      danger: Record<string, string>;
-      info?: Record<string, string>;
-    };
+    color: FoundationColorGroups;
     spacing: Record<string, string>;
     radius: Record<string, string>;
     typography: {

@@ -124,7 +124,7 @@ const foundationTokensSchema = z
         danger: tokenGroupSchema,
         info: tokenGroupSchema.optional(),
       })
-      .strict(),
+      .catchall(tokenGroupSchema),
     spacing: z
       .object({
         '0': dimensionTokenSchema,

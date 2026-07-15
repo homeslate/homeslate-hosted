@@ -17,6 +17,25 @@ describe("DEFAULT_THEME_DOCUMENTS — validation", () => {
   }
 });
 
+describe("DEFAULT_THEME_DOCUMENTS — Tailwind palettes", () => {
+  it("includes Tailwind 4 OKLCH color palettes as foundation tokens", () => {
+    const doc = DEFAULT_THEME_DOCUMENTS[0];
+
+    expect(doc.tokens.foundation.color.red["500"]).toEqual({
+      $type: "color",
+      $value: "oklch(63.7% 0.237 25.331)",
+    });
+    expect(doc.tokens.foundation.color.sky["950"]).toEqual({
+      $type: "color",
+      $value: "oklch(29.3% 0.066 243.157)",
+    });
+    expect(doc.tokens.foundation.color.mauve["500"]).toEqual({
+      $type: "color",
+      $value: "oklch(54.2% 0.034 322.5)",
+    });
+  });
+});
+
 describe("DEFAULT_THEME_DOCUMENTS — resolveTheme snapshots", () => {
   for (const doc of DEFAULT_THEME_DOCUMENTS) {
     for (const mode of ["dark", "light"] as const) {

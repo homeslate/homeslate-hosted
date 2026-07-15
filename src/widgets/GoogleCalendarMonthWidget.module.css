@@ -1,8 +1,12 @@
 .container {
   height: 100%;
   padding: 0.875rem;
-  background: linear-gradient(135deg, rgba(66, 133, 244, 0.08) 0%, rgba(52, 168, 83, 0.08) 100%);
-  border-radius: var(--mantine-radius-md);
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--token-color-brand-500) 8%, transparent) 0%,
+    color-mix(in srgb, var(--token-status-success-fg) 8%, transparent) 100%
+  );
+  border-radius: var(--token-widget-radius, var(--token-radius-md));
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -26,25 +30,25 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.07em;
-  color: var(--token-text-muted, rgba(255, 255, 255, 0.4));
+  color: var(--token-text-muted);
 }
 
 .refreshBtn {
-  color: var(--token-text-muted, rgba(255, 255, 255, 0.3)) !important;
+  color: var(--token-text-muted) !important;
 }
 
 .refreshBtn:hover {
-  color: var(--token-text-primary, rgba(255, 255, 255, 0.8)) !important;
-  background: var(--token-surface-card, rgba(255, 255, 255, 0.08)) !important;
+  color: var(--token-text-primary) !important;
+  background: var(--token-surface-card) !important;
 }
 
 .addBtn {
-  color: var(--token-text-muted, rgba(255, 255, 255, 0.3)) !important;
+  color: var(--token-text-muted) !important;
 }
 
 .addBtn:hover {
-  color: var(--token-color-brand-500$1, #4285f4) !important;
-  background: var(--token-surface-card, rgba(255, 255, 255, 0.08)) !important;
+  color: var(--token-color-brand-500) !important;
+  background: var(--token-surface-card) !important;
 }
 
 /* ── Time grid ── */
@@ -64,7 +68,7 @@
 }
 
 .calendarHeader {
-  color: var(--token-color-brand-500$1, #4285f4);
+  color: var(--token-color-brand-500);
   font-size: 0.82rem;
 }
 
@@ -102,7 +106,7 @@
   display: flex;
   flex-direction: column;
   margin-top: 0.5rem;
-  border-top: 1px solid var(--token-border-default, rgba(255, 255, 255, 0.07));
+  border-top: 1px solid var(--token-border-default);
   padding-top: 0.5rem;
 }
 
@@ -119,14 +123,14 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  color: var(--token-color-brand-500$1, #4285f4);
+  color: var(--token-color-brand-500);
 }
 
 .eventCount {
   font-size: 0.6rem;
   font-weight: 700;
-  background: rgba(66, 133, 244, 0.2);
-  color: #4285f4;
+  background: color-mix(in srgb, var(--token-color-brand-500) 20%, transparent);
+  color: var(--token-color-brand-500);
   border-radius: 10px;
   padding: 0 6px;
   line-height: 1.6;
@@ -142,8 +146,8 @@
 .eventCard {
   display: flex;
   align-items: stretch;
-  background: var(--token-surface-card, rgba(255, 255, 255, 0.05));
-  border: 1px solid var(--token-border-default, rgba(255, 255, 255, 0.07));
+  background: var(--token-surface-card);
+  border: 1px solid var(--token-border-default);
   border-radius: 6px;
   overflow: hidden;
   margin-bottom: 0.25rem;
@@ -167,7 +171,7 @@
 .eventTitle {
   font-size: 0.78rem;
   font-weight: 600;
-  color: var(--token-text-primary, rgba(255, 255, 255, 0.88));
+  color: var(--token-text-primary);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -175,7 +179,7 @@
 
 .eventTime {
   font-size: 0.67rem;
-  color: var(--token-text-muted, rgba(255, 255, 255, 0.45));
+  color: var(--token-text-muted);
   margin-top: 1px;
 }
 
@@ -184,7 +188,7 @@
   align-items: center;
   gap: 3px;
   font-size: 0.65rem;
-  color: var(--token-text-muted, rgba(255, 255, 255, 0.35));
+  color: var(--token-text-muted);
   margin-top: 1px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -206,6 +210,6 @@
 /* ── Settings ── */
 
 .authSection {
-  background: var(--token-surface-card, rgba(0, 0, 0, 0.2));
-  border: 1px solid var(--token-border-default, rgba(255, 255, 255, 0.1));
+  background: var(--token-surface-card);
+  border: 1px solid var(--token-border-default);
 }

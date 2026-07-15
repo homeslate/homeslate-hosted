@@ -2,9 +2,13 @@
   height: 100%;
   min-height: 0;
   overflow: auto;
-  padding: 1rem;
-  background: linear-gradient(135deg, rgba(251, 146, 60, 0.1) 0%, rgba(251, 191, 36, 0.1) 100%);
-  border-radius: var(--mantine-radius-md);
+  padding: var(--token-widget-padding, var(--token-spacing-4));
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--token-status-warning-fg) 10%, transparent) 0%,
+    color-mix(in srgb, var(--token-color-brand-500) 10%, transparent) 100%
+  );
+  border-radius: var(--token-widget-radius, var(--token-radius-md));
   display: flex;
   flex-direction: column;
 }
@@ -115,7 +119,7 @@
 .location {
   font-weight: 600;
   font-size: 1rem;
-  color: var(--mantine-color-orange-6);
+  color: var(--token-status-warning-fg);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -142,7 +146,7 @@
   font-size: clamp(2rem, 5vw, 3rem);
   font-weight: 300;
   line-height: 1;
-  background: linear-gradient(135deg, #fb923c 0%, #fbbf24 100%);
+  background: linear-gradient(135deg, var(--token-status-warning-fg) 0%, var(--token-color-brand-500) 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -150,7 +154,7 @@
 
 .condition {
   font-size: 1rem;
-  color: var(--mantine-color-dimmed);
+  color: var(--token-text-muted);
 }
 
 .details {
@@ -165,14 +169,14 @@
   display: flex;
   align-items: center;
   gap: 0.25rem;
-  color: var(--mantine-color-dimmed);
+  color: var(--token-text-muted);
 }
 
 /* Next 12 hours strip */
 .hourlySection {
   margin-top: 1rem;
   padding-top: 1rem;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  border-top: 1px solid var(--token-border-default);
 }
 
 .hourly {
@@ -190,8 +194,8 @@
   align-items: center;
   gap: 0.2rem;
   padding: 0.4rem 0.35rem;
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: var(--mantine-radius-sm);
+  background: var(--token-surface-card);
+  border-radius: var(--token-radius-sm);
 }
 
 .forecast {
@@ -199,7 +203,7 @@
   gap: 0.5rem;
   margin-top: 1rem;
   padding-top: 1rem;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  border-top: 1px solid var(--token-border-default);
   overflow-x: auto;
 }
 
@@ -211,32 +215,32 @@
   align-items: center;
   gap: 0.25rem;
   padding: 0.5rem;
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: var(--mantine-radius-sm);
+  background: var(--token-surface-card);
+  border-radius: var(--token-radius-sm);
 }
 
 .iconSunny {
-  color: #fbbf24;
+  color: var(--token-status-warning-fg);
 }
 
 .iconMoon {
-  color: #a78bfa;
+  color: var(--token-color-brand-600);
 }
 
 .iconCloudy {
-  color: #94a3b8;
+  color: var(--token-text-muted);
 }
 
 .iconRainy {
-  color: #60a5fa;
+  color: var(--token-status-info-fg, var(--token-color-brand-500));
 }
 
 .iconSnowy {
-  color: #a5f3fc;
+  color: var(--token-status-info-fg, var(--token-color-brand-500));
 }
 
 .iconStormy {
-  color: #c084fc;
+  color: var(--token-color-brand-600);
 }
 
 /* Empty state */
@@ -251,7 +255,7 @@
 }
 
 .emptyIcon {
-  color: var(--mantine-color-orange-6);
+  color: var(--token-status-warning-fg);
   opacity: 0.5;
 }
 
@@ -276,25 +280,25 @@
 
 /* Settings styles */
 .searchResults {
-  background: rgba(0, 0, 0, 0.3);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--token-surface-overlay, var(--token-surface-card));
+  border: 1px solid var(--token-border-default);
   max-height: 200px;
   overflow-y: auto;
 }
 
 .searchResult {
-  color: var(--mantine-color-dimmed);
+  color: var(--token-text-muted);
   font-weight: normal;
 }
 
 .searchResult:hover {
-  color: white;
-  background: rgba(255, 255, 255, 0.1);
+  color: var(--token-text-primary);
+  background: color-mix(in srgb, var(--token-color-brand-500) 12%, transparent);
 }
 
 .currentLocation {
-  background: rgba(251, 146, 60, 0.1);
-  border: 1px solid rgba(251, 146, 60, 0.2);
+  background: var(--token-status-warning-bg);
+  border: 1px solid var(--token-status-warning-border);
 }
 
 .aqiBadge {

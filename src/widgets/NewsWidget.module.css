@@ -1,8 +1,12 @@
 .container {
   height: 100%;
-  padding: 1rem;
-  background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(99, 102, 241, 0.1) 100%);
-  border-radius: var(--mantine-radius-md);
+  padding: var(--token-widget-padding, var(--token-spacing-4));
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--token-color-brand-500) 10%, transparent) 0%,
+    color-mix(in srgb, var(--token-color-brand-600) 10%, transparent) 100%
+  );
+  border-radius: var(--token-widget-radius, var(--token-radius-md));
   display: flex;
   flex-direction: column;
 }
@@ -25,7 +29,7 @@
   gap: 0.5rem;
   font-weight: 600;
   font-size: 1rem;
-  color: var(--mantine-color-blue-5);
+  color: var(--token-color-brand-500);
 }
 
 .newsList {
@@ -35,14 +39,14 @@
 }
 
 .newsItem {
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--token-surface-card);
+  border: 1px solid var(--token-border-default);
   transition: all 0.2s ease;
 }
 
 .newsItem:hover {
-  background: rgba(255, 255, 255, 0.06);
-  border-color: rgba(59, 130, 246, 0.3);
+  background: color-mix(in srgb, var(--token-color-brand-500) 8%, var(--token-surface-card));
+  border-color: color-mix(in srgb, var(--token-color-brand-500) 45%, var(--token-border-default));
 }
 
 .newsLink {
@@ -54,7 +58,7 @@
 }
 
 .newsLink:hover .newsTitle {
-  color: var(--mantine-color-blue-4);
+  color: var(--token-text-link);
 }
 
 .newsTitle {
@@ -76,7 +80,7 @@
 }
 
 .source {
-  color: var(--mantine-color-blue-5);
+  color: var(--token-color-brand-500);
   font-weight: 500;
 }
 
@@ -92,7 +96,7 @@
 }
 
 .emptyIcon {
-  color: var(--mantine-color-blue-5);
+  color: var(--token-color-brand-500);
   opacity: 0.5;
 }
 

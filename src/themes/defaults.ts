@@ -1,4 +1,5 @@
 import type { ThemeDocument } from "./themeDocumentValidation";
+import { tailwindPaletteToTokenGroup } from "./tailwindPalette";
 
 const SCHEMA_URL = "https://homeslate.app/schemas/theme-document.schema.json";
 
@@ -43,19 +44,6 @@ const SHARED_TYPOGRAPHY_REST = {
     normal: { $type: "number", $value: 1.5 },
     relaxed: { $type: "number", $value: 1.75 },
   },
-} as const;
-
-const NEUTRAL_PALETTE = {
-  "50": { $type: "color", $value: "#fafafa" },
-  "100": { $type: "color", $value: "#f3f4f6" },
-  "200": { $type: "color", $value: "#e5e7eb" },
-  "300": { $type: "color", $value: "#d1d5db" },
-  "400": { $type: "color", $value: "#9ca3af" },
-  "500": { $type: "color", $value: "#6b7280" },
-  "600": { $type: "color", $value: "#4b5563" },
-  "700": { $type: "color", $value: "#374151" },
-  "800": { $type: "color", $value: "#1f2937" },
-  "900": { $type: "color", $value: "#111827" },
 } as const;
 
 const STATUS_COLORS = {
@@ -436,11 +424,11 @@ function buildDocument(seed: ThemeSeed): ThemeDocument {
             "500": color(seed.brand["500"]),
             "600": color(seed.brand["600"]),
           },
-          neutral: NEUTRAL_PALETTE,
           success: STATUS_COLORS.success,
           warning: STATUS_COLORS.warning,
           danger: STATUS_COLORS.danger,
           info: STATUS_COLORS.info,
+          ...tailwindPaletteToTokenGroup(),
         },
         spacing: SHARED_SPACING,
         radius: SHARED_RADIUS,

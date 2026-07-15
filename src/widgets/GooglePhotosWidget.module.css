@@ -3,8 +3,8 @@
   height: 100%;
   position: relative;
   overflow: hidden;
-  border-radius: 8px;
-  background-color: #1a1b1e;
+  border-radius: var(--token-widget-radius, var(--token-radius-md));
+  background-color: var(--token-surface-card);
 }
 
 .container.transparent {
@@ -29,7 +29,11 @@
   left: 0;
   right: 0;
   height: 40%;
-  background: linear-gradient(to top, rgba(0, 0, 0, 0.7) 0%, transparent 100%);
+  background: linear-gradient(
+    to top,
+    color-mix(in srgb, var(--token-surface-overlay, var(--token-surface-card)) 86%, transparent) 0%,
+    transparent 100%
+  );
   pointer-events: none;
 }
 
@@ -42,10 +46,10 @@
 }
 
 .captionText {
-  color: white;
+  color: var(--token-text-inverse);
   font-size: 14px;
   font-weight: 500;
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+  text-shadow: 0 1px 3px var(--token-surface-overlay, var(--token-surface-card));
 }
 
 .signIn,
@@ -61,20 +65,20 @@
 }
 
 .googleIcon {
-  color: #4285f4;
+  color: var(--token-color-brand-500);
   margin-bottom: 12px;
 }
 
 .emptyIcon,
 .loading {
-  color: #909296;
+  color: var(--token-text-muted);
   margin-bottom: 12px;
 }
 
 .authSection {
   padding: 12px;
-  background-color: #f8f9fa;
-  border-radius: 8px;
+  background-color: var(--token-surface-card);
+  border-radius: var(--token-radius-md);
 }
 
 .refreshBtn {
@@ -85,10 +89,10 @@
 }
 
 .refreshButton {
-  background-color: rgba(0, 0, 0, 0.5);
-  color: white;
+  background-color: color-mix(in srgb, var(--token-surface-overlay, var(--token-surface-card)) 75%, transparent);
+  color: var(--token-text-inverse);
 }
 
 .refreshButton:hover {
-  background-color: rgba(0, 0, 0, 0.7);
+  background-color: color-mix(in srgb, var(--token-surface-overlay, var(--token-surface-card)) 90%, transparent);
 }

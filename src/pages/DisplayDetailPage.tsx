@@ -608,7 +608,7 @@ export function DisplayDetailPage() {
     </Modal>
     <div className={classes.root}>
       <header className={classes.header}>
-        <Group gap="sm">
+        <Group gap="md" wrap="nowrap">
           <Tooltip label="Back to displays">
             <ActionIcon variant="subtle" onClick={() => navigate('/displays')}>
               <IconArrowLeft size={18} />
@@ -644,6 +644,21 @@ export function DisplayDetailPage() {
               </Tooltip>
             </Group>
           )}
+          <Group gap={4} className={classes.topNav} wrap="nowrap">
+            {navItems.map((item) => {
+              const Icon = item.icon;
+              return (
+                <UnstyledButton
+                  key={item.key}
+                  className={`${classes.topNavItem} ${activePage === item.key ? classes.topNavItemActive : ''}`}
+                  onClick={() => setActivePage(item.key)}
+                >
+                  <Icon size={15} />
+                  <Text size="sm" fw={500}>{item.label}</Text>
+                </UnstyledButton>
+              );
+            })}
+          </Group>
         </Group>
         <Group gap="sm">
           {(display.isOwner ?? true) && (
@@ -693,27 +708,7 @@ export function DisplayDetailPage() {
       </header>
 
       <main className={classes.main}>
-        <aside className={classes.nav}>
-          <Stack gap={6}>
-            {navItems.map((item) => {
-              const Icon = item.icon;
-              return (
-                <UnstyledButton
-                  key={item.key}
-                  className={`${classes.navItem} ${activePage === item.key ? classes.navItemActive : ''}`}
-                  onClick={() => setActivePage(item.key)}
-                >
-                  <Group gap="xs" wrap="nowrap">
-                    <Icon size={16} />
-                    <Text size="sm" fw={500}>{item.label}</Text>
-                  </Group>
-                </UnstyledButton>
-              );
-            })}
-          </Stack>
-        </aside>
-
-        <section className={classes.content}>
+        <section className={`${classes.content} ${activePage === 'theme' ? classes.themeContent : ''}`}>
           {activePage === 'views' && (
             <>
               <Group justify="space-between" mb="md">
@@ -923,11 +918,12 @@ export function DisplayDetailPage() {
           )}
 
           {activePage === 'theme' && (
-            <section className={classes.section}>
-              <Title order={5} className={classes.sectionTitle} mb="md">Themes</Title>
+            <section className={`${classes.section} ${classes.themeSection}`}>
               <ThemeDocumentManager
                 documents={display.themes}
                 activeThemeDocumentId={display.activeThemeId}
+                previewLayouts={display.layouts}
+                initialPreviewLayoutId={display.activeLayoutId}
                 onChange={(themes, activeThemeId) => {
                   upsertDisplay({
                     ...display,

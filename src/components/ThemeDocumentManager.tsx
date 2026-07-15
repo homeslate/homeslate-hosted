@@ -5,6 +5,7 @@ import {
   Badge,
   Button,
   Code,
+  ColorInput,
   Group,
   Modal,
   Paper,
@@ -12,6 +13,7 @@ import {
   Select,
   SegmentedControl,
   Stack,
+  Tabs,
   Text,
   TextInput,
   Textarea,
@@ -20,18 +22,40 @@ import {
 import {
   IconAlertCircle,
   IconCheck,
+  IconColorPicker,
   IconEdit,
+  IconLink,
+  IconPalette,
   IconPlus,
   IconTrash,
   IconX,
 } from '@tabler/icons-react';
 import type { ColorMode } from '../types/theme';
 import type { ThemeDocument } from '../types/theme';
+import type { DashboardLayout } from '../types/widget';
+import { BackgroundSlideshow } from './BackgroundSlideshow';
+import { Dashboard } from './Dashboard';
 import {
   validateThemeDocument,
   type ThemeValidationIssue,
 } from '../themes/themeDocumentValidation';
 import { getPresetById, THEME_PRESET_OPTIONS, resolveTheme, themeToVars } from '../themes';
+import {
+  TAILWIND_COLOR_PALETTES,
+  TAILWIND_COMPACT_COLOR_SWATCHES,
+  TAILWIND_PALETTE_NAMES,
+  TAILWIND_PALETTE_STEPS,
+} from '../themes/tailwindPalette';
+import {
+  buildReferenceOptions,
+  getEditableTokenEntries,
+  getWidgetTokenSections,
+  setTokenValue,
+  tokenCssVarName,
+  type EditableTokenEntry,
+  type EditableTokenType,
+  type ReferenceOption,
+} from '../themes/themeEditorModel';
 
 function createThemeDocumentFromPreset(presetId: string, name: string): ThemeDocument {
   const base = getPresetById(presetId);
@@ -52,8 +76,12 @@ import classes from './ThemeDocumentManager.module.css';
 interface ThemeDocumentManagerProps {
   documents: ThemeDocument[] | undefined;
   activeThemeDocumentId: string | null | undefined;
+  previewLayouts?: DashboardLayout[];
+  initialPreviewLayoutId?: string | null;
   onChange: (documents: ThemeDocument[], activeThemeDocumentId: string | null) => void;
 }
+
+const ALIAS_VALUE_RE = /^\{[\w.]+\}$/;
 
 function withActiveFlags(documents: ThemeDocument[], activeThemeDocumentId: string | null): ThemeDocument[] {
   return documents.map((doc) => ({
@@ -73,13 +101,295 @@ function formatIssues(issues: ThemeValidationIssue[]): string {
   return issues.slice(0, 8).map((issue) => `${issue.path}: ${issue.message}`).join('\n');
 }
 
-export function ThemeDocumentManager({ documents, activeThemeDocumentId, onChange }: ThemeDocumentManagerProps) {
+function getInitialThemeId(documents: ThemeDocument[], activeThemeDocumentId: string | null | undefined): string | null {
+  if (activeThemeDocumentId && documents.some((doc) => doc.id === activeThemeDocumentId)) {
+    return activeThemeDocumentId;
+  }
+  return documents[0]?.id ?? null;
+}
+
+interface TokenControlProps {
+  entry: EditableTokenEntry;
+  references: ReferenceOption[];
+  onChange: (entry: EditableTokenEntry, value: string) => void;
+}
+
+function tokenTypeLabel(type: EditableTokenType): string {
+  if (type === 'fontFamily') return 'Font family';
+  if (type === 'dimension') return 'Dimension';
+  return 'Color';
+}
+
+function defaultDirectValue(type: EditableTokenType): string {
+  if (type === 'fontFamily') return "'Outfit', sans-serif";
+  if (type === 'dimension') return '12px';
+  return '#6366f1';
+}
+
+function tailwindTokenPath(name: string, step: string): string {
+  return `foundation.color.${name}.${step}`;
+}
+
+function canPreviewColorValue(value: string): boolean {
+  return !ALIAS_VALUE_RE.test(value) && !value.includes('gradient');
+}
+
+function TokenControl({ entry, references, onChange }: TokenControlProps) {
+  const isReference = ALIAS_VALUE_RE.test(entry.value);
+  const referenceValue = references.some((option) => option.value === entry.value) ? entry.value : null;
+  const referenceFallback = references[0]?.value;
+  const typeLabel = tokenTypeLabel(entry.type);
+  const cssVarName = tokenCssVarName(entry.referencePath);
+  const [paletteBrowserOpen, setPaletteBrowserOpen] = useState(false);
+  const [paletteQuery, setPaletteQuery] = useState('');
+  const [referenceBrowserOpen, setReferenceBrowserOpen] = useState(false);
+  const [customColorOpen, setCustomColorOpen] = useState(false);
+  const customColorValue = isReference ? defaultDirectValue("color") : entry.value;
+  const filteredPaletteNames = useMemo(() => {
+    const query = paletteQuery.trim().toLowerCase();
+    if (!query) return TAILWIND_PALETTE_NAMES;
+
+    return TAILWIND_PALETTE_NAMES.filter((name) =>
+      TAILWIND_PALETTE_STEPS.some((step) => {
+        const value = TAILWIND_COLOR_PALETTES[name][step];
+        const tokenPath = tailwindTokenPath(name, step);
+        return `${name} ${step} ${tokenPath} ${value}`.toLowerCase().includes(query);
+      }),
+    );
+  }, [paletteQuery]);
+
+  return (
+    <Paper withBorder radius="md" p="sm" className={classes.colorTokenCard}>
+      <Stack gap="xs">
+        <div>
+          <Group justify="space-between" gap="xs" align="flex-start" wrap="nowrap">
+            <Text size="sm" fw={600} className={classes.tokenLabel}>
+              {entry.label}
+            </Text>
+            {entry.referencePath.startsWith('components.widget.') && (
+              <Badge size="xs" variant="light" color="indigo">
+                Widget-related
+              </Badge>
+            )}
+          </Group>
+          <Text size="xs" c="dimmed">
+            {entry.referencePath}
+          </Text>
+          <Text size="xs" c="dimmed" className={classes.tokenCssVar}>
+            CSS var <Code>{cssVarName}</Code>
+          </Text>
+        </div>
+
+        {entry.type === 'color' ? (
+          <>
+            <Group gap="xs" align="flex-end" wrap="nowrap" className={classes.colorValueRow}>
+              <TextInput
+                label="Color value"
+                size="xs"
+                value={entry.value}
+                onChange={(event) => onChange(entry, event.currentTarget.value)}
+                placeholder="#6366f1, oklch(...), or {foundation.color.red.500}"
+                className={classes.colorValueInput}
+                leftSection={
+                  canPreviewColorValue(entry.value) ? (
+                    <span className={classes.colorPreviewChip} style={{ background: entry.value }} />
+                  ) : undefined
+                }
+                leftSectionWidth={canPreviewColorValue(entry.value) ? 34 : undefined}
+              />
+              <Group gap={4} wrap="nowrap" className={classes.colorSourceActions}>
+                <Tooltip label="Browse palettes">
+                  <ActionIcon
+                    variant="subtle"
+                    aria-label="Browse palettes"
+                    onClick={() => setPaletteBrowserOpen(true)}
+                  >
+                    <IconPalette size={16} />
+                  </ActionIcon>
+                </Tooltip>
+                <Tooltip label="Reference another token">
+                  <ActionIcon
+                    variant="subtle"
+                    aria-label="Reference another token"
+                    onClick={() => setReferenceBrowserOpen(true)}
+                    disabled={references.length === 0}
+                  >
+                    <IconLink size={16} />
+                  </ActionIcon>
+                </Tooltip>
+                <Tooltip label="Pick custom color">
+                  <ActionIcon
+                    variant="subtle"
+                    aria-label="Pick custom color"
+                    onClick={() => setCustomColorOpen(true)}
+                  >
+                    <IconColorPicker size={16} />
+                  </ActionIcon>
+                </Tooltip>
+              </Group>
+            </Group>
+            <Modal
+              opened={customColorOpen}
+              onClose={() => setCustomColorOpen(false)}
+              title="Pick custom color"
+              size="sm"
+            >
+              <ColorInput
+                label="Color value"
+                size="sm"
+                value={customColorValue}
+                onChange={(value) => onChange(entry, value)}
+                placeholder="#6366f1"
+                swatches={TAILWIND_COMPACT_COLOR_SWATCHES}
+              />
+            </Modal>
+            <Modal
+              opened={referenceBrowserOpen}
+              onClose={() => setReferenceBrowserOpen(false)}
+              title="Reference another token"
+              size="lg"
+            >
+              <Select
+                label="Search token references"
+                size="sm"
+                data={references}
+                value={referenceValue}
+                onChange={(value) => {
+                  if (!value) return;
+                  onChange(entry, value);
+                  setReferenceBrowserOpen(false);
+                }}
+                placeholder="Search token references"
+                searchable
+                clearable={false}
+                maxDropdownHeight={360}
+              />
+            </Modal>
+            <Modal
+              opened={paletteBrowserOpen}
+              onClose={() => setPaletteBrowserOpen(false)}
+              title="Browse palettes"
+              size="xl"
+              scrollAreaComponent={ScrollArea.Autosize}
+            >
+              <Stack gap="sm">
+                <TextInput
+                  label="Search palettes, shades, paths, or OKLCH"
+                  size="sm"
+                  value={paletteQuery}
+                  onChange={(event) => setPaletteQuery(event.currentTarget.value)}
+                  placeholder="red 500, foundation.color.sky.950, oklch..."
+                />
+                <Text size="xs" c="dimmed">
+                  Pick a direct OKLCH value. Use the reference button if you want to keep the token path instead.
+                </Text>
+                <div className={classes.paletteBrowserGrid}>
+                  {filteredPaletteNames.map((name) => (
+                    <div key={name} className={classes.paletteFamilyRow}>
+                      <div className={classes.paletteFamilyLabel}>
+                        <Text size="sm" fw={700}>
+                          {name}
+                        </Text>
+                        <Text size="xs" c="dimmed">
+                          {`foundation.color.${name}`}
+                        </Text>
+                      </div>
+                      <div className={classes.paletteShadeGrid}>
+                        {TAILWIND_PALETTE_STEPS.map((step) => {
+                          const value = TAILWIND_COLOR_PALETTES[name][step];
+                          const tokenPath = tailwindTokenPath(name, step);
+                          return (
+                            <button
+                              key={step}
+                              type="button"
+                              className={classes.paletteShadeButton}
+                              onClick={() => {
+                                onChange(entry, value);
+                                setPaletteBrowserOpen(false);
+                              }}
+                              title={`${tokenPath} (${value})`}
+                            >
+                              <span className={classes.paletteShadeChip} style={{ background: value }} />
+                              <span className={classes.paletteShadeLabel}>{step}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                {filteredPaletteNames.length === 0 && (
+                  <Text size="sm" c="dimmed">
+                    No palette colors match that search.
+                  </Text>
+                )}
+              </Stack>
+            </Modal>
+          </>
+        ) : (
+          <>
+            <SegmentedControl
+              size="xs"
+              value={isReference ? 'reference' : 'direct'}
+              onChange={(value) => {
+                if (value === 'direct' && isReference) {
+                  onChange(entry, defaultDirectValue(entry.type));
+                  return;
+                }
+                if (value === 'reference' && !isReference && referenceFallback) {
+                  onChange(entry, referenceFallback);
+                }
+              }}
+              data={[
+                { label: 'Direct', value: 'direct' },
+                { label: 'Reference', value: 'reference' },
+              ]}
+              fullWidth
+            />
+            {!isReference ? (
+              <TextInput
+                label={typeLabel}
+                size="xs"
+                value={entry.value}
+                onChange={(event) => onChange(entry, event.currentTarget.value)}
+                placeholder={entry.type === 'fontFamily' ? "'Outfit', sans-serif" : '12px'}
+              />
+            ) : (
+              <Select
+                label={`Reference ${typeLabel.toLowerCase()}`}
+                size="xs"
+                data={references}
+                value={referenceValue}
+                onChange={(value) => value && onChange(entry, value)}
+                placeholder="Reference another token"
+                searchable
+                clearable={false}
+              />
+            )}
+          </>
+        )}
+      </Stack>
+    </Paper>
+  );
+}
+
+export function ThemeDocumentManager({
+  documents,
+  activeThemeDocumentId,
+  previewLayouts = [],
+  initialPreviewLayoutId,
+  onChange,
+}: ThemeDocumentManagerProps) {
   const themeDocuments = useMemo(() => documents ?? [], [documents]);
+  const initialThemeId = useMemo(
+    () => getInitialThemeId(themeDocuments, activeThemeDocumentId),
+    [activeThemeDocumentId, themeDocuments]
+  );
 
   /** Row highlight in the library (which theme actions apply to). */
-  const [libraryFocusId, setLibraryFocusId] = useState<string | null>(themeDocuments[0]?.id ?? null);
+  const [libraryFocusId, setLibraryFocusId] = useState<string | null>(initialThemeId);
   /** When set, the JSON + preview workspace is open for this theme id. */
-  const [editingThemeId, setEditingThemeId] = useState<string | null>(null);
+  const [editingThemeId, setEditingThemeId] = useState<string | null>(initialThemeId);
 
   const [editorValue, setEditorValue] = useState('');
   const [themeName, setThemeName] = useState('Custom Theme');
@@ -88,6 +398,11 @@ export function ThemeDocumentManager({ documents, activeThemeDocumentId, onChang
   const [saveSuccess, setSaveSuccess] = useState<string | null>(null);
   const [libraryNotice, setLibraryNotice] = useState<string | null>(null);
   const [previewMode, setPreviewMode] = useState<ColorMode>('dark');
+  const [editorTab, setEditorTab] = useState<string | null>('quick');
+  const [widgetTokenQuery, setWidgetTokenQuery] = useState('');
+  const [previewLayoutId, setPreviewLayoutId] = useState<string | null>(
+    initialPreviewLayoutId ?? previewLayouts[0]?.id ?? null
+  );
 
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
   const [pendingEditId, setPendingEditId] = useState<string | null>(null);
@@ -106,14 +421,23 @@ export function ThemeDocumentManager({ documents, activeThemeDocumentId, onChang
   const isDirty = Boolean(editingThemeId && editorValue !== savedJsonForEditing);
 
   useEffect(() => {
-    if (!libraryFocusId && themeDocuments[0]) {
-      setLibraryFocusId(themeDocuments[0].id);
+    if (!libraryFocusId && initialThemeId) {
+      setLibraryFocusId(initialThemeId);
+      if (!editingThemeId) setEditingThemeId(initialThemeId);
       return;
     }
     if (libraryFocusId && !themeDocuments.some((doc) => doc.id === libraryFocusId)) {
-      setLibraryFocusId(themeDocuments[0]?.id ?? null);
+      setLibraryFocusId(initialThemeId);
+      if (!editingThemeId) setEditingThemeId(initialThemeId);
     }
-  }, [libraryFocusId, themeDocuments]);
+  }, [editingThemeId, initialThemeId, libraryFocusId, themeDocuments]);
+
+  useEffect(() => {
+    if (previewLayoutId && previewLayouts.some((layout) => layout.id === previewLayoutId)) {
+      return;
+    }
+    setPreviewLayoutId(initialPreviewLayoutId ?? previewLayouts[0]?.id ?? null);
+  }, [initialPreviewLayoutId, previewLayoutId, previewLayouts]);
 
   /** Load editor when entering edit mode for a theme. */
   useEffect(() => {
@@ -138,11 +462,58 @@ export function ThemeDocumentManager({ documents, activeThemeDocumentId, onChang
         return { status: 'invalid' as const, issues: validation.issues };
       }
       const vars = themeDocumentToPreviewVars(validation.data, previewMode);
-      return { status: 'ok' as const, vars };
-    } catch {
-      return { status: 'parse' as const };
+      return { status: 'ok' as const, doc: validation.data, vars };
+    } catch (error) {
+      if (error instanceof SyntaxError) {
+        return { status: 'parse' as const };
+      }
+      return {
+        status: 'invalid' as const,
+        issues: [{ path: '$', message: error instanceof Error ? error.message : 'Unable to resolve theme.' }],
+      };
     }
   }, [editorValue, previewMode, editingThemeId]);
+
+  const editableTokenEntries = useMemo(
+    () => (previewResult.status === 'ok' ? getEditableTokenEntries(previewResult.doc, previewMode) : []),
+    [previewMode, previewResult]
+  );
+
+  const widgetTokenSections = useMemo(
+    () => getWidgetTokenSections(editableTokenEntries, widgetTokenQuery),
+    [editableTokenEntries, widgetTokenQuery]
+  );
+
+  const groupedTokenEntries = useMemo(() => {
+    const groups = new Map<EditableTokenType, EditableTokenEntry[]>();
+    for (const entry of editableTokenEntries) {
+      const groupName = entry.type;
+      groups.set(groupName, [...(groups.get(groupName) ?? []), entry]);
+    }
+    return Array.from(groups.entries());
+  }, [editableTokenEntries]);
+
+  const referenceOptionsByType = useMemo(
+    () => ({
+      color: previewResult.status === 'ok' ? buildReferenceOptions(previewResult.doc, previewMode, 'color') : [],
+      fontFamily: previewResult.status === 'ok' ? buildReferenceOptions(previewResult.doc, previewMode, 'fontFamily') : [],
+      dimension: previewResult.status === 'ok' ? buildReferenceOptions(previewResult.doc, previewMode, 'dimension') : [],
+    }),
+    [previewMode, previewResult]
+  );
+
+  const activePreviewLayout = previewLayouts.find((layout) => layout.id === previewLayoutId) ?? previewLayouts[0] ?? null;
+
+  const updateToken = (entry: EditableTokenEntry, value: string) => {
+    if (previewResult.status !== 'ok') return;
+    const nextDoc = setTokenValue(previewResult.doc, entry.tokenPath, value, entry.type);
+    setEditorValue(JSON.stringify(nextDoc, null, 2));
+    setSaveError(null);
+    setSaveSuccess(null);
+  };
+
+  const referencesFor = (entry: EditableTokenEntry) =>
+    referenceOptionsByType[entry.type].filter((option) => option.value !== `{${entry.referencePath}}`);
 
   const beginEdit = (id: string) => {
     if (isDirty) {
@@ -282,11 +653,6 @@ export function ThemeDocumentManager({ documents, activeThemeDocumentId, onChang
 
   return (
     <div className={classes.page}>
-      <Text size="sm" c="dimmed">
-        Manage themes in the library, then open one in the editor to change JSON and preview. Saving writes to this
-        display&apos;s config.
-      </Text>
-
       {libraryNotice && (
         <Alert color="blue" onClose={() => setLibraryNotice(null)} withCloseButton>
           <Text size="sm">{libraryNotice}</Text>
@@ -320,11 +686,11 @@ export function ThemeDocumentManager({ documents, activeThemeDocumentId, onChang
                         className={`${classes.themeRow} ${isFocus ? classes.themeRowSelected : ''} ${isLive ? classes.themeRowActive : ''}`}
                         role="button"
                         tabIndex={0}
-                        onClick={() => setLibraryFocusId(doc.id)}
+                        onClick={() => beginEdit(doc.id)}
                         onKeyDown={(e) => {
                           if (e.key === 'Enter' || e.key === ' ') {
                             e.preventDefault();
-                            setLibraryFocusId(doc.id);
+                            beginEdit(doc.id);
                           }
                         }}
                       >
@@ -445,7 +811,7 @@ export function ThemeDocumentManager({ documents, activeThemeDocumentId, onChang
               <Group justify="space-between" align="flex-start" wrap="wrap" className={classes.workspaceHeader}>
                 <div>
                   <Text fw={600}>Editing</Text>
-                  <Text size="sm" c="dimmed">
+                  <Text size="sm" c="dimmed" component="div">
                     {editingTheme?.name ?? editingThemeId}
                     {isDirty ? (
                       <Badge ml="xs" size="xs" color="orange" variant="light">
@@ -467,16 +833,109 @@ export function ThemeDocumentManager({ documents, activeThemeDocumentId, onChang
               <div className={classes.editorPreviewRow}>
                 <div className={classes.editorColumn}>
                   <Stack gap="sm">
-                    <Textarea
-                      label="Theme JSON"
-                      minRows={18}
-                      maxRows={36}
-                      autosize
-                      classNames={{ input: classes.textarea }}
-                      value={editorValue}
-                      onChange={(event) => setEditorValue(event.currentTarget.value)}
-                      spellCheck={false}
-                    />
+                    <Tabs value={editorTab} onChange={setEditorTab} keepMounted={false}>
+                      <Tabs.List className={classes.editorTabsList}>
+                        <Tabs.Tab value="quick">Widget tokens</Tabs.Tab>
+                        <Tabs.Tab value="all">All tokens</Tabs.Tab>
+                        <Tabs.Tab value="json">Theme JSON</Tabs.Tab>
+                      </Tabs.List>
+
+                      <Tabs.Panel value="quick" pt="sm">
+                        {previewResult.status === 'ok' ? (
+                          <Stack gap="sm">
+                            <div className={classes.widgetTokenIntro}>
+                              <TextInput
+                                size="xs"
+                                label="Filter widget tokens"
+                                placeholder="Search token, CSS variable, or value"
+                                value={widgetTokenQuery}
+                                onChange={(event) => setWidgetTokenQuery(event.currentTarget.value)}
+                                className={classes.widgetTokenSearch}
+                              />
+                            </div>
+
+                            {widgetTokenSections.length === 0 ? (
+                              <Paper withBorder p="md" radius="md">
+                                <Text size="sm" c="dimmed">
+                                  No widget-related tokens match this filter.
+                                </Text>
+                              </Paper>
+                            ) : (
+                              <Stack gap="md">
+                                {widgetTokenSections.map((section) => (
+                                  <section key={section.id} className={classes.tokenSection}>
+                                    <Group justify="space-between" gap="xs" align="flex-start" wrap="nowrap">
+                                      <div>
+                                        <Text size="xs" fw={700} tt="uppercase" c="dimmed">
+                                          {section.title}
+                                        </Text>
+                                        <Text size="xs" c="dimmed">
+                                          {section.description}
+                                        </Text>
+                                      </div>
+                                      <Badge size="xs" variant="outline">
+                                        {section.entries.length} tokens
+                                      </Badge>
+                                    </Group>
+                                    <div className={classes.colorTokenGrid}>
+                                      {section.entries.map((entry) => (
+                                        <TokenControl
+                                          key={entry.referencePath}
+                                          entry={entry}
+                                          references={referencesFor(entry)}
+                                          onChange={updateToken}
+                                        />
+                                      ))}
+                                    </div>
+                                  </section>
+                                ))}
+                              </Stack>
+                            )}
+                          </Stack>
+                        ) : (
+                          <Alert color="yellow">Fix the theme JSON before editing tokens in the GUI.</Alert>
+                        )}
+                      </Tabs.Panel>
+
+                      <Tabs.Panel value="all" pt="sm">
+                        {previewResult.status === 'ok' ? (
+                          <Stack gap="md">
+                            {groupedTokenEntries.map(([groupName, entries]) => (
+                              <Stack gap="sm" key={groupName}>
+                                <Text size="xs" fw={700} tt="uppercase" c="dimmed">
+                                  {tokenTypeLabel(groupName)}
+                                </Text>
+                                <div className={classes.colorTokenGrid}>
+                                  {entries.map((entry) => (
+                                    <TokenControl
+                                      key={entry.referencePath}
+                                      entry={entry}
+                                      references={referencesFor(entry)}
+                                      onChange={updateToken}
+                                    />
+                                  ))}
+                                </div>
+                              </Stack>
+                            ))}
+                          </Stack>
+                        ) : (
+                          <Alert color="yellow">Fix the theme JSON before editing tokens in the GUI.</Alert>
+                        )}
+                      </Tabs.Panel>
+
+                      <Tabs.Panel value="json" pt="sm">
+                        <Textarea
+                          label="Theme JSON"
+                          minRows={18}
+                          maxRows={36}
+                          autosize
+                          classNames={{ input: classes.textarea }}
+                          value={editorValue}
+                          onChange={(event) => setEditorValue(event.currentTarget.value)}
+                          spellCheck={false}
+                        />
+                      </Tabs.Panel>
+                    </Tabs>
 
                     {saveError && (
                       <Alert color="red" icon={<IconAlertCircle size={16} />}>
@@ -501,17 +960,29 @@ export function ThemeDocumentManager({ documents, activeThemeDocumentId, onChang
                   <Stack gap="sm">
                     <Group justify="space-between" align="center" wrap="wrap">
                       <Text size="sm" fw={600}>
-                        Live preview
+                        View preview
                       </Text>
-                      <SegmentedControl
-                        size="xs"
-                        value={previewMode}
-                        onChange={(v) => setPreviewMode(v as ColorMode)}
-                        data={[
-                          { label: 'Dark', value: 'dark' },
-                          { label: 'Light', value: 'light' },
-                        ]}
-                      />
+                      <Group gap="xs">
+                        {previewLayouts.length > 0 && (
+                          <Select
+                            size="xs"
+                            data={previewLayouts.map((layout) => ({ value: layout.id, label: layout.name }))}
+                            value={activePreviewLayout?.id ?? null}
+                            onChange={setPreviewLayoutId}
+                            allowDeselect={false}
+                            className={classes.previewViewSelect}
+                          />
+                        )}
+                        <SegmentedControl
+                          size="xs"
+                          value={previewMode}
+                          onChange={(v) => setPreviewMode(v as ColorMode)}
+                          data={[
+                            { label: 'Dark', value: 'dark' },
+                            { label: 'Light', value: 'light' },
+                          ]}
+                        />
+                      </Group>
                     </Group>
 
                     <div className={classes.previewShell}>
@@ -520,12 +991,25 @@ export function ThemeDocumentManager({ documents, activeThemeDocumentId, onChang
                           className={classes.previewCanvas}
                           style={previewResult.vars as CSSProperties}
                         >
-                          <div className={classes.previewToolbar}>Widget toolbar</div>
-                          <div className={classes.previewWidget}>
-                            <p className={classes.previewWidgetTitle}>Sample widget</p>
-                            <p className={classes.previewWidgetMuted}>Secondary text uses muted tokens.</p>
-                            <span className={classes.previewButton}>Accent button</span>
-                          </div>
+                          {activePreviewLayout ? (
+                            <div className={classes.actualPreviewViewport}>
+                              <BackgroundSlideshow layout={activePreviewLayout} />
+                              <Dashboard
+                                layoutId={activePreviewLayout.id}
+                                externalLayouts={previewLayouts}
+                                isEditing={false}
+                              />
+                            </div>
+                          ) : (
+                            <>
+                              <div className={classes.previewToolbar}>Widget toolbar</div>
+                              <div className={classes.previewWidget}>
+                                <p className={classes.previewWidgetTitle}>Sample widget</p>
+                                <p className={classes.previewWidgetMuted}>Secondary text uses muted tokens.</p>
+                                <span className={classes.previewButton}>Accent button</span>
+                              </div>
+                            </>
+                          )}
                         </div>
                       ) : (
                         <div className={classes.previewPlaceholder}>

@@ -209,6 +209,31 @@ describe("validateThemeDocument", () => {
     expect(result.ok).toBe(true);
   });
 
+  it("accepts expanded Tailwind foundation color palette groups", () => {
+    const doc = minimalDoc() as {
+      tokens: {
+        foundation: {
+          color: Record<string, unknown>;
+        };
+        modes: {
+          dark: { semantic: { text: { primary: { $value: string } } } };
+        };
+      };
+    };
+    doc.tokens.foundation.color.red = {
+      "500": { $type: "color", $value: "oklch(63.7% 0.237 25.331)" },
+    };
+    doc.tokens.foundation.color.sky = {
+      "950": { $type: "color", $value: "oklch(29.3% 0.066 243.157)" },
+    };
+    doc.tokens.modes.dark.semantic.text.primary.$value =
+      "{foundation.color.red.500}";
+
+    const result = validateThemeDocument(doc);
+
+    expect(result.ok).toBe(true);
+  });
+
   it("rejects an unbalanced alias (missing close brace)", () => {
     const doc = minimalDoc() as {
       tokens: {

@@ -18,6 +18,34 @@
   height: 56px;
 }
 
+.topNav {
+  padding: 0.2rem;
+  border: 1px solid var(--mantine-color-default-border);
+  border-radius: var(--mantine-radius-md);
+  background: color-mix(in srgb, var(--mantine-color-default), var(--mantine-color-body) 24%);
+}
+
+.topNavItem {
+  min-height: 32px;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.65rem;
+  border-radius: var(--mantine-radius-sm);
+  color: var(--mantine-color-dimmed);
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.topNavItem:hover {
+  color: var(--mantine-color-text);
+  background: var(--mantine-color-default-hover);
+}
+
+.topNavItemActive {
+  color: var(--mantine-color-indigo-filled);
+  background: var(--mantine-color-indigo-light);
+}
+
 .title {
   color: var(--mantine-color-text);
 }
@@ -26,48 +54,28 @@
   flex: 1;
   min-height: 0;
   padding: 1.25rem 1.5rem;
-  display: flex;
-  gap: 1rem;
   overflow: hidden;
 }
 
-.nav {
-  width: 220px;
-  flex-shrink: 0;
-  border: 1px solid var(--mantine-color-default-border);
-  background: var(--mantine-color-default);
-  border-radius: var(--mantine-radius-md);
-  padding: 0.5rem;
-  align-self: flex-start;
-}
-
-.navItem {
-  width: 100%;
-  border-radius: var(--mantine-radius-sm);
-  padding: 0.55rem 0.65rem;
-  color: var(--mantine-color-dimmed);
-  transition: background-color 0.15s ease, color 0.15s ease;
-}
-
-.navItem:hover {
-  background: var(--mantine-color-default-hover);
-  color: var(--mantine-color-text);
-}
-
-.navItemActive {
-  background: var(--mantine-color-indigo-light);
-  color: var(--mantine-color-indigo-filled);
-}
-
 .content {
-  flex: 1;
+  height: 100%;
   min-width: 0;
   overflow-y: auto;
   padding: 0.5rem 0.25rem 2rem;
 }
 
+.themeContent {
+  overflow: hidden;
+  padding: 0;
+}
+
 .section {
   margin-bottom: 0.5rem;
+}
+
+.themeSection {
+  height: 100%;
+  margin-bottom: 0;
 }
 
 .sectionTitle {
@@ -110,12 +118,20 @@
 
 @media (max-width: 900px) {
   .main {
-    flex-direction: column;
+    gap: 0.75rem;
+    padding: 1rem;
+  }
+
+  .header {
+    height: auto;
+    min-height: 56px;
+    flex-wrap: wrap;
     gap: 0.75rem;
   }
 
-  .nav {
+  .topNav {
+    order: 3;
     width: 100%;
-    align-self: stretch;
+    overflow-x: auto;
   }
 }

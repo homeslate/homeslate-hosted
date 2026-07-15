@@ -10,7 +10,7 @@
     rgba(var(--token-color-brand-500-rgb), 0.1) 0%,
     rgba(var(--token-color-brand-500-rgb), 0.05) 100%
   );
-  border-radius: var(--mantine-radius-md);
+  border-radius: var(--token-widget-radius, var(--token-radius-md));
 }
 
 .container.transparent {
@@ -22,16 +22,13 @@
   font-weight: 300;
   letter-spacing: 0.05em;
   line-height: 1;
-  background: linear-gradient(135deg, var(--token-color-brand-500$1) 0%, var(--token-color-brand-600) 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: var(--token-text-primary);
   text-shadow: 0 0 40px var(--token-glow);
 }
 
 .date {
   font-weight: 500;
-  color: var(--mantine-color-dimmed);
+  color: var(--token-text-muted);
   text-transform: capitalize;
   margin-top: 0.4em;
 }

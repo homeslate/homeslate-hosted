@@ -1,8 +1,12 @@
 .container {
   height: 100%;
-  padding: 1rem;
-  background: linear-gradient(135deg, rgba(34, 197, 94, 0.1) 0%, rgba(16, 185, 129, 0.1) 100%);
-  border-radius: var(--mantine-radius-md);
+  padding: var(--token-widget-padding, var(--token-spacing-4));
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--token-status-success-fg) 10%, transparent) 0%,
+    color-mix(in srgb, var(--token-color-brand-500) 10%, transparent) 100%
+  );
+  border-radius: var(--token-widget-radius, var(--token-radius-md));
   display: flex;
   flex-direction: column;
 }
@@ -25,16 +29,16 @@
   gap: 0.5rem;
   font-weight: 600;
   font-size: 1rem;
-  color: var(--mantine-color-green-5);
+  color: var(--token-status-success-fg);
 }
 
 .refreshBtn {
-  color: var(--mantine-color-dimmed);
+  color: var(--token-text-muted);
 }
 
 .refreshBtn:hover {
-  color: white;
-  background: rgba(255, 255, 255, 0.1);
+  color: var(--token-text-primary);
+  background: color-mix(in srgb, var(--token-color-brand-500) 12%, transparent);
 }
 
 .stocksList {
@@ -48,14 +52,14 @@
   justify-content: space-between;
   align-items: flex-start;
   gap: 1rem;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--token-surface-card);
+  border: 1px solid var(--token-border-default);
   transition: all 0.2s ease;
 }
 
 .stockRow:hover {
-  background: rgba(255, 255, 255, 0.06);
-  border-color: rgba(34, 197, 94, 0.3);
+  background: color-mix(in srgb, var(--token-status-success-fg) 8%, var(--token-surface-card));
+  border-color: color-mix(in srgb, var(--token-status-success-fg) 45%, var(--token-border-default));
 }
 
 .stockInfo {
@@ -77,15 +81,15 @@
 }
 
 .positive {
-  color: #22c55e;
+  color: var(--token-status-success-fg);
 }
 
 .negative {
-  color: #ef4444;
+  color: var(--token-status-danger-fg);
 }
 
 .neutral {
-  color: var(--mantine-color-dimmed);
+  color: var(--token-text-muted);
 }
 
 .attribution {
@@ -105,7 +109,7 @@
 }
 
 .emptyIcon {
-  color: var(--mantine-color-green-5);
+  color: var(--token-status-success-fg);
   opacity: 0.5;
 }
 
@@ -133,20 +137,20 @@
 }
 
 .searchResults {
-  background: rgba(0, 0, 0, 0.3);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--token-surface-overlay, var(--token-surface-card));
+  border: 1px solid var(--token-border-default);
   max-height: 250px;
   overflow-y: auto;
 }
 
 .searchResult {
-  color: var(--mantine-color-dimmed);
+  color: var(--token-text-muted);
   font-weight: normal;
 }
 
 .searchResult:hover:not(:disabled) {
-  color: white;
-  background: rgba(255, 255, 255, 0.1);
+  color: var(--token-text-primary);
+  background: color-mix(in srgb, var(--token-color-brand-500) 12%, transparent);
 }
 
 .searchResult:disabled {
