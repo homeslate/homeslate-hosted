@@ -6,8 +6,8 @@ import { findHourlyStartIndex, sliceHourlyFromNow } from './hourlyForecast';
 // naive time strings lines up with the device's own local hour. This keeps
 // the original test intent (comparisons against the device's local clock)
 // while exercising the new explicit-offset API.
-function deviceUtcOffsetSeconds(): number {
-  return new Date().getTimezoneOffset() * -60;
+function deviceUtcOffsetSeconds(now: Date): number {
+  return -now.getTimezoneOffset() * 60;
 }
 
 describe('findHourlyStartIndex', () => {
@@ -19,7 +19,7 @@ describe('findHourlyStartIndex', () => {
       '2026-07-15T15:00',
     ];
     const now = new Date(2026, 6, 15, 14, 20, 0); // Jul 15 2026 2:20 PM local
-    expect(findHourlyStartIndex(times, now, deviceUtcOffsetSeconds())).toBe(2);
+    expect(findHourlyStartIndex(times, now, deviceUtcOffsetSeconds(now))).toBe(2);
   });
 
   it('skips hours before now', () => {
@@ -29,13 +29,13 @@ describe('findHourlyStartIndex', () => {
       '2026-07-15T02:00',
     ];
     const now = new Date(2026, 6, 15, 2, 5, 0);
-    expect(findHourlyStartIndex(times, now, deviceUtcOffsetSeconds())).toBe(2);
+    expect(findHourlyStartIndex(times, now, deviceUtcOffsetSeconds(now))).toBe(2);
   });
 
   it('returns length when all hours are in the past', () => {
     const times = ['2026-07-15T00:00', '2026-07-15T01:00'];
     const now = new Date(2026, 6, 15, 14, 0, 0);
-    expect(findHourlyStartIndex(times, now, deviceUtcOffsetSeconds())).toBe(2);
+    expect(findHourlyStartIndex(times, now, deviceUtcOffsetSeconds(now))).toBe(2);
   });
 
   it('uses the provided offset instead of the device local timezone', () => {
@@ -70,7 +70,7 @@ describe('sliceHourlyFromNow', () => {
     const values = times.map((_, i) => i);
     const now = new Date(2026, 6, 15, 14, 20, 0);
     expect(
-      sliceHourlyFromNow({ times, values, now, utcOffsetSeconds: deviceUtcOffsetSeconds(), count: 12 }),
+      sliceHourlyFromNow({ times, values, now, utcOffsetSeconds: deviceUtcOffsetSeconds(now), count: 12 }),
     ).toEqual([14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25]);
   });
 
@@ -79,7 +79,7 @@ describe('sliceHourlyFromNow', () => {
     const values = ['a', 'b'];
     const now = new Date(2026, 6, 15, 22, 10, 0);
     expect(
-      sliceHourlyFromNow({ times, values, now, utcOffsetSeconds: deviceUtcOffsetSeconds(), count: 12 }),
+      sliceHourlyFromNow({ times, values, now, utcOffsetSeconds: deviceUtcOffsetSeconds(now), count: 12 }),
     ).toEqual(['a', 'b']);
   });
 
