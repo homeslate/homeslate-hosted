@@ -2,6 +2,8 @@ import type { AlarmToneId } from './types';
 
 let ctx: AudioContext | null = null;
 let timer: ReturnType<typeof setInterval> | null = null;
+let timeouts: ReturnType<typeof setTimeout>[] = [];
+let sessionId = 0;
 
 function getCtx(): AudioContext {
   if (!ctx) ctx = new AudioContext();
@@ -23,21 +25,33 @@ function beep(frequency: number, durationMs: number, gainValue = 0.15): void {
   osc.stop(now + durationMs / 1000);
 }
 
-function playPattern(toneId: AlarmToneId): void {
+function scheduleBeep(session: number, delayMs: number, frequency: number, durationMs: number, gainValue?: number): void {
+  const handle = setTimeout(() => {
+    if (session !== sessionId) return;
+    beep(frequency, durationMs, gainValue);
+  }, delayMs);
+  timeouts.push(handle);
+}
+
+function playPattern(toneId: AlarmToneId, session: number): void {
+  if (session !== sessionId) return;
+
   if (toneId === 'chime') {
     beep(880, 180);
-    setTimeout(() => beep(1174, 220), 200);
+    scheduleBeep(session, 200, 1174, 220);
   } else if (toneId === 'bell') {
     beep(660, 400, 0.2);
   } else {
     beep(440, 120);
-    setTimeout(() => beep(550, 120), 140);
-    setTimeout(() => beep(660, 180), 280);
+    scheduleBeep(session, 140, 550, 120);
+    scheduleBeep(session, 280, 660, 180);
   }
 }
 
 export async function startAlarmTone(toneId: AlarmToneId): Promise<void> {
   stopAlarmTone();
+  const session = sessionId;
+
   const ac = getCtx();
   if (ac.state === 'suspended') {
     try {
@@ -46,13 +60,23 @@ export async function startAlarmTone(toneId: AlarmToneId): Promise<void> {
       return;
     }
   }
-  playPattern(toneId);
-  timer = setInterval(() => playPattern(toneId), 1200);
+
+  if (session !== sessionId) return;
+
+  playPattern(toneId, session);
+  timer = setInterval(() => playPattern(toneId, session), 1200);
 }
 
 export function stopAlarmTone(): void {
+  sessionId += 1;
+
   if (timer) {
     clearInterval(timer);
     timer = null;
   }
+
+  for (const handle of timeouts) {
+    clearTimeout(handle);
+  }
+  timeouts = [];
 }
