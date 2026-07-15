@@ -57,7 +57,8 @@ export function ViewEditorPage() {
         d.colorMode !== prev.colorMode ||
         d.stickyNotesEnabled !== prev.stickyNotesEnabled ||
         d.holidayEffectsEnabled !== prev.holidayEffectsEnabled ||
-        d.holidayPreviewId !== prev.holidayPreviewId
+        d.holidayPreviewId !== prev.holidayPreviewId ||
+        d.alarms !== prev.alarms
       ) {
         const {
           layouts,
@@ -70,6 +71,7 @@ export function ViewEditorPage() {
           stickyNotesEnabled,
           holidayEffectsEnabled,
           holidayPreviewId,
+          alarms,
         } = d;
         const payload: ConfigUpsertRequest = {
           layouts,
@@ -82,6 +84,7 @@ export function ViewEditorPage() {
           stickyNotesEnabled,
           holidayEffectsEnabled,
           holidayPreviewId,
+          alarms,
         };
         void apiClient
           .put<unknown, ConfigUpsertRequest>('/api/config', {

@@ -44,6 +44,7 @@ import {
   IconPalette,
 } from '@tabler/icons-react';
 import { IconPickerModal } from '../components/IconPickerModal';
+import { AlarmListEditor } from '../alarms/AlarmListEditor';
 import {
   DndContext,
   closestCenter,
@@ -348,6 +349,7 @@ export function DisplayDetailPage() {
     setStickyNotesEnabled,
     setHolidayEffectsEnabled,
     setHolidayPreviewId,
+    setAlarms,
     openPreview,
   } = useDashboardStore();
   const display = displays.find((d) => d.id === selectedDisplayId);
@@ -386,6 +388,7 @@ export function DisplayDetailPage() {
       stickyNotesEnabled,
       holidayEffectsEnabled,
       holidayPreviewId,
+      alarms,
     } = {
       ...display,
       ...overrides,
@@ -401,6 +404,7 @@ export function DisplayDetailPage() {
       stickyNotesEnabled,
       holidayEffectsEnabled,
       holidayPreviewId,
+      alarms,
     };
     void apiClient
       .put<unknown, ConfigUpsertRequest>('/api/config', {
@@ -827,6 +831,24 @@ export function DisplayDetailPage() {
                       }}
                     />
                   </Group>
+                </Paper>
+              </section>
+
+              <section className={classes.section}>
+                <Title order={5} className={classes.sectionTitle} mb="md">Alarms</Title>
+                <Paper className={classes.settingsCard} p="md" radius="md">
+                  <Stack gap="sm">
+                    <Text size="xs" c="dimmed">
+                      Recurring alarms ring on this display with sound. Snooze for 5, 10, or 15 minutes.
+                    </Text>
+                    <AlarmListEditor
+                      alarms={display.alarms ?? []}
+                      onChange={(next) => {
+                        setAlarms(display.id, next);
+                        saveConfig({ alarms: next });
+                      }}
+                    />
+                  </Stack>
                 </Paper>
               </section>
 
