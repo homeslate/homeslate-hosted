@@ -36,6 +36,18 @@ const ConfigBodySchema = z
         'new-years-eve',
       ])
       .optional(),
+    alarms: z
+      .array(
+        z.object({
+          id: z.string(),
+          label: z.string(),
+          enabled: z.boolean(),
+          time: z.string(),
+          days: z.array(z.number().int().min(0).max(6)),
+          toneId: z.enum(['chime', 'bell', 'radar']),
+        })
+      )
+      .optional(),
   })
   .passthrough();
 

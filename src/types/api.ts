@@ -2,6 +2,7 @@ import type { StickyNote } from './widget';
 import type { ColorMode } from './theme';
 import type { ThemeDocument } from './theme';
 import type { HolidayId } from '../holidays/registry';
+import type { AlarmDefinition } from '../alarms/types';
 
 export interface ApiOkResponse {
   ok: true;
@@ -50,6 +51,7 @@ export interface ConfigUpsertRequest {
   stickyNotesEnabled?: boolean;
   holidayEffectsEnabled?: boolean;
   holidayPreviewId?: HolidayId;
+  alarms?: AlarmDefinition[];
 }
 
 export interface InviteSummaryDto {

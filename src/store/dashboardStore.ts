@@ -5,6 +5,8 @@ import type { DashboardLayout, WidgetDefinition, WidgetConfig, StickyNote } from
 import type { ColorMode } from '../types/theme';
 import type { ThemeDocument } from '../types/theme';
 import type { HolidayId } from '../holidays/registry';
+import type { AlarmDefinition } from '../alarms/types';
+import { coerceAlarms } from '../alarms/schedule';
 
 export interface Display {
   id: string;        // displays.id (server UUID, primary key)
@@ -22,6 +24,7 @@ export interface Display {
   holidayEffectsEnabled?: boolean;
   holidayPreviewId?: HolidayId;
   isOwner?: boolean;
+  alarms?: AlarmDefinition[];
 }
 
 export interface RemoteDisplay {
@@ -41,6 +44,7 @@ export interface RemoteDisplay {
     stickyNotesEnabled?: boolean;
     holidayEffectsEnabled?: boolean;
     holidayPreviewId?: HolidayId;
+    alarms?: AlarmDefinition[];
   } | null;
 }
 
@@ -79,6 +83,7 @@ interface DashboardState {
   setStickyNotesEnabled: (displayId: string, enabled: boolean) => void;
   setHolidayEffectsEnabled: (displayId: string, enabled: boolean) => void;
   setHolidayPreviewId: (displayId: string, holidayId: HolidayId | undefined) => void;
+  setAlarms: (displayId: string, alarms: AlarmDefinition[]) => void;
 
   // Per-display layout/view actions (act on selectedDisplayId)
   createLayout: (name: string) => void;
@@ -254,6 +259,7 @@ export const useDashboardStore = create<DashboardState>()(
             holidayEffectsEnabled: config.holidayEffectsEnabled ?? existing?.holidayEffectsEnabled ?? false,
             holidayPreviewId: config.holidayPreviewId ?? existing?.holidayPreviewId,
             isOwner: remote.is_owner ?? existing?.isOwner ?? true,
+            alarms: coerceAlarms(config.alarms ?? existing?.alarms ?? []),
           };
         });
         // Keep selectedDisplayId valid
@@ -286,6 +292,7 @@ export const useDashboardStore = create<DashboardState>()(
           rotationIntervalMs: 30000,
           themes: [],
           activeThemeId: null,
+          alarms: [],
         };
         set((state) => ({ displays: [...state.displays, newDisplay] }));
       },
@@ -454,6 +461,12 @@ export const useDashboardStore = create<DashboardState>()(
             ...d,
             holidayPreviewId: holidayId,
           })),
+        }));
+      },
+
+      setAlarms: (displayId: string, alarms: AlarmDefinition[]) => {
+        set((state) => ({
+          displays: updateDisplay(state.displays, displayId, (d) => ({ ...d, alarms })),
         }));
       },
 
