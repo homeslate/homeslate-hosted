@@ -8,7 +8,7 @@ import type { DashboardLayout, StickyNote, WidgetDefinition } from '../types/wid
 import type { TodoItem } from '../widgets/TodoWidget';
 import type { ColorMode, ThemeDocument } from '../types/theme';
 import type { HolidayId } from '../holidays/registry';
-import { resolveTheme, themeToVars, pickActiveDocument } from '../themes';
+import { resolveDisplayThemeVars } from '../themes';
 import { apiClient } from '../services/apiClient';
 import type { NotesPatchRequest, TodosPatchRequest } from '../types/api';
 import type { AlarmDefinition } from '../alarms/types';
@@ -79,14 +79,12 @@ export function DisplayViewer({
   const alarms = useMemo(() => coerceAlarms(config?.alarms), [config?.alarms]);
 
   const tokenVars = useMemo(() => {
-    const themes = config?.themes;
-    if (!themes?.length) {
-      return {};
-    }
-    const themeDoc = pickActiveDocument(themes, config?.activeThemeId ?? null);
     const effectiveMode = localColorMode ?? colorMode ?? config?.colorMode ?? 'dark';
-    const resolvedTheme = resolveTheme(themeDoc, effectiveMode);
-    return themeToVars(resolvedTheme);
+    return resolveDisplayThemeVars(
+      config?.themes,
+      config?.activeThemeId ?? null,
+      effectiveMode,
+    );
   }, [config, colorMode, localColorMode]);
 
   useEffect(() => {

@@ -16,6 +16,16 @@
   --token-text-muted: #6c6c7e;
   --token-glow: rgba(99, 102, 241, 0.3);
   --token-font-base: 'Outfit', 'Inter', sans-serif;
+  /* Spacing / widget chrome — keeps layout density when viewer theme vars aren't mounted yet */
+  --token-spacing-0: 0px;
+  --token-spacing-1: 4px;
+  --token-spacing-2: 8px;
+  --token-spacing-3: 12px;
+  --token-spacing-4: 16px;
+  --token-spacing-6: 24px;
+  --token-spacing-8: 32px;
+  --token-widget-padding: 12px;
+  --token-widget-radius: 12px;
 }
 
 :root[data-theme-fallback] {
@@ -33,6 +43,15 @@
   --token-interactive-primary-bg: #6366f1;
   --token-interactive-primary-fg: #ffffff;
   --token-font-base: 'Inter', sans-serif;
+  --token-spacing-0: 0px;
+  --token-spacing-1: 4px;
+  --token-spacing-2: 8px;
+  --token-spacing-3: 12px;
+  --token-spacing-4: 16px;
+  --token-spacing-6: 24px;
+  --token-spacing-8: 32px;
+  --token-widget-padding: 12px;
+  --token-widget-radius: 12px;
 }
 
 * {

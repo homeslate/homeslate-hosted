@@ -5,6 +5,7 @@ export {
   pickActiveDocument,
 } from "./defaults";
 export { themeToVars, hexToRgb, getBackgroundStyle } from "./utils";
+export { resolveDisplayThemeVars } from "./resolveDisplayThemeVars";
 export { resolveTheme, ThemeResolutionError } from "./resolver";
 export { mantineThemeFromResolved } from "./mantineBridge";
 export {

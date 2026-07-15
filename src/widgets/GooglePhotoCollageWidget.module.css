@@ -17,8 +17,8 @@
   width: 100%;
   height: 100%;
   display: grid;
-  gap: var(--token-spacing-1);
-  padding: var(--token-spacing-1);
+  gap: var(--token-spacing-1, 4px);
+  padding: var(--token-spacing-1, 4px);
   box-sizing: border-box;
 }
 
