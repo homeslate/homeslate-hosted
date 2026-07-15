@@ -1,3 +1,5 @@
+import { sliceHourlyFromNow } from './hourlyForecast';
+
 // Open-Meteo Weather API Service
 // Free for non-commercial use, commercial plans available
 // https://open-meteo.com/
@@ -42,7 +44,7 @@ export interface AirQualityData {
 export interface WeatherData {
   current: CurrentWeather;
   daily: DailyForecast[];
-  hourly: HourlyForecast[]; // next 12 hours
+  hourly: HourlyForecast[]; // next 12 hours from now
   location: {
     name: string;
     country: string;
@@ -182,15 +184,19 @@ export async function fetchWeather(
 
   const data = await response.json();
 
-  // Next 12 hours from hourly arrays (API returns 168 by default)
-  const hourlyCount = 12;
-  const hourlyTimes = (data.hourly?.time ?? []).slice(0, hourlyCount);
-  const hourly: HourlyForecast[] = hourlyTimes.map((time: string, i: number) => ({
+  const times: string[] = data.hourly?.time ?? [];
+  const mapped: HourlyForecast[] = times.map((time: string, i: number) => ({
     time,
     temperature: Math.round(data.hourly.temperature_2m[i]),
     weatherCode: data.hourly.weather_code[i],
     isDay: data.hourly.is_day[i] === 1,
   }));
+  const hourly = sliceHourlyFromNow({
+    times,
+    values: mapped,
+    now: new Date(),
+    count: 12,
+  });
 
   return {
     current: {
