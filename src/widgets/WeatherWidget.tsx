@@ -36,6 +36,7 @@ import {
   type AirQualityData,
 } from '../services/weather';
 import classes from './WeatherWidget.module.css';
+import { getWeatherSectionVisibility, getWeatherSizeTier } from './weatherSizeTier';
 
 export interface WeatherConfig extends WidgetConfig {
   location: string;
@@ -176,17 +177,16 @@ export function WeatherWidget({ widget }: WidgetProps<WeatherConfig>) {
 
   const alignClass = textAlign === 'center' ? classes.alignCenter : textAlign === 'right' ? classes.alignRight : classes.alignLeft;
 
-  // Hide weekly forecast when widget is small (3x3 or smaller) to avoid crowding
   const { w, h } = widget.layout;
-  const isSmallWidget = w <= 3 && h <= 3;
-  const showWeeklyForecast = showForecast && !isSmallWidget;
-
-  // Compact layout for very short widgets (row height 2) to prevent overlap
-  const isCompact = h <= 2;
+  const tier = getWeatherSizeTier(w, h);
+  const sections = getWeatherSectionVisibility(tier);
+  const isCompact = tier === 'compact';
+  const showWeeklyForecast = showForecast && sections.showWeekly;
+  const showCompactLocation = isCompact && w >= 3;
 
   return (
     <Box className={`${classes.container} ${transparentBackground ? classes.transparent : ''} ${alignClass} ${isCompact ? classes.compact : ''}`}>
-      {!isCompact && (
+      {(sections.showLocation || showCompactLocation) && (
       <div className={classes.header}>
         <Text className={classes.location}>
           {weather.location.name}
@@ -195,7 +195,7 @@ export function WeatherWidget({ widget }: WidgetProps<WeatherConfig>) {
         {isLoading && <Loader size="xs" color="orange" />}
       </div>
       )}
-      {!isCompact && (
+      {sections.showUpdated && (
         <WidgetDataStatus
           widgetId={widget.id}
           lastUpdated={lastUpdated}
@@ -216,7 +216,7 @@ export function WeatherWidget({ widget }: WidgetProps<WeatherConfig>) {
           </div>
         </div>
         
-        {!isCompact && (
+        {sections.showDetails && (
         <div className={classes.details}>
           <div className={classes.detailItem}>
             <IconDroplet size={16} />
@@ -232,7 +232,7 @@ export function WeatherWidget({ widget }: WidgetProps<WeatherConfig>) {
         </div>
         )}
 
-        {!isCompact && showAirQuality && aqData !== null && (() => {
+        {sections.showDetails && showAirQuality && aqData !== null && (() => {
           const band = getAqiBand(aqData.usAqi);
           return (
             <div className={classes.aqiBadge} style={{ borderColor: band.color }}>
@@ -244,7 +244,7 @@ export function WeatherWidget({ widget }: WidgetProps<WeatherConfig>) {
         })()}
       </div>
       
-      {!isCompact && weather.hourly.length > 0 && (
+      {sections.showHourly && weather.hourly.length > 0 && (
         <div className={classes.hourlySection}>
           <Text size="xs" fw={600} c="dimmed" mb="xs">Next 12 hours</Text>
           <div className={classes.hourly}>
