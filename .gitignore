@@ -28,3 +28,6 @@ dist-ssr
 
 # Local agent brainstorming artifacts
 .superpowers/
+
+# Git worktrees
+.worktrees/
