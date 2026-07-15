@@ -22,7 +22,7 @@
 }
 
 .compact .header {
-  margin-bottom: 0.25rem;
+  margin-bottom: 0;
   flex-shrink: 0;
 }
 
@@ -113,7 +113,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 0.5rem;
-  margin-bottom: 0.5rem;
+  margin-bottom: 0;
   min-width: 0;
   flex-shrink: 0;
 }
@@ -163,7 +163,6 @@
 .details {
   display: flex;
   gap: 1rem;
-  margin-top: 0.75rem;
   flex-wrap: wrap;
   min-width: 0;
 }
@@ -177,8 +176,7 @@
 
 /* Next 12 hours strip */
 .hourlySection {
-  margin-top: 1rem;
-  padding-top: 1rem;
+  padding-top: 1.25rem;
   border-top: 1px solid var(--token-border-default);
   flex-shrink: 0;
 }
@@ -205,8 +203,7 @@
 .forecast {
   display: flex;
   gap: 0.5rem;
-  margin-top: 1rem;
-  padding-top: 1rem;
+  padding-top: 1.25rem;
   border-top: 1px solid var(--token-border-default);
   overflow-x: auto;
   flex-shrink: 0;
@@ -310,7 +307,6 @@
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
-  margin-top: 0.5rem;
   padding: 0.25rem 0.6rem;
   border: 1px solid;
   border-radius: 999px;
