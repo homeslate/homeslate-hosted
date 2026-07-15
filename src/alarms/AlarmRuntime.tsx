@@ -82,13 +82,23 @@ export function AlarmRuntime({ alarms, enabled = true }: Props) {
   }, [alarms, enabled, enqueue]);
 
   useEffect(() => {
-    if (!current || muted) {
+    if (!enabled) {
+      stopAlarmTone();
+      setShowSnoozeChoices(false);
+      setMuted(false);
+      setQueue([]);
+      return;
+    }
+  }, [enabled]);
+
+  useEffect(() => {
+    if (!enabled || !current || muted) {
       stopAlarmTone();
       return;
     }
     void startAlarmTone(current.alarm.toneId);
     return () => stopAlarmTone();
-  }, [current, muted, current?.alarm.toneId]);
+  }, [enabled, current, muted, current?.alarm.toneId]);
 
   useEffect(() => {
     setShowSnoozeChoices(false);
