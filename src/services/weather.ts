@@ -195,6 +195,7 @@ export async function fetchWeather(
     times,
     values: mapped,
     now: new Date(),
+    utcOffsetSeconds: data.utc_offset_seconds ?? 0,
     count: 12,
   });
 
