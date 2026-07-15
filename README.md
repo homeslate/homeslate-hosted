@@ -36,9 +36,14 @@ A customizable home display platform built with React, Vite, and Mantine. Create
 # Install dependencies
 npm install
 
-# Start development server
+# Frontend only (no API / Netlify functions)
 npm run dev
+
+# Full local stack — Vite + Netlify functions (use this for /api/*)
+npm run dev:netlify
 ```
+
+Open `http://localhost:8888` when using `dev:netlify`. Plain `npm run dev` serves Vite on `:5173` and will fail `/api/*` proxies unless Netlify is also running on `:8888`.
 
 ### Build for Production
 

@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:netlify": "netlify dev",
     "build": "tsc -b && vite build",
     "postbuild": "node scripts/write-redirects.mjs",
     "lint": "eslint .",
