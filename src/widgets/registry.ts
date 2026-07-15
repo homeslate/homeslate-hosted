@@ -13,6 +13,7 @@ import type { StocksConfig } from './StocksWidget';
 import type { WeekCalendarConfig } from './WeekCalendarWidget';
 import type { TodoConfig } from './TodoWidget';
 import type { SportsConfig } from './SportsWidget';
+import type { AlarmsConfig } from './AlarmsWidget';
 import {
   IconClock,
   IconCalendar,
@@ -27,6 +28,7 @@ import {
   IconLayoutGrid,
   IconCheckbox,
   IconTrophy,
+  IconAlarm,
 } from '@tabler/icons-react';
 
 // Lazy-load widget components so each widget's bundle is only fetched when
@@ -69,6 +71,9 @@ const TodoWidgetSettings = lazy(() => import('./TodoWidget').then((m) => ({ defa
 
 const SportsWidget = lazy(() => import('./SportsWidget').then((m) => ({ default: m.SportsWidget })));
 const SportsWidgetSettings = lazy(() => import('./SportsWidget').then((m) => ({ default: m.SportsWidgetSettings })));
+
+const AlarmsWidget = lazy(() => import('./AlarmsWidget').then((m) => ({ default: m.AlarmsWidget })));
+const AlarmsWidgetSettings = lazy(() => import('./AlarmsWidget').then((m) => ({ default: m.AlarmsWidgetSettings })));
 
  
 const widgetRegistry = new Map<string, WidgetRegistryEntry<WidgetConfig>>();
@@ -391,6 +396,26 @@ const sportsEntry: WidgetRegistryEntry<SportsConfig> = {
   },
 };
 setWidgetEntry('sports', sportsEntry);
+
+// Alarms Widget
+const alarmsEntry: WidgetRegistryEntry<AlarmsConfig> = {
+  type: 'alarms',
+  name: 'Alarms',
+  description: 'View and manage recurring display alarms',
+  icon: IconAlarm,
+  component: AlarmsWidget,
+  settingsComponent: AlarmsWidgetSettings,
+  defaultConfig: {
+    transparentBackground: false,
+  },
+  defaultLayout: {
+    w: 3,
+    h: 3,
+    minW: 2,
+    minH: 2,
+  },
+};
+setWidgetEntry('alarms', alarmsEntry);
 
  
 export const getWidgetTypes = (): WidgetRegistryEntry<WidgetConfig>[] => {

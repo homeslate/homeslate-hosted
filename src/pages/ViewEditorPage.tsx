@@ -23,6 +23,7 @@ import { apiClient } from '../services/apiClient';
 import type { ConfigUpsertRequest } from '../types/api';
 import { Dashboard } from '../components/Dashboard';
 import { WidgetPanel, BgSettings } from '../components/WidgetPanel';
+import { AlarmsProvider } from '../alarms/AlarmsContext';
 import classes from './ViewEditorPage.module.css';
 
 export function ViewEditorPage() {
@@ -35,6 +36,7 @@ export function ViewEditorPage() {
     openPreview,
     setColorMode,
     setLayoutBackground,
+    setAlarms,
   } = useDashboardStore();
   const { vars: themeVars, colorMode } = useTheme();
   const display = displays.find((d) => d.id === selectedDisplayId);
@@ -185,7 +187,12 @@ export function ViewEditorPage() {
         <WidgetPanel />
         <main className={classes.main} style={themeVars as React.CSSProperties}>
           <BackgroundSlideshow layout={view} />
-          <Dashboard layoutId={selectedViewId ?? undefined} isEditing={true} />
+          <AlarmsProvider
+            alarms={display.alarms ?? []}
+            onAlarmsChange={(next) => setAlarms(display.id, next)}
+          >
+            <Dashboard layoutId={selectedViewId ?? undefined} isEditing={true} />
+          </AlarmsProvider>
         </main>
       </div>
       <Modal
