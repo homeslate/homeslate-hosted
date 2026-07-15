@@ -17,6 +17,11 @@ import './App.css';
 // DisplayViewer is used on the always-on tablet so keep it eager to avoid
 // a loading flash on every hard refresh of the display URL.
 import { DisplayViewer } from './components/DisplayViewer';
+import {
+  clearSessionDisplayId,
+  persistDisplayId,
+  resolveDisplayId,
+} from './displayPersistence';
 const AuthPage = lazy(() => import('./pages/AuthPage').then((m) => ({ default: m.AuthPage })));
 const DisplayListPage = lazy(() => import('./pages/DisplayListPage').then((m) => ({ default: m.DisplayListPage })));
 const DisplayDetailPage = lazy(() => import('./pages/DisplayDetailPage').then((m) => ({ default: m.DisplayDetailPage })));
@@ -75,14 +80,13 @@ function MantineBridge({ children }: { children: ReactNode }) {
   );
 }
 
-// If the URL has ?display=<uuid>, persist it so it survives OAuth redirects.
-// We do this at module load time (before any component mounts) so we catch
-// the very first navigation, including cases where the browser reloads after
-// a Google OAuth redirect flow and the query string has been stripped.
-const DISPLAY_SESSION_KEY = 'kd_pending_display';
+// If the URL has ?display=<uuid>, persist it so it survives OAuth redirects
+// (sessionStorage) and Android Chrome PWA relaunches that open start_url "/"
+// (localStorage, restored only in standalone/fullscreen display-mode).
+// Module load time so we catch the first navigation before any component mounts.
 const _initialDisplayParam = new URLSearchParams(window.location.search).get('display');
 if (_initialDisplayParam) {
-  sessionStorage.setItem(DISPLAY_SESSION_KEY, _initialDisplayParam);
+  persistDisplayId(_initialDisplayParam);
 }
 
 function AppInner() {
@@ -101,15 +105,14 @@ function AppInner() {
   }
 
   // Display device mode: ?display=<uuid> → fullscreen viewer, no auth needed.
-  // Also check sessionStorage so we survive OAuth redirects that strip query params
-  // (e.g. on Android Chrome where the Google consent flow can reload the page).
-  const urlDisplayParam = new URLSearchParams(window.location.search).get('display');
-  const displayParam = urlDisplayParam ?? sessionStorage.getItem(DISPLAY_SESSION_KEY);
+  // Falls back to sessionStorage (OAuth) and localStorage (installed PWA).
+  const displayParam = resolveDisplayId();
   if (displayParam) return <DisplayViewer displayId={displayParam} />;
 
-  // No display param — clear any stale pending display so the management UI
-  // is reachable if the user navigates to the root URL without the parameter.
-  sessionStorage.removeItem(DISPLAY_SESSION_KEY);
+  // No display for this tab — clear the short-lived session copy so the
+  // management UI is reachable. Keep localStorage so the installed app still
+  // reopens the pinned display on next standalone launch.
+  clearSessionDisplayId();
 
   if (!isAuthenticated) return <Suspense fallback={<PageLoader />}><AuthPage /></Suspense>;
 

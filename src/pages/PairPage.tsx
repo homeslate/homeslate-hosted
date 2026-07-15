@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { Center, Paper, Title, Text, Stack, Code, Loader, CopyButton, Tooltip, ActionIcon, Box } from '@mantine/core';
 import { IconLayoutDashboard, IconCopy, IconCheck } from '@tabler/icons-react';
 import { apiClient, ApiError } from '../services/apiClient';
+import { persistDisplayId } from '../displayPersistence';
 import type { PairCreateResponse, PairStatusResponse } from '../types/api';
 import classes from './PairPage.module.css';
 
@@ -18,7 +19,7 @@ export function PairPage() {
     });
     if (data.status === 'claimed' && data.displayId) {
       setStatus('claimed');
-      sessionStorage.setItem('kd_pending_display', data.displayId);
+      persistDisplayId(data.displayId);
       window.location.href = `/?display=${data.displayId}`;
       return;
     }

@@ -1,6 +1,7 @@
 import { createContext, useContext, type ReactNode } from 'react';
+import { DISPLAY_SESSION_KEY, resolveDisplayId } from '../displayPersistence';
 
-export const DISPLAY_SESSION_KEY = 'kd_pending_display';
+export { DISPLAY_SESSION_KEY };
 
 interface DisplayContextValue {
   displayId: string;
@@ -30,20 +31,18 @@ export function useDisplayContext(): string | null {
 }
 
 /**
- * Read display ID from URL or sessionStorage (for when context isn't available).
- * Use this as a fallback in widgets so display mode is detected even with lazy loading.
+ * Read display ID from URL / session / standalone localStorage
+ * (for when context isn't available). Use this as a fallback in widgets
+ * so display mode is detected even with lazy loading.
  */
 export function getDisplayIdFromWindow(): string | null {
   if (typeof window === 'undefined') return null;
-  return (
-    new URLSearchParams(window.location.search).get('display') ||
-    sessionStorage.getItem(DISPLAY_SESSION_KEY)
-  );
+  return resolveDisplayId();
 }
 
 /**
  * Display ID for the current device when in display/viewer mode.
- * Prefer context (DisplayProvider); fallback to URL or sessionStorage.
+ * Prefer context (DisplayProvider); fallback to URL / session / standalone local.
  */
 export function useDisplayId(): string | null {
   const fromContext = useContext(DisplayContext)?.displayId;
