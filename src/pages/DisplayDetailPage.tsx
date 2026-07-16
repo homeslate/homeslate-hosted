@@ -347,6 +347,7 @@ export function DisplayDetailPage() {
     setColorMode,
     setPasscodeEnabled,
     setStickyNotesEnabled,
+    setVoiceEnabled,
     setHolidayEffectsEnabled,
     setHolidayPreviewId,
     setAlarms,
@@ -388,6 +389,7 @@ export function DisplayDetailPage() {
       activeThemeId,
       colorMode: savedColorMode,
       stickyNotesEnabled,
+      voiceEnabled,
       holidayEffectsEnabled,
       holidayPreviewId,
       alarms,
@@ -404,6 +406,7 @@ export function DisplayDetailPage() {
       activeThemeId,
       colorMode: savedColorMode,
       stickyNotesEnabled,
+      voiceEnabled,
       holidayEffectsEnabled,
       holidayPreviewId,
       alarms,
@@ -853,6 +856,22 @@ export function DisplayDetailPage() {
                         }, 500);
                       }}
                     />
+                    <Group justify="space-between" mt="xs">
+                      <Stack gap={2}>
+                        <Text size="sm" fw={500}>Enable voice commands</Text>
+                        <Text size="xs" c="dimmed">
+                          Say dismiss or snooze when an alarm rings. Microphone permission is requested
+                          on this display (Chromium / HTTPS recommended).
+                        </Text>
+                      </Stack>
+                      <Switch
+                        checked={display.voiceEnabled ?? false}
+                        onChange={(e) => {
+                          setVoiceEnabled(display.id, e.currentTarget.checked);
+                          saveConfig({ voiceEnabled: e.currentTarget.checked });
+                        }}
+                      />
+                    </Group>
                   </Stack>
                 </Paper>
               </section>

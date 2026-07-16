@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { AlarmDefinition, SnoozeMinutes } from './types';
 import { findDueAlarms, snoozeFireAt } from './schedule';
-import { startAlarmTone, stopAlarmTone } from './tones';
+import { setAlarmToneDucked, startAlarmTone, stopAlarmTone } from './tones';
 import { AlarmDialog } from './AlarmDialog';
+import { useAlarmVoiceCommands } from '../voice/useAlarmVoiceCommands';
 
 const GRACE_MS = 60_000;
 const TICK_MS = 1000;
@@ -15,9 +16,10 @@ interface QueueItem {
 interface Props {
   alarms: AlarmDefinition[];
   enabled?: boolean;
+  voiceEnabled?: boolean;
 }
 
-export function AlarmRuntime({ alarms, enabled = true }: Props) {
+export function AlarmRuntime({ alarms, enabled = true, voiceEnabled = false }: Props) {
   const [queue, setQueue] = useState<QueueItem[]>([]);
   const [showSnoozeChoices, setShowSnoozeChoices] = useState(false);
   const [muted, setMuted] = useState(false);
@@ -106,16 +108,32 @@ export function AlarmRuntime({ alarms, enabled = true }: Props) {
     setMuted(false);
   }, [current?.occurrenceKey]);
 
-  const dismiss = () => {
+  const dismiss = useCallback(() => {
     stopAlarmTone();
     setQueue((prev) => prev.slice(1));
-  };
+  }, []);
 
-  const snooze = (minutes: SnoozeMinutes) => {
-    if (!current) return;
-    snoozesRef.current[current.alarm.id] = snoozeFireAt(Date.now(), minutes);
-    dismiss();
-  };
+  const snooze = useCallback(
+    (minutes: SnoozeMinutes) => {
+      if (!current) return;
+      snoozesRef.current[current.alarm.id] = snoozeFireAt(Date.now(), minutes);
+      dismiss();
+    },
+    [current, dismiss],
+  );
+
+  const voiceActive = Boolean(enabled && current);
+  const { listening, unavailableReason } = useAlarmVoiceCommands({
+    active: voiceActive,
+    enabled: voiceEnabled,
+    onDismiss: dismiss,
+    onSnooze: snooze,
+  });
+
+  useEffect(() => {
+    setAlarmToneDucked(listening && !muted);
+    return () => setAlarmToneDucked(false);
+  }, [listening, muted]);
 
   if (!enabled || !current) return null;
 
@@ -125,6 +143,8 @@ export function AlarmRuntime({ alarms, enabled = true }: Props) {
       time={current.alarm.time}
       muted={muted}
       showSnoozeChoices={showSnoozeChoices}
+      voiceListening={listening}
+      voiceUnavailableReason={voiceEnabled ? unavailableReason : null}
       onToggleMute={() => setMuted((m) => !m)}
       onDismiss={dismiss}
       onOpenSnooze={() => setShowSnoozeChoices(true)}

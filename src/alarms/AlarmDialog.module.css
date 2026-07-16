@@ -32,6 +32,16 @@
   margin-bottom: 1.75rem;
 }
 
+.voiceStatus {
+  margin: -1rem 0 1.25rem;
+  letter-spacing: 0.01em;
+}
+
+.voiceStatus[data-listening='true'] {
+  color: var(--mantine-color-teal-4, #20c997);
+  opacity: 1;
+}
+
 .pulse {
   width: 64px;
   height: 64px;

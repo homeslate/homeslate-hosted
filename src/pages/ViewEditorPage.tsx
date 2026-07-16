@@ -58,6 +58,7 @@ export function ViewEditorPage() {
         d.activeThemeId !== prev.activeThemeId ||
         d.colorMode !== prev.colorMode ||
         d.stickyNotesEnabled !== prev.stickyNotesEnabled ||
+        d.voiceEnabled !== prev.voiceEnabled ||
         d.holidayEffectsEnabled !== prev.holidayEffectsEnabled ||
         d.holidayPreviewId !== prev.holidayPreviewId ||
         d.alarms !== prev.alarms
@@ -71,6 +72,7 @@ export function ViewEditorPage() {
           activeThemeId,
           colorMode: savedColorMode,
           stickyNotesEnabled,
+          voiceEnabled,
           holidayEffectsEnabled,
           holidayPreviewId,
           alarms,
@@ -84,6 +86,7 @@ export function ViewEditorPage() {
           activeThemeId,
           colorMode: savedColorMode,
           stickyNotesEnabled,
+          voiceEnabled,
           holidayEffectsEnabled,
           holidayPreviewId,
           alarms,

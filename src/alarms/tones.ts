@@ -4,6 +4,14 @@ let ctx: AudioContext | null = null;
 let timer: ReturnType<typeof setInterval> | null = null;
 let timeouts: ReturnType<typeof setTimeout>[] = [];
 let sessionId = 0;
+/** Multiplier applied to beep gain while voice is listening (duck, don't mute). */
+let duckFactor = 1;
+
+const DUCKED_GAIN = 0.22;
+
+export function setAlarmToneDucked(ducked: boolean): void {
+  duckFactor = ducked ? DUCKED_GAIN : 1;
+}
 
 function getCtx(): AudioContext {
   if (!ctx) ctx = new AudioContext();
@@ -16,7 +24,7 @@ function beep(frequency: number, durationMs: number, gainValue = 0.15): void {
   const gain = ac.createGain();
   osc.type = 'sine';
   osc.frequency.value = frequency;
-  gain.gain.value = gainValue;
+  gain.gain.value = gainValue * duckFactor;
   osc.connect(gain);
   gain.connect(ac.destination);
   const now = ac.currentTime;
@@ -69,6 +77,7 @@ export async function startAlarmTone(toneId: AlarmToneId): Promise<void> {
 
 export function stopAlarmTone(): void {
   sessionId += 1;
+  duckFactor = 1;
 
   if (timer) {
     clearInterval(timer);

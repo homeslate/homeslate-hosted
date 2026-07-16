@@ -21,6 +21,7 @@ export interface Display {
   colorMode?: ColorMode;
   passcodeEnabled?: boolean;
   stickyNotesEnabled?: boolean;
+  voiceEnabled?: boolean;
   holidayEffectsEnabled?: boolean;
   holidayPreviewId?: HolidayId;
   isOwner?: boolean;
@@ -42,6 +43,7 @@ export interface RemoteDisplay {
     activeThemeId?: string | null;
     colorMode?: ColorMode;
     stickyNotesEnabled?: boolean;
+    voiceEnabled?: boolean;
     holidayEffectsEnabled?: boolean;
     holidayPreviewId?: HolidayId;
     alarms?: AlarmDefinition[];
@@ -81,6 +83,7 @@ interface DashboardState {
   setLayoutBackground: (layoutId: string, updates: Partial<Pick<import('../types/widget').DashboardLayout, 'backgroundImage' | 'backgroundImageSize' | 'backgroundOverlayOpacity' | 'backgroundPhotos' | 'backgroundInterval'>>) => void;
   setPasscodeEnabled: (displayId: string, enabled: boolean) => void;
   setStickyNotesEnabled: (displayId: string, enabled: boolean) => void;
+  setVoiceEnabled: (displayId: string, enabled: boolean) => void;
   setHolidayEffectsEnabled: (displayId: string, enabled: boolean) => void;
   setHolidayPreviewId: (displayId: string, holidayId: HolidayId | undefined) => void;
   setAlarms: (displayId: string, alarms: AlarmDefinition[]) => void;
@@ -256,6 +259,7 @@ export const useDashboardStore = create<DashboardState>()(
             colorMode: config.colorMode ?? existing?.colorMode,
             passcodeEnabled: remote.passcode_enabled ?? existing?.passcodeEnabled ?? false,
             stickyNotesEnabled: config.stickyNotesEnabled ?? existing?.stickyNotesEnabled ?? false,
+            voiceEnabled: config.voiceEnabled ?? existing?.voiceEnabled ?? false,
             holidayEffectsEnabled: config.holidayEffectsEnabled ?? existing?.holidayEffectsEnabled ?? false,
             holidayPreviewId: config.holidayPreviewId ?? existing?.holidayPreviewId,
             isOwner: remote.is_owner ?? existing?.isOwner ?? true,
@@ -442,6 +446,15 @@ export const useDashboardStore = create<DashboardState>()(
           displays: updateDisplay(state.displays, displayId, (d) => ({
             ...d,
             stickyNotesEnabled: enabled,
+          })),
+        }));
+      },
+
+      setVoiceEnabled: (displayId: string, enabled: boolean) => {
+        set((state) => ({
+          displays: updateDisplay(state.displays, displayId, (d) => ({
+            ...d,
+            voiceEnabled: enabled,
           })),
         }));
       },

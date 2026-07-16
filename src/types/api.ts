@@ -49,6 +49,7 @@ export interface ConfigUpsertRequest {
   activeThemeId?: string | null;
   colorMode?: ColorMode;
   stickyNotesEnabled?: boolean;
+  voiceEnabled?: boolean;
   holidayEffectsEnabled?: boolean;
   holidayPreviewId?: HolidayId;
   alarms?: AlarmDefinition[];

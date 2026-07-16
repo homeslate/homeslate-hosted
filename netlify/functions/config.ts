@@ -23,6 +23,7 @@ const ConfigBodySchema = z
     activeThemeId: z.string().nullable().optional(),
     colorMode: z.enum(['light', 'dark']).optional(),
     stickyNotesEnabled: z.boolean().optional(),
+    voiceEnabled: z.boolean().optional(),
     holidayEffectsEnabled: z.boolean().optional(),
     holidayPreviewId: z
       .enum([

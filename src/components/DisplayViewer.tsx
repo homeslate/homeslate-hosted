@@ -32,6 +32,7 @@ interface DisplayConfig {
   activeThemeId?: string | null;
   colorMode?: ColorMode;
   stickyNotesEnabled?: boolean;
+  voiceEnabled?: boolean;
   holidayEffectsEnabled?: boolean;
   holidayPreviewId?: HolidayId;
   alarms?: AlarmDefinition[];
@@ -516,7 +517,11 @@ export function DisplayViewer({
             </div>
           )}
           {!isPreview && (
-            <AlarmRuntime alarms={alarms} enabled={!passcodeRequired} />
+            <AlarmRuntime
+              alarms={alarms}
+              enabled={!passcodeRequired}
+              voiceEnabled={config?.voiceEnabled ?? false}
+            />
           )}
         </div>
       </AlarmsProvider>
