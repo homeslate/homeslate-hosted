@@ -9,12 +9,14 @@ interface Props {
   time: string;
   muted: boolean;
   showSnoozeChoices: boolean;
+  showRestart?: boolean;
   voiceListening?: boolean;
   voiceUnavailableReason?: VoiceStatusReason | null;
   onToggleMute: () => void;
   onDismiss: () => void;
   onOpenSnooze: () => void;
   onSnooze: (minutes: SnoozeMinutes) => void;
+  onRestart?: () => void;
 }
 
 function voiceStatusLabel(
@@ -33,12 +35,14 @@ export function AlarmDialog({
   time,
   muted,
   showSnoozeChoices,
+  showRestart,
   voiceListening = false,
   voiceUnavailableReason = null,
   onToggleMute,
   onDismiss,
   onOpenSnooze,
   onSnooze,
+  onRestart,
 }: Props) {
   const status = voiceStatusLabel(voiceListening, voiceUnavailableReason);
 
@@ -85,6 +89,11 @@ export function AlarmDialog({
               ))}
             </div>
           )}
+          {showRestart && onRestart && !showSnoozeChoices ? (
+            <Button size="xl" variant="default" onClick={onRestart}>
+              Restart
+            </Button>
+          ) : null}
         </div>
       </div>
     </div>
