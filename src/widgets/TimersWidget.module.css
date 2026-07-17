@@ -27,7 +27,7 @@
 }
 
 .runtimeCard {
-  background: var(--token-surface-elevated, var(--mantine-color-body));
+  background: var(--token-surface-elevated, var(--token-surface-card));
 }
 
 .runtimeDetails {
