@@ -24,6 +24,7 @@ import type { ConfigUpsertRequest } from '../types/api';
 import { Dashboard } from '../components/Dashboard';
 import { WidgetPanel, BgSettings } from '../components/WidgetPanel';
 import { AlarmsProvider } from '../alarms/AlarmsContext';
+import { TimersProvider } from '../timers/TimersContext';
 import classes from './ViewEditorPage.module.css';
 
 export function ViewEditorPage() {
@@ -190,12 +191,14 @@ export function ViewEditorPage() {
         <WidgetPanel />
         <main className={classes.main} style={themeVars as React.CSSProperties}>
           <BackgroundSlideshow layout={view} />
-          <AlarmsProvider
-            alarms={display.alarms ?? []}
-            onAlarmsChange={(next) => setAlarms(display.id, next)}
-          >
-            <Dashboard layoutId={selectedViewId ?? undefined} isEditing={true} />
-          </AlarmsProvider>
+          <TimersProvider>
+            <AlarmsProvider
+              alarms={display.alarms ?? []}
+              onAlarmsChange={(next) => setAlarms(display.id, next)}
+            >
+              <Dashboard layoutId={selectedViewId ?? undefined} isEditing={true} />
+            </AlarmsProvider>
+          </TimersProvider>
         </main>
       </div>
       <Modal

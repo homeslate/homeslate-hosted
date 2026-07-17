@@ -14,7 +14,7 @@ interface Props {
   alarms: AlarmDefinition[];
   enabled?: boolean;
   voiceEnabled?: boolean;
-  onRegisterEnqueue?: (enqueue: (item: AlertQueueItem) => void) => void;
+  onRegisterEnqueue?: (enqueue: ((item: AlertQueueItem) => void) | null) => void;
   onTimerRestart?: (timer: NonNullable<AlertQueueItem['timer']>) => void;
 }
 
@@ -45,12 +45,12 @@ export function AlertRuntime({
 
   useEffect(() => {
     if (!enabled) {
-      onRegisterEnqueue?.(() => {});
+      onRegisterEnqueue?.(null);
       return;
     }
 
     onRegisterEnqueue?.(enqueueOne);
-    return () => onRegisterEnqueue?.(() => {});
+    return () => onRegisterEnqueue?.(null);
   }, [enabled, enqueueOne, onRegisterEnqueue]);
 
   useEffect(() => {
