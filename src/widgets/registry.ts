@@ -14,6 +14,7 @@ import type { WeekCalendarConfig } from './WeekCalendarWidget';
 import type { TodoConfig } from './TodoWidget';
 import type { SportsConfig } from './SportsWidget';
 import type { AlarmsConfig } from './AlarmsWidget';
+import type { TimersConfig } from './TimersWidget';
 import {
   IconClock,
   IconCalendar,
@@ -29,6 +30,7 @@ import {
   IconCheckbox,
   IconTrophy,
   IconAlarm,
+  IconHourglass,
 } from '@tabler/icons-react';
 
 // Lazy-load widget components so each widget's bundle is only fetched when
@@ -74,6 +76,9 @@ const SportsWidgetSettings = lazy(() => import('./SportsWidget').then((m) => ({ 
 
 const AlarmsWidget = lazy(() => import('./AlarmsWidget').then((m) => ({ default: m.AlarmsWidget })));
 const AlarmsWidgetSettings = lazy(() => import('./AlarmsWidget').then((m) => ({ default: m.AlarmsWidgetSettings })));
+
+const TimersWidget = lazy(() => import('./TimersWidget').then((m) => ({ default: m.TimersWidget })));
+const TimersWidgetSettings = lazy(() => import('./TimersWidget').then((m) => ({ default: m.TimersWidgetSettings })));
 
  
 const widgetRegistry = new Map<string, WidgetRegistryEntry<WidgetConfig>>();
@@ -416,6 +421,27 @@ const alarmsEntry: WidgetRegistryEntry<AlarmsConfig> = {
   },
 };
 setWidgetEntry('alarms', alarmsEntry);
+
+// Timers Widget
+const timersEntry: WidgetRegistryEntry<TimersConfig> = {
+  type: 'timers',
+  name: 'Timers',
+  description: 'Countdown timers with shared display alerts',
+  icon: IconHourglass,
+  component: TimersWidget,
+  settingsComponent: TimersWidgetSettings,
+  defaultConfig: {
+    presets: [],
+    transparentBackground: false,
+  },
+  defaultLayout: {
+    w: 3,
+    h: 3,
+    minW: 2,
+    minH: 2,
+  },
+};
+setWidgetEntry('timers', timersEntry);
 
  
 export const getWidgetTypes = (): WidgetRegistryEntry<WidgetConfig>[] => {
