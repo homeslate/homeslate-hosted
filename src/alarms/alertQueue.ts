@@ -15,3 +15,13 @@ export function dedupeEnqueue(
 
   return next;
 }
+
+export function timerSnoozesAfterDismiss<T>(
+  timerSnoozes: Record<string, T>,
+  runId: string,
+  preserveTimerSnooze: boolean,
+): Record<string, T> {
+  if (preserveTimerSnooze) return timerSnoozes;
+  const { [runId]: _dismissedSnooze, ...remainingSnoozes } = timerSnoozes;
+  return remainingSnoozes;
+}

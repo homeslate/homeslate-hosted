@@ -5,7 +5,7 @@ import { setAlarmToneDucked, startAlarmTone, stopAlarmTone } from './tones';
 import { AlarmDialog } from './AlarmDialog';
 import { useAlarmVoiceCommands } from '../voice/useAlarmVoiceCommands';
 import type { AlertQueueItem } from './alertTypes';
-import { dedupeEnqueue } from './alertQueue';
+import { dedupeEnqueue, timerSnoozesAfterDismiss } from './alertQueue';
 
 const GRACE_MS = 60_000;
 const TICK_MS = 1000;
@@ -145,10 +145,14 @@ export function AlertRuntime({
     setMuted(false);
   }, [current?.id]);
 
-  const dismiss = useCallback(() => {
+  const dismiss = useCallback((options?: { preserveTimerSnooze?: boolean }) => {
     stopAlarmTone();
     if (current?.kind === 'timer' && current.timer) {
-      delete timerSnoozesRef.current[current.timer.runId];
+      timerSnoozesRef.current = timerSnoozesAfterDismiss(
+        timerSnoozesRef.current,
+        current.timer.runId,
+        options?.preserveTimerSnooze ?? false,
+      );
     }
     setQueue((prev) => prev.slice(1));
   }, [current]);
@@ -162,7 +166,7 @@ export function AlertRuntime({
       } else if (current.kind === 'timer' && current.timer) {
         timerSnoozesRef.current[current.timer.runId] = { fireAt, timer: current.timer };
       }
-      dismiss();
+      dismiss({ preserveTimerSnooze: true });
     },
     [current, dismiss],
   );
