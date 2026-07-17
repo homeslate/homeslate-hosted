@@ -13,14 +13,19 @@ describe('Timers widget', () => {
     });
   });
 
-  it('removes invalid timer presets before rendering', () => {
+  it('removes invalid timer presets and defaults invalid tones before rendering', () => {
     expect(
       coerceTimerPresets([
         { id: 'one', label: 'Tea', durationSeconds: 300, toneId: 'chime' },
         { id: '', label: 'Missing ID', durationSeconds: 300, toneId: 'chime' },
         { id: 'bad-duration', label: 'Broken', durationSeconds: 0, toneId: 'chime' },
         { id: 'bad-tone', label: 'Broken', durationSeconds: 300, toneId: 'unknown' },
+        { id: 'missing-tone', label: 'Broken', durationSeconds: 300 },
       ]),
-    ).toEqual([{ id: 'one', label: 'Tea', durationSeconds: 300, toneId: 'chime' }]);
+    ).toEqual([
+      { id: 'one', label: 'Tea', durationSeconds: 300, toneId: 'chime' },
+      { id: 'bad-tone', label: 'Broken', durationSeconds: 300, toneId: 'chime' },
+      { id: 'missing-tone', label: 'Broken', durationSeconds: 300, toneId: 'chime' },
+    ]);
   });
 });

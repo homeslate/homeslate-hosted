@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useReducer, useRef, type ReactNode } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import type { AlertQueueItem } from '../alarms/alertTypes';
 import type { AlarmToneId } from '../alarms/types';
@@ -27,8 +27,78 @@ interface TimersContextValue {
 
 const TimersContext = createContext<TimersContextValue | null>(null);
 
+interface TimersState {
+  runtimes: TimerRuntime[];
+  pendingCompletions: TimerRuntime[];
+}
+
+type TimersAction =
+  | { type: 'start'; runtime: TimerRuntime }
+  | { type: 'pause'; id: string; now: number }
+  | { type: 'resume'; id: string; now: number }
+  | { type: 'cancel'; id: string }
+  | { type: 'tick'; now: number }
+  | { type: 'flush-completions'; ids: string[] };
+
+function withCompletedRuntimes(state: TimersState, runtimes: TimerRuntime[], completed: TimerRuntime[]): TimersState {
+  if (completed.length === 0) return { ...state, runtimes };
+
+  const pendingIds = new Set(state.pendingCompletions.map((runtime) => runtime.id));
+  return {
+    runtimes,
+    pendingCompletions: [...state.pendingCompletions, ...completed.filter((runtime) => !pendingIds.has(runtime.id))],
+  };
+}
+
+function timersReducer(state: TimersState, action: TimersAction): TimersState {
+  switch (action.type) {
+    case 'start':
+      return { ...state, runtimes: [...state.runtimes, action.runtime] };
+    case 'resume':
+      return {
+        ...state,
+        runtimes: state.runtimes.map((runtime) => (runtime.id === action.id ? resumeRuntime(runtime, action.now) : runtime)),
+      };
+    case 'cancel':
+      return {
+        runtimes: state.runtimes.filter((runtime) => runtime.id !== action.id),
+        pendingCompletions: state.pendingCompletions.filter((runtime) => runtime.id !== action.id),
+      };
+    case 'pause': {
+      const completed: TimerRuntime[] = [];
+      const runtimes = state.runtimes.flatMap((runtime) => {
+        if (runtime.id !== action.id) return [runtime];
+        const paused = pauseRuntime(runtime, action.now);
+        if (isRuntimeComplete(paused, action.now)) {
+          completed.push(paused);
+          return [];
+        }
+        return [paused];
+      });
+      return withCompletedRuntimes(state, runtimes, completed);
+    }
+    case 'tick': {
+      const completed: TimerRuntime[] = [];
+      const runtimes = state.runtimes.flatMap((runtime) => {
+        if (isRuntimeComplete(runtime, action.now)) {
+          completed.push(runtime);
+          return [];
+        }
+        if (runtime.status === 'paused') return [runtime];
+        return [{ ...runtime, remainingMs: remainingMs(runtime, action.now) }];
+      });
+      return withCompletedRuntimes(state, runtimes, completed);
+    }
+    case 'flush-completions': {
+      const ids = new Set(action.ids);
+      return { ...state, pendingCompletions: state.pendingCompletions.filter((runtime) => !ids.has(runtime.id)) };
+    }
+  }
+}
+
 export function TimersProvider({ children }: { children: ReactNode }) {
-  const [runtimes, setRuntimes] = useState<TimerRuntime[]>([]);
+  const [state, dispatch] = useReducer(timersReducer, { runtimes: [], pendingCompletions: [] });
+  const { runtimes } = state;
   const enqueueRef = useRef<EnqueueFn | null>(null);
   const completedRef = useRef(new Set<string>());
 
@@ -44,7 +114,7 @@ export function TimersProvider({ children }: { children: ReactNode }) {
         ...fields,
       });
       if (!runtime) return;
-      setRuntimes((prev) => [...prev, runtime]);
+      dispatch({ type: 'start', runtime });
     },
     [],
   );
@@ -52,7 +122,7 @@ export function TimersProvider({ children }: { children: ReactNode }) {
   const startFromPreset = useCallback((preset: TimerPreset) => {
     const runtime = createRuntimeFromPreset(preset, uuidv4(), Date.now());
     if (!runtime) return;
-    setRuntimes((prev) => [...prev, runtime]);
+    dispatch({ type: 'start', runtime });
   }, []);
 
   const restartFromAlert = useCallback(
@@ -68,16 +138,15 @@ export function TimersProvider({ children }: { children: ReactNode }) {
   );
 
   const resume = useCallback((id: string) => {
-    const now = Date.now();
-    setRuntimes((prev) => prev.map((runtime) => (runtime.id === id ? resumeRuntime(runtime, now) : runtime)));
+    dispatch({ type: 'resume', id, now: Date.now() });
   }, []);
 
   const cancel = useCallback((id: string) => {
     completedRef.current.delete(id);
-    setRuntimes((prev) => prev.filter((runtime) => runtime.id !== id));
+    dispatch({ type: 'cancel', id });
   }, []);
 
-  const enqueueCompletion = (runtime: TimerRuntime) => {
+  const enqueueCompletion = useCallback((runtime: TimerRuntime) => {
     if (completedRef.current.has(runtime.id)) return;
     completedRef.current.add(runtime.id);
     enqueueRef.current?.({
@@ -94,54 +163,25 @@ export function TimersProvider({ children }: { children: ReactNode }) {
         presetId: runtime.presetId,
       },
     });
-  };
+  }, []);
 
   const pause = useCallback((id: string) => {
-    const now = Date.now();
-    setRuntimes((prev) => {
-      const next: TimerRuntime[] = [];
-      for (const runtime of prev) {
-        if (runtime.id !== id) {
-          next.push(runtime);
-          continue;
-        }
-        const paused = pauseRuntime(runtime, now);
-        if (isRuntimeComplete(paused, now)) {
-          enqueueCompletion(paused);
-          continue;
-        }
-        next.push(paused);
-      }
-      return next;
-    });
+    dispatch({ type: 'pause', id, now: Date.now() });
   }, []);
 
   useEffect(() => {
     const tick = window.setInterval(() => {
-      const now = Date.now();
-      setRuntimes((prev) => {
-        const stillRunning: TimerRuntime[] = [];
-
-        for (const runtime of prev) {
-          if (isRuntimeComplete(runtime, now)) {
-            enqueueCompletion(runtime);
-            continue;
-          }
-
-          if (runtime.status === 'paused') {
-            stillRunning.push(runtime);
-            continue;
-          }
-
-          stillRunning.push({ ...runtime, remainingMs: remainingMs(runtime, now) });
-        }
-
-        return stillRunning;
-      });
+      dispatch({ type: 'tick', now: Date.now() });
     }, 250);
 
     return () => window.clearInterval(tick);
   }, []);
+
+  useEffect(() => {
+    if (state.pendingCompletions.length === 0) return;
+    state.pendingCompletions.forEach(enqueueCompletion);
+    dispatch({ type: 'flush-completions', ids: state.pendingCompletions.map((runtime) => runtime.id) });
+  }, [enqueueCompletion, state.pendingCompletions]);
 
   const value: TimersContextValue = {
     runtimes,

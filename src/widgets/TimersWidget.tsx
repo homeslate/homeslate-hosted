@@ -19,8 +19,8 @@ const TONE_IDS = new Set<AlarmToneId>(ALARM_TONE_OPTIONS.map((tone) => tone.valu
 export function coerceTimerPresets(value: unknown): TimerPreset[] {
   if (!Array.isArray(value)) return [];
 
-  return value.filter(
-    (preset): preset is TimerPreset =>
+  return value.flatMap((preset): TimerPreset[] => {
+    if (
       typeof preset === 'object' &&
       preset !== null &&
       typeof preset.id === 'string' &&
@@ -28,10 +28,17 @@ export function coerceTimerPresets(value: unknown): TimerPreset[] {
       typeof preset.label === 'string' &&
       typeof preset.durationSeconds === 'number' &&
       Number.isFinite(preset.durationSeconds) &&
-      preset.durationSeconds > 0 &&
-      typeof preset.toneId === 'string' &&
-      TONE_IDS.has(preset.toneId as AlarmToneId),
-  );
+      preset.durationSeconds > 0
+    ) {
+      return [{
+        id: preset.id,
+        label: preset.label,
+        durationSeconds: preset.durationSeconds,
+        toneId: typeof preset.toneId === 'string' && TONE_IDS.has(preset.toneId as AlarmToneId) ? preset.toneId as AlarmToneId : 'chime',
+      }];
+    }
+    return [];
+  });
 }
 
 function createTimerPreset(): TimerPreset {
