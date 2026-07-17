@@ -67,11 +67,6 @@ export function TimersProvider({ children }: { children: ReactNode }) {
     [startFromFields],
   );
 
-  const pause = useCallback((id: string) => {
-    const now = Date.now();
-    setRuntimes((prev) => prev.map((runtime) => (runtime.id === id ? pauseRuntime(runtime, now) : runtime)));
-  }, []);
-
   const resume = useCallback((id: string) => {
     const now = Date.now();
     setRuntimes((prev) => prev.map((runtime) => (runtime.id === id ? resumeRuntime(runtime, now) : runtime)));
@@ -82,6 +77,45 @@ export function TimersProvider({ children }: { children: ReactNode }) {
     setRuntimes((prev) => prev.filter((runtime) => runtime.id !== id));
   }, []);
 
+  const enqueueCompletion = (runtime: TimerRuntime) => {
+    if (completedRef.current.has(runtime.id)) return;
+    completedRef.current.add(runtime.id);
+    enqueueRef.current?.({
+      kind: 'timer',
+      id: `timer|${runtime.id}`,
+      label: runtime.label,
+      subtitle: '0:00',
+      toneId: runtime.toneId,
+      timer: {
+        runId: runtime.id,
+        durationSeconds: runtime.durationSeconds,
+        label: runtime.label,
+        toneId: runtime.toneId,
+        presetId: runtime.presetId,
+      },
+    });
+  };
+
+  const pause = useCallback((id: string) => {
+    const now = Date.now();
+    setRuntimes((prev) => {
+      const next: TimerRuntime[] = [];
+      for (const runtime of prev) {
+        if (runtime.id !== id) {
+          next.push(runtime);
+          continue;
+        }
+        const paused = pauseRuntime(runtime, now);
+        if (isRuntimeComplete(paused, now)) {
+          enqueueCompletion(paused);
+          continue;
+        }
+        next.push(paused);
+      }
+      return next;
+    });
+  }, []);
+
   useEffect(() => {
     const tick = window.setInterval(() => {
       const now = Date.now();
@@ -89,32 +123,17 @@ export function TimersProvider({ children }: { children: ReactNode }) {
         const stillRunning: TimerRuntime[] = [];
 
         for (const runtime of prev) {
+          if (isRuntimeComplete(runtime, now)) {
+            enqueueCompletion(runtime);
+            continue;
+          }
+
           if (runtime.status === 'paused') {
             stillRunning.push(runtime);
             continue;
           }
 
-          if (!isRuntimeComplete(runtime, now)) {
-            stillRunning.push({ ...runtime, remainingMs: remainingMs(runtime, now) });
-            continue;
-          }
-
-          if (completedRef.current.has(runtime.id)) continue;
-          completedRef.current.add(runtime.id);
-          enqueueRef.current?.({
-            kind: 'timer',
-            id: `timer|${runtime.id}`,
-            label: runtime.label,
-            subtitle: '0:00',
-            toneId: runtime.toneId,
-            timer: {
-              runId: runtime.id,
-              durationSeconds: runtime.durationSeconds,
-              label: runtime.label,
-              toneId: runtime.toneId,
-              presetId: runtime.presetId,
-            },
-          });
+          stillRunning.push({ ...runtime, remainingMs: remainingMs(runtime, now) });
         }
 
         return stillRunning;

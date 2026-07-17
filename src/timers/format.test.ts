@@ -61,6 +61,7 @@ describe('remaining / pause / resume / complete', () => {
   it('isRuntimeComplete when remaining <= 0', () => {
     expect(isRuntimeComplete(running({ endsAt: 1_000_000 }), 1_000_000)).toBe(true);
     expect(isRuntimeComplete(running({ endsAt: 1_000_001 }), 1_000_000)).toBe(false);
+    expect(isRuntimeComplete(running({ status: 'paused', remainingMs: 0 }), 1_000_000)).toBe(true);
   });
 
   it('createRuntimeFromFields rejects non-positive duration', () => {
