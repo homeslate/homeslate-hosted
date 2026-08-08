@@ -13,12 +13,11 @@ describe("resolveDisplayThemeVars", () => {
   });
 
   it("uses the active theme document when themes are present", () => {
-    const doc = DEFAULT_THEME_DOCUMENTS[1];
+    const doc = DEFAULT_THEME_DOCUMENTS[1]; // Midnight
     const vars = resolveDisplayThemeVars([doc], doc.id, "dark");
 
     expect(vars["--token-spacing-1"]).toBe("4px");
-    expect(vars["--token-color-brand-500"]).toBe(
-      doc.tokens.foundation.color.brand["500"].$value,
-    );
+    // Midnight brand color — distinct from Cosmos default (#6366f1)
+    expect(vars["--token-color-brand-500"]).toBe("#3b82f6");
   });
 });
