@@ -1,5 +1,6 @@
 import type { Handler } from '@netlify/functions';
 import { AUTH_JSON_HEADERS, errorResponse, jsonResponse, optionsResponse } from './_shared/http';
+import { exchangeRefreshToken } from './_shared/googleTokens';
 
 export const handler: Handler = async (event) => {
   if (event.httpMethod === 'OPTIONS') {
@@ -23,37 +24,7 @@ export const handler: Handler = async (event) => {
   }
 
   try {
-    const clientId = process.env.GOOGLE_CLIENT_ID;
-    const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
-    
-    if (!clientId || !clientSecret) {
-      console.error('Missing Google OAuth credentials');
-      return errorResponse(500, 'Server configuration error', AUTH_JSON_HEADERS);
-    }
-
-    const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({
-        client_id: clientId,
-        client_secret: clientSecret,
-        refresh_token: refreshToken,
-        grant_type: 'refresh_token',
-      }),
-    });
-
-    if (!tokenRes.ok) {
-      const error = await tokenRes.text();
-      console.error('Google token refresh failed:', error);
-      return errorResponse(401, 'Invalid refresh token', AUTH_JSON_HEADERS);
-    }
-
-    const tokenData = await tokenRes.json() as {
-      access_token: string;
-      expires_in: number;
-      scope: string;
-      token_type: string;
-    };
+    const tokenData = await exchangeRefreshToken(refreshToken);
 
     return jsonResponse(
       200,
@@ -65,6 +36,6 @@ export const handler: Handler = async (event) => {
     );
   } catch (err) {
     console.error('Token refresh error:', err);
-    return errorResponse(500, 'Internal server error', AUTH_JSON_HEADERS);
+    return errorResponse(401, 'Invalid refresh token', AUTH_JSON_HEADERS);
   }
 };

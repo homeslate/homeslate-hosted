@@ -79,12 +79,29 @@ interface GoogleTokenClient {
   requestAccessToken: (config?: { prompt?: string }) => void;
 }
 
+interface GoogleCodeClientResponse {
+  code?: string;
+  error?: string;
+  error_description?: string;
+}
+
+interface GoogleCodeClient {
+  requestCode: (config?: { prompt?: string }) => void;
+}
+
 interface GoogleOauth2Api {
   initTokenClient: (config: {
     client_id: string;
     scope: string;
     callback: (response: GoogleTokenResponse) => void;
   }) => GoogleTokenClient;
+  initCodeClient: (config: {
+    client_id: string;
+    scope: string;
+    ux_mode?: 'popup' | 'redirect';
+    callback: (response: GoogleCodeClientResponse) => void;
+    error_callback?: (error: unknown) => void;
+  }) => GoogleCodeClient;
 }
 
 interface GoogleIdentityServices {

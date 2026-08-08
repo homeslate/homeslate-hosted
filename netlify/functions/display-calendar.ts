@@ -1,6 +1,7 @@
 import type { Handler } from '@netlify/functions';
 import { sql } from 'drizzle-orm';
 import { getDb } from '../../src/db';
+import { exchangeRefreshToken } from './_shared/googleTokens';
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -46,22 +47,7 @@ function toCandidate(row: TokenRow | undefined, source: TokenCandidate['source']
 }
 
 async function exchangeRefreshForAccess(refreshToken: string): Promise<{ access_token: string; expires_in: number }> {
-  const clientId = process.env.GOOGLE_CLIENT_ID;
-  const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
-  if (!clientId || !clientSecret) throw new Error('Missing Google OAuth credentials');
-
-  const res = await fetch('https://oauth2.googleapis.com/token', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: new URLSearchParams({
-      client_id: clientId,
-      client_secret: clientSecret,
-      refresh_token: refreshToken,
-      grant_type: 'refresh_token',
-    }),
-  });
-  if (!res.ok) throw new Error('Failed to refresh token');
-  const data = (await res.json()) as { access_token: string; expires_in?: number };
+  const data = await exchangeRefreshToken(refreshToken);
   return { access_token: data.access_token, expires_in: data.expires_in ?? 3600 };
 }
 
@@ -211,7 +197,8 @@ export const handler: Handler = async (event) => {
             WHERE id = ${candidate.user_id}::uuid
           `);
           break;
-        } catch {
+        } catch (err) {
+          console.error(`display-calendar refresh failed for ${candidate.source}:`, err);
           refreshFailures.push(candidate.source);
           // Try next linked user token.
         }

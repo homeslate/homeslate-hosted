@@ -14,7 +14,7 @@ export const PUBLIC_JSON_HEADERS: HttpHeaders = {
 
 export const AUTH_JSON_HEADERS: HttpHeaders = {
   ...BASE_CORS_HEADERS,
-  'Access-Control-Allow-Headers': 'Authorization, Content-Type',
+  'Access-Control-Allow-Headers': 'Authorization, Content-Type, X-Refresh-Token',
   'Content-Type': 'application/json',
 };
 

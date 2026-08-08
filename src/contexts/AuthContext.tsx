@@ -39,33 +39,8 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
-interface GoogleTokenClientResponse {
-  access_token: string;
-  expires_in: number;
-  error?: string;
-  refresh_token?: string;
-}
-
-interface GoogleTokenClient {
-  callback: (response: GoogleTokenClientResponse) => void;
-  requestAccessToken: (config?: { prompt?: string }) => void;
-}
-
-interface GoogleOauth2Api {
-  initTokenClient: (config: {
-    client_id: string;
-    scope: string;
-    callback: (response: GoogleTokenClientResponse) => void;
-    access_type?: 'offline';
-  }) => GoogleTokenClient;
-}
-
-interface WindowWithGoogle extends Window {
-  google?: {
-    accounts?: {
-      oauth2?: GoogleOauth2Api;
-    };
-  };
+interface GoogleCodeClient {
+  requestCode: (config?: { prompt?: string }) => void;
 }
 
 function readStoredToken(): string | null {
@@ -95,14 +70,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(readStoredUser);
   const [accessToken, setAccessToken] = useState<string | null>(readStoredToken);
   const [isLoading, setIsLoading] = useState(false);
-   
-  const tokenClientRef = useRef<GoogleTokenClient | null>(null);
+
+  const codeClientRef = useRef<GoogleCodeClient | null>(null);
   const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const syncedTokenRef = useRef<string | null>(null);
 
   /**
    * Store a fresh token + schedule the next silent refresh.
-   * Called both from signIn() and from the silent-refresh callback.
    */
   const storeToken = useCallback((token: string, expiresIn: number) => {
     const expiry = Date.now() + expiresIn * 1000;
@@ -110,7 +84,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.setItem(TOKEN_EXPIRY_KEY, String(expiry));
     setAccessToken(token);
 
-    // Schedule next refresh REFRESH_BEFORE_EXPIRY_MS before the token expires.
     const msUntilRefresh = Math.max(0, expiresIn * 1000 - REFRESH_BEFORE_EXPIRY_MS);
     if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current);
     refreshTimerRef.current = setTimeout(() => {
@@ -122,7 +95,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const refreshAccessToken = useCallback(async (): Promise<string | null> => {
     const refreshToken = localStorage.getItem(REFRESH_TOKEN_KEY);
     if (!refreshToken) return null;
-    
+
     try {
       const res = await fetch('/api/refresh-token', {
         method: 'POST',
@@ -142,58 +115,38 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [storeToken]);
 
-  /**
-   * Request a new access token using server-side refresh.
-   * This works without requiring Google Identity Services or browser session.
-   */
+  /** Refresh access token server-side using the stored refresh token. */
   const silentRefresh = useCallback(async () => {
     const newToken = await refreshAccessToken();
     if (!newToken) {
-      console.warn('Server-side token refresh failed, will try GIS fallback');
-      if (!tokenClientRef.current) return;
-      tokenClientRef.current.callback = (response: GoogleTokenClientResponse) => {
-        if (response.error) {
-          console.warn('GIS silent token refresh failed:', response.error);
-          return;
-        }
-        storeToken(response.access_token, response.expires_in ?? 3600);
-      };
-      tokenClientRef.current.requestAccessToken({ prompt: '' });
+      console.warn('Server-side token refresh failed; owner must sign in again');
     }
-  }, [refreshAccessToken, storeToken]);
+  }, [refreshAccessToken]);
 
-  // Load Google Identity Services and initialise the token client
+  const scheduleRefreshFromStorage = useCallback(() => {
+    const expiry = localStorage.getItem(TOKEN_EXPIRY_KEY);
+    const token = localStorage.getItem(TOKEN_KEY);
+    if (!expiry || !token) return;
+
+    const msRemaining = parseInt(expiry, 10) - Date.now();
+    const msUntilRefresh = Math.max(0, msRemaining - REFRESH_BEFORE_EXPIRY_MS);
+    if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current);
+    refreshTimerRef.current = setTimeout(() => {
+      silentRefresh();
+    }, msUntilRefresh);
+  }, [silentRefresh]);
+
+  // Load Google Identity Services script and schedule token refresh from storage.
   useEffect(() => {
-    const init = () => {
-      const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID as string;
-      if (!clientId) return;
-      const oauth2 = (window as WindowWithGoogle).google?.accounts?.oauth2;
-      if (!oauth2) return;
-      tokenClientRef.current = oauth2.initTokenClient({
-        client_id: clientId,
-        scope: SCOPES,
-        access_type: 'offline',
-        callback: () => {}, // replaced per-request in signIn() / silentRefresh()
-      });
-
-      // If we already have a stored token, schedule a refresh based on the
-      // remaining lifetime. If it's already close to expiry or expired, refresh now.
-      const expiry = localStorage.getItem(TOKEN_EXPIRY_KEY);
-      if (expiry && localStorage.getItem(TOKEN_KEY)) {
-        const msRemaining = parseInt(expiry, 10) - Date.now();
-        const msUntilRefresh = Math.max(0, msRemaining - REFRESH_BEFORE_EXPIRY_MS);
-        if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current);
-        refreshTimerRef.current = setTimeout(() => {
-          silentRefresh();
-        }, msUntilRefresh);
-      }
+    const onReady = () => {
+      scheduleRefreshFromStorage();
     };
 
     if (
       typeof window !== 'undefined' &&
       (window as typeof window & { google?: unknown }).google
     ) {
-      init();
+      onReady();
       return;
     }
 
@@ -201,7 +154,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     script.src = 'https://accounts.google.com/gsi/client';
     script.async = true;
     script.defer = true;
-    script.onload = () => setTimeout(init, 100);
+    script.onload = () => setTimeout(onReady, 100);
     document.head.appendChild(script);
 
     return () => {
@@ -254,31 +207,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     []
   );
 
-  // On mount: if we have a stored token but no user, re-validate it
-  // If token is expired, try to refresh it first
+  // On mount: restore session from stored tokens, refreshing if the access token expired.
   useEffect(() => {
-    if (accessToken && !user) {
-      const expiry = localStorage.getItem(TOKEN_EXPIRY_KEY);
-      const isExpired = !expiry || Date.now() >= parseInt(expiry, 10);
-      
-      if (isExpired) {
-        refreshAccessToken()
-          .then((newToken) => {
-            if (newToken) {
-              return fetchAndStoreUser(newToken);
-            }
-            throw new Error('Token refresh failed');
-          })
-          .catch(clearSession);
-      } else {
-        fetchAndStoreUser(accessToken).catch(clearSession);
-      }
+    const token = readStoredToken();
+    const storedUser = readStoredUser();
+    const storedRefresh = localStorage.getItem(REFRESH_TOKEN_KEY);
+
+    if (token && storedUser) return;
+
+    if (token && !storedUser) {
+      fetchAndStoreUser(token).catch(clearSession);
+      return;
+    }
+
+    if (storedRefresh) {
+      refreshAccessToken()
+        .then((newToken) => {
+          if (newToken) return fetchAndStoreUser(newToken);
+          throw new Error('Token refresh failed');
+        })
+        .catch(clearSession);
+      return;
+    }
+
+    if (storedUser || token) {
+      clearSession();
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Keep backend token state fresh for display-calendar usage (owner/collaborator).
-  // This runs once per access token value and is non-disruptive for existing sessions.
   useEffect(() => {
     if (!accessToken) return;
     if (syncedTokenRef.current === accessToken) return;
@@ -288,34 +246,81 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         syncedTokenRef.current = accessToken;
       })
       .catch((err) => {
-        // Avoid forcing sign-out for transient backend sync issues.
         console.warn('Failed to sync auth session to backend:', err);
       });
   }, [accessToken, fetchAndStoreUser]);
 
   const signIn = useCallback(() => {
-    if (!tokenClientRef.current) return;
+    const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID as string;
+    const oauth2 = window.google?.accounts?.oauth2;
+    if (!clientId || !oauth2) return;
+
     setIsLoading(true);
-    tokenClientRef.current.callback = async (response: GoogleTokenClientResponse) => {
-      if (response.error) {
+
+    const client = oauth2.initCodeClient({
+      client_id: clientId,
+      scope: SCOPES,
+      ux_mode: 'popup',
+      callback: async (response) => {
+        if (response.error) {
+          console.error('Google sign-in failed:', response.error, response.error_description);
+          setIsLoading(false);
+          return;
+        }
+        if (!response.code) {
+          setIsLoading(false);
+          return;
+        }
+
+        try {
+          const res = await fetch('/api/exchange-code', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-Requested-With': 'XmlHttpRequest',
+            },
+            body: JSON.stringify({
+              code: response.code,
+              redirect_uri: window.location.origin,
+            }),
+          });
+
+          if (!res.ok) {
+            throw new Error('Failed to exchange authorization code');
+          }
+
+          const data = await res.json() as {
+            access_token: string;
+            expires_in: number;
+            refresh_token?: string;
+            user: AuthUser;
+          };
+
+          if (data.refresh_token) {
+            localStorage.setItem(REFRESH_TOKEN_KEY, data.refresh_token);
+          } else {
+            console.warn('No refresh token returned; calendar on displays may stop working after access token expiry');
+          }
+
+          storeToken(data.access_token, data.expires_in ?? 3600);
+          setUser(data.user);
+          localStorage.setItem(USER_KEY, JSON.stringify(data.user));
+          syncedTokenRef.current = data.access_token;
+        } catch (err) {
+          console.error('Failed to complete sign-in:', err);
+        } finally {
+          setIsLoading(false);
+        }
+      },
+      error_callback: (error) => {
+        console.warn('Google sign-in error:', error);
         setIsLoading(false);
-        return;
-      }
-      const token = response.access_token;
-      if (response.refresh_token) {
-        localStorage.setItem(REFRESH_TOKEN_KEY, response.refresh_token);
-      }
-      storeToken(token, response.expires_in ?? 3600);
-      try {
-        await fetchAndStoreUser(token, response.refresh_token);
-      } catch (err) {
-        console.error('Failed to fetch user after sign-in:', err);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    tokenClientRef.current.requestAccessToken({ prompt: 'consent' });
-  }, [fetchAndStoreUser, storeToken]);
+      },
+    });
+
+    codeClientRef.current = client;
+    client.requestCode({ prompt: 'consent' });
+  }, [storeToken]);
 
   // Do not call Google's token revoke here: revocation invalidates the refresh
   // token for this OAuth client, which breaks server-side calendar fetch for
