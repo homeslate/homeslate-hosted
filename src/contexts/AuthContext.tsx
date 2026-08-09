@@ -104,6 +104,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
       if (!res.ok) {
         console.warn('Token refresh failed:', res.status);
+        if (res.status === 401) {
+          localStorage.removeItem(REFRESH_TOKEN_KEY);
+        }
         return null;
       }
       const data = await res.json() as { access_token: string; expires_in: number };
@@ -136,32 +139,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }, msUntilRefresh);
   }, [silentRefresh]);
 
-  // Load Google Identity Services script and schedule token refresh from storage.
+  // Schedule silent server-side token refresh from stored credentials (no Google popup).
   useEffect(() => {
-    const onReady = () => {
-      scheduleRefreshFromStorage();
-    };
-
-    if (
-      typeof window !== 'undefined' &&
-      (window as typeof window & { google?: unknown }).google
-    ) {
-      onReady();
-      return;
-    }
-
-    const script = document.createElement('script');
-    script.src = 'https://accounts.google.com/gsi/client';
-    script.async = true;
-    script.defer = true;
-    script.onload = () => setTimeout(onReady, 100);
-    document.head.appendChild(script);
-
+    scheduleRefreshFromStorage();
     return () => {
       if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current);
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [scheduleRefreshFromStorage]);
 
   const clearSession = useCallback(() => {
     if (refreshTimerRef.current) {
@@ -224,7 +208,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       refreshAccessToken()
         .then((newToken) => {
           if (newToken) return fetchAndStoreUser(newToken);
-          throw new Error('Token refresh failed');
+          // Only sign out when the refresh token was rejected (removed above on 401).
+          if (!localStorage.getItem(REFRESH_TOKEN_KEY)) {
+            throw new Error('Token refresh failed');
+          }
         })
         .catch(clearSession);
       return;
@@ -252,74 +239,97 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signIn = useCallback(() => {
     const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID as string;
-    const oauth2 = window.google?.accounts?.oauth2;
-    if (!clientId || !oauth2) return;
+    if (!clientId) return;
 
     setIsLoading(true);
 
-    const client = oauth2.initCodeClient({
-      client_id: clientId,
-      scope: SCOPES,
-      ux_mode: 'popup',
-      callback: async (response) => {
-        if (response.error) {
-          console.error('Google sign-in failed:', response.error, response.error_description);
-          setIsLoading(false);
-          return;
-        }
-        if (!response.code) {
-          setIsLoading(false);
-          return;
-        }
-
-        try {
-          const res = await fetch('/api/exchange-code', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'X-Requested-With': 'XmlHttpRequest',
-            },
-            body: JSON.stringify({
-              code: response.code,
-              redirect_uri: window.location.origin,
-            }),
-          });
-
-          if (!res.ok) {
-            throw new Error('Failed to exchange authorization code');
-          }
-
-          const data = await res.json() as {
-            access_token: string;
-            expires_in: number;
-            refresh_token?: string;
-            user: AuthUser;
-          };
-
-          if (data.refresh_token) {
-            localStorage.setItem(REFRESH_TOKEN_KEY, data.refresh_token);
-          } else {
-            console.warn('No refresh token returned; calendar on displays may stop working after access token expiry');
-          }
-
-          storeToken(data.access_token, data.expires_in ?? 3600);
-          setUser(data.user);
-          localStorage.setItem(USER_KEY, JSON.stringify(data.user));
-          syncedTokenRef.current = data.access_token;
-        } catch (err) {
-          console.error('Failed to complete sign-in:', err);
-        } finally {
-          setIsLoading(false);
-        }
-      },
-      error_callback: (error) => {
-        console.warn('Google sign-in error:', error);
+    const runSignIn = () => {
+      const oauth2 = window.google?.accounts?.oauth2;
+      if (!oauth2) {
         setIsLoading(false);
-      },
-    });
+        return;
+      }
 
-    codeClientRef.current = client;
-    client.requestCode({ prompt: 'consent' });
+      const client = oauth2.initCodeClient({
+        client_id: clientId,
+        scope: SCOPES,
+        ux_mode: 'popup',
+        callback: async (response) => {
+          if (response.error) {
+            console.error('Google sign-in failed:', response.error, response.error_description);
+            setIsLoading(false);
+            return;
+          }
+          if (!response.code) {
+            setIsLoading(false);
+            return;
+          }
+
+          try {
+            const res = await fetch('/api/exchange-code', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XmlHttpRequest',
+              },
+              body: JSON.stringify({
+                code: response.code,
+                redirect_uri: window.location.origin,
+              }),
+            });
+
+            if (!res.ok) {
+              throw new Error('Failed to exchange authorization code');
+            }
+
+            const data = await res.json() as {
+              access_token: string;
+              expires_in: number;
+              refresh_token?: string;
+              user: AuthUser;
+            };
+
+            if (data.refresh_token) {
+              localStorage.setItem(REFRESH_TOKEN_KEY, data.refresh_token);
+            } else {
+              console.warn('No refresh token returned; calendar on displays may stop working after access token expiry');
+            }
+
+            storeToken(data.access_token, data.expires_in ?? 3600);
+            setUser(data.user);
+            localStorage.setItem(USER_KEY, JSON.stringify(data.user));
+            syncedTokenRef.current = data.access_token;
+          } catch (err) {
+            console.error('Failed to complete sign-in:', err);
+          } finally {
+            setIsLoading(false);
+          }
+        },
+        error_callback: (error) => {
+          console.warn('Google sign-in error:', error);
+          setIsLoading(false);
+        },
+      });
+
+      codeClientRef.current = client;
+      client.requestCode({ prompt: 'consent' });
+    };
+
+    if (window.google?.accounts?.oauth2) {
+      runSignIn();
+      return;
+    }
+
+    const script = document.createElement('script');
+    script.src = 'https://accounts.google.com/gsi/client';
+    script.async = true;
+    script.defer = true;
+    script.onload = () => setTimeout(runSignIn, 100);
+    script.onerror = () => {
+      console.error('Failed to load Google Identity Services');
+      setIsLoading(false);
+    };
+    document.head.appendChild(script);
   }, [storeToken]);
 
   // Do not call Google's token revoke here: revocation invalidates the refresh
