@@ -1,5 +1,3 @@
-import { sliceHourlyFromNow } from './hourlyForecast';
-
 // Open-Meteo Weather API Service
 // Free for non-commercial use, commercial plans available
 // https://open-meteo.com/
@@ -44,7 +42,8 @@ export interface AirQualityData {
 export interface WeatherData {
   current: CurrentWeather;
   daily: DailyForecast[];
-  hourly: HourlyForecast[]; // next 12 hours from now
+  hourly: HourlyForecast[];
+  utcOffsetSeconds: number;
   location: {
     name: string;
     country: string;
@@ -157,7 +156,7 @@ export async function fetchWeather(
     'precipitation_probability_max',
   ].join(','));
 
-  // Hourly forecast (next 12 hours: temperature + weather icon)
+  // Hourly forecast (temperature + weather icon)
   url.searchParams.set('hourly', [
     'temperature_2m',
     'weather_code',
@@ -191,14 +190,6 @@ export async function fetchWeather(
     weatherCode: data.hourly.weather_code[i],
     isDay: data.hourly.is_day[i] === 1,
   }));
-  const hourly = sliceHourlyFromNow({
-    times,
-    values: mapped,
-    now: new Date(),
-    utcOffsetSeconds: data.utc_offset_seconds ?? 0,
-    count: 12,
-  });
-
   return {
     current: {
       temperature: Math.round(data.current.temperature_2m),
@@ -215,7 +206,8 @@ export async function fetchWeather(
       tempMin: Math.round(data.daily.temperature_2m_min[i]),
       precipitationProbability: data.daily.precipitation_probability_max[i],
     })),
-    hourly,
+    hourly: mapped,
+    utcOffsetSeconds: data.utc_offset_seconds ?? 0,
     location: locationInfo ?? {
       name: 'Unknown',
       country: '',

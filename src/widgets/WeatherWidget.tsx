@@ -246,7 +246,7 @@ export function WeatherWidget({ widget }: WidgetProps<WeatherConfig>) {
       
       {sections.showHourly && weather.hourly.length > 0 && (
         <div className={classes.hourlySection}>
-          <Text size="xs" fw={600} c="dimmed" mb="xs">Next 12 hours</Text>
+          <Text size="xs" fw={600} c="dimmed" mb="xs">Next 24 hours</Text>
           <div className={classes.hourly}>
             {weather.hourly.map((hour, index) => {
               const hourLabel = new Date(hour.time).toLocaleTimeString('en-US', {

@@ -174,18 +174,22 @@
   color: var(--token-text-muted);
 }
 
-/* Next 12 hours strip */
+/* Next 24 hours strip */
 .hourlySection {
   padding-top: 1.25rem;
   border-top: 1px solid var(--token-border-default);
   flex-shrink: 0;
+  min-width: 0;
 }
 
 .hourly {
   display: flex;
   gap: 0.35rem;
   overflow-x: auto;
+  overflow-y: hidden;
   padding-bottom: 0.25rem;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
 }
 
 .forecastHour {
