@@ -22,3 +22,10 @@
   from = "/*"
   to = "/index.html"
   status = 200
+
+# GIS popup OAuth (initCodeClient ux_mode: popup) needs opener access to the popup.
+# Without this, Chrome logs COOP warnings and sign-in can intermittently fail.
+[[headers]]
+  for = "/*"
+  [headers.values]
+    Cross-Origin-Opener-Policy = "same-origin-allow-popups"

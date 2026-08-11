@@ -269,14 +269,19 @@ export function WeatherWidget({ widget }: WidgetProps<WeatherConfig>) {
       {showWeeklyForecast && weather.daily.length > 1 && (
         <div className={classes.forecast}>
           {weather.daily.slice(1, forecastDays + 1).map((day, index) => {
-            const dayName = new Date(day.date).toLocaleDateString('en-US', { weekday: 'short' });
+            const dayName = new Date(day.date).toLocaleDateString('en-US', { weekday: 'long' });
             const dayIcon = getWeatherIcon(day.weatherCode);
             return (
               <div key={index} className={classes.forecastDay}>
-                <Text size="xs" fw={500}>{dayName}</Text>
-                <WeatherIcon condition={dayIcon} size={24} />
-                <Text size="xs">{day.tempMax}°</Text>
-                <Text size="xs" c="dimmed">{day.tempMin}°</Text>
+                <Text size="sm" fw={500} className={classes.forecastDayName}>{dayName}</Text>
+                <div className={classes.forecastDayBody}>
+                  <WeatherIcon condition={dayIcon} size={26} />
+                  <div className={classes.forecastDayTemps}>
+                    <Text size="sm" fw={500} component="span">{day.tempMax}°</Text>
+                    <Text size="sm" c="dimmed" component="span">/</Text>
+                    <Text size="sm" c="dimmed" component="span">{day.tempMin}°</Text>
+                  </div>
+                </div>
               </div>
             );
           })}

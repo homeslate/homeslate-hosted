@@ -215,14 +215,38 @@
 
 .forecastDay {
   flex: 1;
-  min-width: 48px;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.25rem;
-  padding: 0.5rem;
+  justify-content: center;
+  gap: 0.35rem;
+  padding: 0.6rem 0.5rem;
   background: var(--token-surface-card);
   border-radius: var(--token-radius-sm);
+}
+
+.forecastDayName {
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+
+.forecastDayBody {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.forecastDayTemps {
+  display: flex;
+  flex-direction: row;
+  align-items: baseline;
+  gap: 0.2rem;
+  white-space: nowrap;
 }
 
 .iconSunny {
