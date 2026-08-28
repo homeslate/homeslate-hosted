@@ -69,6 +69,19 @@ describe('validateDisplayDocument', () => {
     expect(result.ok).toBe(false);
   });
 
+  it('rejects v1 with non-array views', () => {
+    const result = validateDisplayDocument({ schemaVersion: 1, views: 'invalid' });
+    expect(result.ok).toBe(false);
+  });
+
+  it('rejects unsupported schema version', () => {
+    const result = validateDisplayDocument({ schemaVersion: 2, name: 'Kitchen', views: [] });
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.errors.some((e) => e.path === 'schemaVersion')).toBe(true);
+    }
+  });
+
   it('applies a registered config schema to that type only', () => {
     registerWidgetConfigSchema(
       'clock',
