@@ -11,6 +11,33 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
+function validateLegacyRootFields(raw: unknown): DisplayValidationError[] {
+  if (isPlainObject(raw) && raw.schemaVersion === 1) {
+    return [];
+  }
+  if (!isPlainObject(raw)) {
+    return [{ path: '$', message: 'Required' }];
+  }
+  const errors: DisplayValidationError[] = [];
+  if (!Array.isArray(raw.layouts)) {
+    errors.push({ path: 'layouts', message: 'Required' });
+  }
+  if (!(typeof raw.activeLayoutId === 'string' || raw.activeLayoutId === null)) {
+    errors.push({ path: 'activeLayoutId', message: 'Required' });
+  }
+  if (typeof raw.rotationEnabled !== 'boolean') {
+    errors.push({ path: 'rotationEnabled', message: 'Required' });
+  }
+  if (
+    typeof raw.rotationIntervalMs !== 'number' ||
+    !Number.isInteger(raw.rotationIntervalMs) ||
+    raw.rotationIntervalMs <= 0
+  ) {
+    errors.push({ path: 'rotationIntervalMs', message: 'Required' });
+  }
+  return errors;
+}
+
 function validateLegacyPutBody(raw: unknown): DisplayValidationError[] {
   if (!isPlainObject(raw) || raw.schemaVersion === 1 || !Array.isArray(raw.layouts)) {
     return [];
@@ -95,6 +122,10 @@ export function toLegacyConfig(document: DisplayDocument): Record<string, unknow
 }
 
 export function writeStoredConfig(raw: unknown): DisplayValidationResult {
+  const rootErrors = validateLegacyRootFields(raw);
+  if (rootErrors.length > 0) {
+    return { ok: false, errors: rootErrors };
+  }
   const legacyErrors = validateLegacyPutBody(raw);
   if (legacyErrors.length > 0) {
     return { ok: false, errors: legacyErrors };

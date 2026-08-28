@@ -121,6 +121,41 @@ describe('writeStoredConfig / readStoredConfig', () => {
     expect(written.document.views[0].id).toBe('view-1');
   });
 
+  it('rejects empty object PUT bodies', () => {
+    const written = writeStoredConfig({});
+    expect(written.ok).toBe(false);
+  });
+
+  it('rejects { layouts: [] } missing required v0 root fields', () => {
+    const written = writeStoredConfig({ layouts: [] });
+    expect(written.ok).toBe(false);
+  });
+
+  it('rejects v0 PUT missing rotationEnabled', () => {
+    const written = writeStoredConfig({
+      layouts: [],
+      activeLayoutId: null,
+      rotationIntervalMs: 12000,
+    });
+    expect(written.ok).toBe(false);
+  });
+
+  it('accepts v0 PUT with empty layouts when required roots are present', () => {
+    const written = writeStoredConfig({
+      layouts: [],
+      activeLayoutId: null,
+      rotationEnabled: false,
+      rotationIntervalMs: 12000,
+    });
+    expect(written.ok).toBe(true);
+  });
+
+  it('readStoredConfig still migrates messy rows like {}', () => {
+    const read = readStoredConfig({});
+    expect(read.document.schemaVersion).toBe(1);
+    expect(Array.isArray(read.legacy.layouts)).toBe(true);
+  });
+
   it('rejects invalid PUT bodies missing widget layout', () => {
     const written = writeStoredConfig({
       layouts: [
