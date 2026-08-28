@@ -122,13 +122,6 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
 }
 
 export function validateDisplayDocument(raw: unknown): DisplayValidationResult {
-  if (isPlainObject(raw) && 'schemaVersion' in raw && raw.schemaVersion !== 1) {
-    return {
-      ok: false,
-      errors: [{ path: 'schemaVersion', message: 'Unsupported schema version' }],
-    };
-  }
-
   let migrated: DisplayDocument;
   try {
     migrated = migrateDisplayDocument(raw);
@@ -136,6 +129,13 @@ export function validateDisplayDocument(raw: unknown): DisplayValidationResult {
     return {
       ok: false,
       errors: [{ path: '$', message: err instanceof Error ? err.message : 'Invalid document' }],
+    };
+  }
+
+  if (isPlainObject(raw) && 'schemaVersion' in raw && raw.schemaVersion !== 1) {
+    return {
+      ok: false,
+      errors: [{ path: 'schemaVersion', message: 'Unsupported schema version' }],
     };
   }
 
