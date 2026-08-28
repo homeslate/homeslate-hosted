@@ -2,6 +2,7 @@ import type { Handler } from '@netlify/functions';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { getDb, displayConfigs, displays } from '../../src/db';
+import { readStoredConfig, writeStoredConfig } from '../../src/displayDocumentBridge';
 import type { TodosPatchRequest } from '../../src/types/api';
 import { PUBLIC_JSON_HEADERS, errorResponse, jsonResponse, optionsResponse } from './_shared/http';
 
@@ -61,25 +62,28 @@ export const handler: Handler = async (event) => {
 
       const { config, configDisplayId } = row;
 
-      const layouts = (config.layouts ?? []) as Array<{
-        id: string;
-        widgets?: Array<{ id: string; type: string; config?: Record<string, unknown> }>;
-      }>;
-
-      const updatedLayouts = layouts.map((layout) => {
-        if (layout.id !== layoutId) return layout;
-        const widgets = layout.widgets ?? [];
-        const updatedWidgets = widgets.map((w) =>
-          w.id === widgetId ? { ...w, config: { ...w.config, items } } : w
-        );
-        return { ...layout, widgets: updatedWidgets };
-      });
-
-      const newConfig = { ...config, layouts: updatedLayouts };
-
+      const { document } = readStoredConfig(config);
+      const next: typeof document = {
+        ...document,
+        views: document.views.map((view) => {
+          if (view.id !== layoutId) return view;
+          return {
+            ...view,
+            widgets: view.widgets.map((w) =>
+              w.id === widgetId ? { ...w, config: { ...w.config, items } } : w
+            ),
+          };
+        }),
+      };
+      const written = writeStoredConfig(next);
+      if (!written.ok) {
+        return errorResponse(400, 'Invalid todos payload', PUBLIC_JSON_HEADERS, {
+          details: written.errors,
+        });
+      }
       await db
         .update(displayConfigs)
-        .set({ config: newConfig, updatedAt: new Date() })
+        .set({ config: written.document, updatedAt: new Date().toISOString() })
         .where(eq(displayConfigs.displayId, configDisplayId));
 
       return jsonResponse(200, { ok: true }, PUBLIC_JSON_HEADERS);

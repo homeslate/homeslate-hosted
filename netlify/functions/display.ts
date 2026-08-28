@@ -2,6 +2,7 @@ import type { Handler } from '@netlify/functions';
 import { createHash } from 'crypto';
 import { eq } from 'drizzle-orm';
 import { getDb, displayConfigs, displays } from '../../src/db';
+import { readStoredConfig } from '../../src/displayDocumentBridge';
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -115,10 +116,12 @@ export const handler: Handler = async (event) => {
       });
     }
 
+    const stripped = stripLegacyThemeFields(config);
+    const { legacy } = readStoredConfig(stripped);
     return {
       statusCode: 200,
       headers: CORS,
-      body: JSON.stringify({ config: stripLegacyThemeFields(config), updated_at: updatedAt }),
+      body: JSON.stringify({ config: legacy, updated_at: updatedAt }),
     };
   } catch (err) {
     console.error('Display fetch error:', err);
