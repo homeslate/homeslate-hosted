@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { migrateDisplayDocument } from './migrate';
+import { validateThemeDocument } from './themeDocumentValidation';
 import type { DisplayDocument } from './types';
 
 export type DisplayValidationError = { path: string; message: string };
@@ -162,6 +163,33 @@ export function validateDisplayDocument(raw: unknown): DisplayValidationResult {
       }
     });
   });
+
+  parsed.data.themes.forEach((theme, index) => {
+    const validation = validateThemeDocument(theme);
+    if (validation.ok) return;
+    extra.push(
+      ...validation.issues.map((issue) => ({
+        path: `themes.${index}.${issue.path}`,
+        message: issue.message,
+      }))
+    );
+  });
+
+  if (typeof parsed.data.activeThemeId === 'string') {
+    const ids = parsed.data.themes
+      .map((document) =>
+        typeof document === 'object' && document && 'id' in document
+          ? (document as { id?: unknown }).id
+          : undefined
+      )
+      .filter((id): id is string => typeof id === 'string');
+    if (!ids.includes(parsed.data.activeThemeId)) {
+      extra.push({
+        path: 'activeThemeId',
+        message: 'activeThemeId must exist in themes',
+      });
+    }
+  }
 
   if (extra.length > 0) {
     return { ok: false, errors: extra };

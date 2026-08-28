@@ -144,4 +144,21 @@ describe('validateDisplayDocument', () => {
       expect(result.document.views[0].id).toBe('v1');
     }
   });
+
+  it('rejects an invalid theme document in themes[]', () => {
+    const result = validateDisplayDocument({
+      ...validDoc,
+      themes: [{ id: 'bad' }],
+    });
+    expect(result.ok).toBe(false);
+  });
+
+  it('rejects activeThemeId that is not in themes', () => {
+    const result = validateDisplayDocument({
+      ...validDoc,
+      themes: [],
+      activeThemeId: 'missing',
+    });
+    expect(result.ok).toBe(false);
+  });
 });

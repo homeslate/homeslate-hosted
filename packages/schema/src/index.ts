@@ -18,3 +18,13 @@ export {
   clearWidgetConfigSchemas,
 } from './validate';
 export type { DisplayValidationError, DisplayValidationResult } from './validate';
+export {
+  validateThemeDocument,
+  isThemeDocumentCandidate,
+} from './themeDocumentValidation';
+export type {
+  ThemeDocument,
+  ThemeValidationIssue,
+  ThemeValidationResult,
+} from './themeDocumentValidation';
+
