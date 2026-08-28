@@ -19,6 +19,7 @@ import { TimersProvider, useTimers } from '../timers/TimersContext';
 import { BackgroundSlideshow } from './BackgroundSlideshow';
 import { Dashboard } from './Dashboard';
 import { HolidayEffects } from './HolidayEffects';
+import { createViewRotationClock } from './viewRotationClock';
 import classes from './DisplayViewer.module.css';
 
 const SWIPE_THRESHOLD = 60;
@@ -64,7 +65,7 @@ export function DisplayViewer({
   const [pinInput, setPinInput] = useState('');
   const [pinError, setPinError] = useState(false);
   const [pinVerifying, setPinVerifying] = useState(false);
-  const rotationRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const rotationClockRef = useRef(createViewRotationClock());
   const rootRef = useRef<HTMLDivElement>(null);
   const [progressKey, setProgressKey] = useState(0);
 
@@ -285,26 +286,31 @@ export function DisplayViewer({
     ? false
     : (forceRotation || Boolean(config?.rotationEnabled));
   const rotationIntervalMs = config?.rotationIntervalMs ?? 30_000;
+  const navigateRef = useRef(navigate);
+  navigateRef.current = navigate;
 
   useEffect(() => {
-    if (rotationRef.current) clearInterval(rotationRef.current);
-    if (rotationEnabled && visibleCount > 1) {
-      rotationRef.current = setInterval(() => navigate('next'), rotationIntervalMs);
-      setProgressKey((k) => k + 1);
-    }
-    return () => {
-      if (rotationRef.current) clearInterval(rotationRef.current);
-    };
-  }, [navigate, rotationEnabled, rotationIntervalMs, visibleCount]);
+    const clock = rotationClockRef.current;
+    clock.sync({
+      enabled: rotationEnabled,
+      intervalMs: rotationIntervalMs,
+      visibleCount,
+      onRotate: () => navigateRef.current('next'),
+    });
+    setProgressKey(clock.getProgressGeneration());
+    return () => clock.stop();
+  }, [displayId, rotationEnabled, rotationIntervalMs, visibleCount]);
 
   const resetRotation = useCallback(() => {
-    if (rotationRef.current) clearInterval(rotationRef.current);
-    const visibleLayouts = config?.layouts.filter((l) => !l.hidden) ?? [];
-    if (rotationEnabled && visibleLayouts.length > 1) {
-      rotationRef.current = setInterval(() => navigate('next'), rotationIntervalMs);
-      setProgressKey((k) => k + 1);
-    }
-  }, [config, navigate, rotationEnabled, rotationIntervalMs]);
+    const clock = rotationClockRef.current;
+    clock.reset({
+      enabled: rotationEnabled,
+      intervalMs: rotationIntervalMs,
+      visibleCount,
+      onRotate: () => navigateRef.current('next'),
+    });
+    setProgressKey(clock.getProgressGeneration());
+  }, [rotationEnabled, rotationIntervalMs, visibleCount]);
 
   useEffect(() => {
     const el = rootRef.current;
