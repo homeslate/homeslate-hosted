@@ -11,7 +11,7 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
-function validateLegacyWidgetLayouts(raw: unknown): DisplayValidationError[] {
+function validateLegacyPutBody(raw: unknown): DisplayValidationError[] {
   if (!isPlainObject(raw) || raw.schemaVersion === 1 || !Array.isArray(raw.layouts)) {
     return [];
   }
@@ -19,21 +19,25 @@ function validateLegacyWidgetLayouts(raw: unknown): DisplayValidationError[] {
   raw.layouts.forEach((layout, layoutIndex) => {
     if (!isPlainObject(layout) || !Array.isArray(layout.widgets)) return;
     layout.widgets.forEach((widget, widgetIndex) => {
-      if (!isPlainObject(widget)) return;
+      const basePath = `layouts.${layoutIndex}.widgets.${widgetIndex}`;
+      if (!isPlainObject(widget)) {
+        errors.push({ path: basePath, message: 'Invalid widget' });
+        return;
+      }
+      if (typeof widget.type !== 'string' || widget.type.length === 0) {
+        errors.push({ path: `${basePath}.type`, message: 'Required' });
+      }
+      if (!isPlainObject(widget.config)) {
+        errors.push({ path: `${basePath}.config`, message: 'Required' });
+      }
       const widgetLayout = widget.layout;
       if (!isPlainObject(widgetLayout)) {
-        errors.push({
-          path: `layouts.${layoutIndex}.widgets.${widgetIndex}.layout`,
-          message: 'Required',
-        });
+        errors.push({ path: `${basePath}.layout`, message: 'Required' });
         return;
       }
       (['x', 'y', 'w', 'h'] as const).forEach((key) => {
         if (typeof widgetLayout[key] !== 'number') {
-          errors.push({
-            path: `layouts.${layoutIndex}.widgets.${widgetIndex}.layout.${key}`,
-            message: 'Required',
-          });
+          errors.push({ path: `${basePath}.layout.${key}`, message: 'Required' });
         }
       });
     });
@@ -91,7 +95,7 @@ export function toLegacyConfig(document: DisplayDocument): Record<string, unknow
 }
 
 export function writeStoredConfig(raw: unknown): DisplayValidationResult {
-  const legacyErrors = validateLegacyWidgetLayouts(raw);
+  const legacyErrors = validateLegacyPutBody(raw);
   if (legacyErrors.length > 0) {
     return { ok: false, errors: legacyErrors };
   }

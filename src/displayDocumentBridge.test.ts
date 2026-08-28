@@ -56,6 +56,60 @@ describe('toLegacyConfig', () => {
     expect(legacy.schemaVersion).toBeUndefined();
     expect(legacy.views).toBeUndefined();
   });
+
+  it('round-trips unknown widget type and object config', () => {
+    const v0WithCustom = {
+      ...v0,
+      layouts: [
+        {
+          ...v0.layouts[0],
+          widgets: [
+            {
+              id: 'w-custom',
+              type: 'my-custom',
+              title: 'Custom',
+              config: { foo: 'bar' },
+              layout: { x: 0, y: 0, w: 2, h: 2 },
+            },
+          ],
+        },
+      ],
+    };
+    const document = migrateDisplayDocument(v0WithCustom);
+    const legacy = toLegacyConfig(document);
+    const layout = (legacy.layouts as Array<Record<string, unknown>>)[0];
+    expect(layout.widgets).toEqual([
+      {
+        id: 'w-custom',
+        type: 'my-custom',
+        title: 'Custom',
+        config: { foo: 'bar' },
+        layout: { x: 0, y: 0, w: 2, h: 2 },
+      },
+    ]);
+  });
+
+  it('preserves URL background photos on round-trip', () => {
+    const v0WithUrlPhoto = {
+      ...v0,
+      layouts: [
+        {
+          ...v0.layouts[0],
+          backgroundPhotos: [
+            { type: 'url', url: 'https://example.com/a.jpg', caption: 'A' },
+            { type: 'stored', key: 'k', filename: 'f.png' },
+          ],
+        },
+      ],
+    };
+    const document = migrateDisplayDocument(v0WithUrlPhoto);
+    const legacy = toLegacyConfig(document);
+    const layout = (legacy.layouts as Array<Record<string, unknown>>)[0];
+    expect(layout.backgroundPhotos).toEqual([
+      { type: 'url', url: 'https://example.com/a.jpg', caption: 'A' },
+      { type: 'stored', key: 'k', filename: 'f.png' },
+    ]);
+  });
 });
 
 describe('writeStoredConfig / readStoredConfig', () => {
@@ -67,7 +121,7 @@ describe('writeStoredConfig / readStoredConfig', () => {
     expect(written.document.views[0].id).toBe('view-1');
   });
 
-  it('rejects invalid PUT bodies', () => {
+  it('rejects invalid PUT bodies missing widget layout', () => {
     const written = writeStoredConfig({
       layouts: [
         {
@@ -76,6 +130,57 @@ describe('writeStoredConfig / readStoredConfig', () => {
           columns: 12,
           rowHeight: 80,
           widgets: [{ id: 'w1', type: 'clock', title: 'Clock', config: {} }],
+        },
+      ],
+      activeLayoutId: 'view-1',
+      rotationEnabled: true,
+      rotationIntervalMs: 12000,
+    });
+    expect(written.ok).toBe(false);
+  });
+
+  it('rejects PUT with widget missing type', () => {
+    const written = writeStoredConfig({
+      layouts: [
+        {
+          id: 'view-1',
+          name: 'Morning',
+          columns: 12,
+          rowHeight: 80,
+          widgets: [
+            {
+              id: 'w1',
+              title: 'Clock',
+              config: {},
+              layout: { x: 0, y: 0, w: 2, h: 2 },
+            },
+          ],
+        },
+      ],
+      activeLayoutId: 'view-1',
+      rotationEnabled: true,
+      rotationIntervalMs: 12000,
+    });
+    expect(written.ok).toBe(false);
+  });
+
+  it('rejects PUT with non-object widget config', () => {
+    const written = writeStoredConfig({
+      layouts: [
+        {
+          id: 'view-1',
+          name: 'Morning',
+          columns: 12,
+          rowHeight: 80,
+          widgets: [
+            {
+              id: 'w1',
+              type: 'clock',
+              title: 'Clock',
+              config: 'bad',
+              layout: { x: 0, y: 0, w: 2, h: 2 },
+            },
+          ],
         },
       ],
       activeLayoutId: 'view-1',
