@@ -123,6 +123,38 @@ describe('migrateDisplayDocument', () => {
     expect(again).toEqual(v1);
   });
 
+  it('preserves empty optional strings and empty background on hand-authored v1', () => {
+    const v1 = {
+      schemaVersion: 1,
+      name: 'Homeslate',
+      views: [
+        {
+          id: 'view-1',
+          name: 'Morning',
+          icon: '',
+          columns: 12,
+          rowHeight: 80,
+          widgets: [],
+          background: { image: '' },
+        },
+        {
+          id: 'view-2',
+          name: 'Evening',
+          columns: 12,
+          rowHeight: 80,
+          widgets: [],
+          background: {},
+        },
+      ],
+      activeViewId: 'view-1',
+      rotation: { enabled: false, intervalMs: 30000 },
+      themes: [],
+      activeThemeId: null,
+      settings: {},
+    };
+    expect(migrateDisplayDocument(v1)).toEqual(v1);
+  });
+
   it('uses document.name when present on v0', () => {
     const doc = migrateDisplayDocument({ ...v0Kitchen, name: 'Kitchen' });
     expect(doc.name).toBe('Kitchen');

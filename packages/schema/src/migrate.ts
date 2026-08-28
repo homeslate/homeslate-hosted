@@ -75,6 +75,26 @@ function migrateBackground(layout: Record<string, unknown>): ViewBackground | un
   return Object.keys(background).length > 0 ? background : undefined;
 }
 
+function migrateV1Background(raw: Record<string, unknown>): ViewBackground {
+  const background: ViewBackground = {};
+  if ('image' in raw && typeof raw.image === 'string') {
+    background.image = raw.image;
+  }
+  if (raw.imageSize === 'cover' || raw.imageSize === 'contain' || raw.imageSize === 'tile') {
+    background.imageSize = raw.imageSize;
+  }
+  if (asNumber(raw.overlayOpacity) !== undefined) {
+    background.overlayOpacity = raw.overlayOpacity as number;
+  }
+  if (Array.isArray(raw.photos)) {
+    background.photos = raw.photos;
+  }
+  if (asNumber(raw.intervalSeconds) !== undefined) {
+    background.intervalSeconds = raw.intervalSeconds as number;
+  }
+  return background;
+}
+
 function migrateNotes(raw: unknown): StickyNote[] | undefined {
   if (!Array.isArray(raw)) return undefined;
   return raw.filter(isPlainObject).map((n) => ({
@@ -89,34 +109,19 @@ function migrateNotes(raw: unknown): StickyNote[] | undefined {
 function migrateView(raw: unknown): View {
   const o = isPlainObject(raw) ? raw : {};
   const widgets = Array.isArray(o.widgets) ? o.widgets.map(migrateWidget) : [];
-  const existingBackground = isPlainObject(o.background) ? o.background : undefined;
-  const background = existingBackground
-    ? {
-        ...(asString(existingBackground.image) ? { image: existingBackground.image as string } : {}),
-        ...(existingBackground.imageSize === 'cover' ||
-        existingBackground.imageSize === 'contain' ||
-        existingBackground.imageSize === 'tile'
-          ? { imageSize: existingBackground.imageSize }
-          : {}),
-        ...(asNumber(existingBackground.overlayOpacity) !== undefined
-          ? { overlayOpacity: existingBackground.overlayOpacity as number }
-          : {}),
-        ...(Array.isArray(existingBackground.photos) ? { photos: existingBackground.photos } : {}),
-        ...(asNumber(existingBackground.intervalSeconds) !== undefined
-          ? { intervalSeconds: existingBackground.intervalSeconds as number }
-          : {}),
-      }
-    : migrateBackground(o);
+  const hasV1Background = 'background' in o && isPlainObject(o.background);
+  const v0Background = hasV1Background ? undefined : migrateBackground(o);
   const notes = migrateNotes(o.notes);
   return {
     id: asString(o.id) ?? '',
     name: asString(o.name) ?? 'View',
-    ...(asString(o.icon) ? { icon: o.icon as string } : {}),
+    ...(typeof o.icon === 'string' ? { icon: o.icon } : {}),
     ...(asBoolean(o.hidden) !== undefined ? { hidden: o.hidden as boolean } : {}),
     columns: asNumber(o.columns) ?? 12,
     rowHeight: asNumber(o.rowHeight) ?? 80,
     widgets,
-    ...(background && Object.keys(background).length > 0 ? { background } : {}),
+    ...(hasV1Background ? { background: migrateV1Background(o.background as Record<string, unknown>) } : {}),
+    ...(v0Background ? { background: v0Background } : {}),
     ...(notes ? { notes } : {}),
   };
 }
