@@ -103,7 +103,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         body: JSON.stringify({ refresh_token: refreshToken }),
       });
       if (!res.ok) {
-        console.warn('Token refresh failed:', res.status);
+        console.warn('[auth] Token refresh failed:', res.status);
         if (res.status === 401) {
           localStorage.removeItem(REFRESH_TOKEN_KEY);
         }
@@ -122,7 +122,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const silentRefresh = useCallback(async () => {
     const newToken = await refreshAccessToken();
     if (!newToken) {
-      console.warn('Server-side token refresh failed; owner must sign in again');
+      console.warn('[auth] Server-side token refresh failed; owner must sign in again');
     }
   }, [refreshAccessToken]);
 
@@ -291,8 +291,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
             if (data.refresh_token) {
               localStorage.setItem(REFRESH_TOKEN_KEY, data.refresh_token);
+              console.info('[auth] stored Google refresh token for display calendar');
             } else {
-              console.warn('No refresh token returned; calendar on displays may stop working after access token expiry');
+              console.warn('[auth] No refresh token returned; calendar on displays may stop working after access token expiry');
             }
 
             storeToken(data.access_token, data.expires_in ?? 3600);
@@ -312,7 +313,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
 
       codeClientRef.current = client;
-      client.requestCode({ prompt: 'consent' });
+      // GIS CodeClient.requestCode() takes no arguments. prompt=consent and
+      // access_type=offline are already hardcoded in the GIS code flow.
+      client.requestCode();
     };
 
     if (window.google?.accounts?.oauth2) {

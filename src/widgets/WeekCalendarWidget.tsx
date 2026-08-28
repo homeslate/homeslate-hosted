@@ -5,6 +5,7 @@ import {
 } from '@mantine/core';
 import { IconBrandGoogle, IconPlus, IconCheck } from '@tabler/icons-react';
 import { GoogleCalendarEmptyState } from '../components/GoogleCalendarEmptyState';
+import { displayCalendarEmptyDetail } from './googleCalendarError';
 import dayjs from 'dayjs';
 import type { WidgetProps, WidgetConfig } from '../types/widget';
 import { useGoogleCalendar } from '../hooks/useGoogleCalendar';
@@ -338,11 +339,11 @@ export function WeekCalendarWidget({ widget }: WidgetProps<WeekCalendarConfig>) 
   if (isDisplayMode && displayData.error && !displayData.isLoading && events.length === 0) {
     return (
       <div className={`${classes.container} ${transparentBackground ? classes.transparent : ''}`}>
-        <div className={classes.emptyState}>
-          <Text size="sm" c="dimmed" ta="center">
-            Calendar will appear when the display owner signs in with Google in the app.
-          </Text>
-        </div>
+        <GoogleCalendarEmptyState
+          variant="displayError"
+          className={classes.emptyState}
+          detail={displayCalendarEmptyDetail(displayData.error)}
+        />
       </div>
     );
   }

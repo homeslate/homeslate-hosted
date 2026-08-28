@@ -44,7 +44,7 @@ import { useDisplayId, useIsPreviewDisplay } from '../contexts/DisplayContext';
 import { useAuth } from '../contexts/AuthContext';
 import type { ParsedCalendarEvent } from '../services/googleCalendar';
 import type { CalendarEventInput } from '../services/googleCalendar';
-import { shouldShowGoogleCalendarErrorAlert } from './googleCalendarError';
+import { displayCalendarEmptyDetail, shouldShowGoogleCalendarErrorAlert } from './googleCalendarError';
 import classes from './GoogleCalendarWidget.module.css';
 import dayjs from 'dayjs';
 
@@ -349,11 +349,11 @@ export function GoogleCalendarWidget({ widget }: WidgetProps<GoogleCalendarConfi
   if (isDisplayMode && error && !isLoading && events.length === 0) {
     return (
       <Box className={`${classes.container} ${transparentBackground ? classes.transparent : ''}`}>
-        <div className={classes.empty}>
-          <Text size="sm" c="dimmed" ta="center">
-            Calendar will appear when the display owner signs in with Google in the app.
-          </Text>
-        </div>
+        <GoogleCalendarEmptyState
+          variant="displayError"
+          className={classes.empty}
+          detail={displayCalendarEmptyDetail(error)}
+        />
       </Box>
     );
   }

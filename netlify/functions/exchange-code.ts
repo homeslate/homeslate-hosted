@@ -106,7 +106,12 @@ export const handler: Handler = async (event) => {
     }
 
     if (!refreshToken) {
-      console.warn('Google auth code exchange did not return a refresh token; display calendar may stop working when access tokens expire');
+      console.warn('[exchange-code] Google did not return a refresh token; display calendar will stop working when the access token expires');
+    } else {
+      console.info('[exchange-code] stored refresh token for display calendar', {
+        userId: user.id,
+        refreshTokenLength: refreshToken.length,
+      });
     }
 
     return jsonResponse(

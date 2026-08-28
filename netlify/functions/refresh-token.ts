@@ -1,4 +1,6 @@
 import type { Handler } from '@netlify/functions';
+import { sql } from 'drizzle-orm';
+import { getDb } from '../../src/db';
 import { AUTH_JSON_HEADERS, errorResponse, jsonResponse, optionsResponse } from './_shared/http';
 import { exchangeRefreshToken } from './_shared/googleTokens';
 
@@ -25,6 +27,19 @@ export const handler: Handler = async (event) => {
 
   try {
     const tokenData = await exchangeRefreshToken(refreshToken);
+    const expiresAt = new Date(Date.now() + (tokenData.expires_in ?? 3600) * 1000).toISOString();
+
+    try {
+      const db = getDb();
+      await db.execute(sql`
+        UPDATE users
+        SET access_token = ${tokenData.access_token},
+            access_token_expires_at = ${expiresAt}::timestamptz
+        WHERE refresh_token = ${refreshToken}
+      `);
+    } catch (persistErr) {
+      console.warn('[refresh-token] failed to persist access token for displays', persistErr);
+    }
 
     return jsonResponse(
       200,
@@ -35,7 +50,7 @@ export const handler: Handler = async (event) => {
       AUTH_JSON_HEADERS
     );
   } catch (err) {
-    console.error('Token refresh error:', err);
+    console.error('[refresh-token] exchange failed:', err);
     return errorResponse(401, 'Invalid refresh token', AUTH_JSON_HEADERS);
   }
 };

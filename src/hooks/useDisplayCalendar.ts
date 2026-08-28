@@ -82,13 +82,36 @@ export function useDisplayCalendar({
         calendarIds: selectedCalendarIdsKey,
         daysAhead: String(daysAhead),
       });
+      console.info('[display-calendar] fetching', {
+        displayId,
+        calendarCount: selectedCalendarIds.length,
+        daysAhead,
+      });
       const res = await fetch(`/api/display-calendar?${params}`);
-      const data = await res.json();
+      const data = await res.json() as {
+        error?: string;
+        reason?: string;
+        details?: unknown;
+        calendars?: Array<{ id: string; summary?: string; backgroundColor?: string }>;
+        events?: Array<{ start: string; end: string; [k: string]: unknown }>;
+      };
       if (!res.ok) {
+        console.warn('[display-calendar] request failed', {
+          displayId,
+          status: res.status,
+          error: data.error,
+          reason: data.reason,
+          details: data.details,
+        });
         setError(data.error ?? 'Failed to load calendar');
         return;
       }
-      const calList = (data.calendars ?? []).map((c: { id: string; summary?: string; backgroundColor?: string }) => ({
+      console.info('[display-calendar] request succeeded', {
+        displayId,
+        calendarCount: (data.calendars ?? []).length,
+        eventCount: (data.events ?? []).length,
+      });
+      const calList = (data.calendars ?? []).map((c) => ({
         id: c.id,
         summary: c.summary ?? c.id,
         backgroundColor: c.backgroundColor,
@@ -98,6 +121,10 @@ export function useDisplayCalendar({
       setLastUpdated(Date.now());
       setConsecutiveFailures(0);
     } catch (err) {
+      console.warn('[display-calendar] network error', {
+        displayId,
+        error: err instanceof Error ? err.message : String(err),
+      });
       setError(err instanceof Error ? err.message : 'Failed to load calendar');
       setConsecutiveFailures((prev) => prev + 1);
     } finally {

@@ -29,6 +29,7 @@ import {
   IconCheck,
 } from '@tabler/icons-react';
 import { GoogleCalendarEmptyState } from '../components/GoogleCalendarEmptyState';
+import { displayCalendarEmptyDetail } from './googleCalendarError';
 import type { WidgetProps, WidgetConfig } from '../types/widget';
 import { useGoogleCalendar } from '../hooks/useGoogleCalendar';
 import { useDisplayCalendar } from '../hooks/useDisplayCalendar';
@@ -228,11 +229,11 @@ export function GoogleCalendarMonthWidget({ widget }: WidgetProps<GoogleCalendar
   if (isDisplayMode && displayData.error && !displayData.isLoading && events.length === 0) {
     return (
       <Box className={`${classes.container} ${transparentBackground ? classes.transparent : ''}`}>
-        <div className={classes.empty}>
-          <Text size="sm" c="dimmed" ta="center">
-            Calendar will appear when the display owner signs in with Google in the app.
-          </Text>
-        </div>
+        <GoogleCalendarEmptyState
+          variant="displayError"
+          className={classes.empty}
+          detail={displayCalendarEmptyDetail(displayData.error)}
+        />
       </Box>
     );
   }
