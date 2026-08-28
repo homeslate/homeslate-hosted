@@ -36,11 +36,10 @@ export const handler: Handler = async (event) => {
           details: written.errors,
         });
       }
-      const config = written.document;
       const db = getDb();
 
       const ownerRows = await db
-        .select({ id: displays.id })
+        .select({ id: displays.id, name: displays.name })
         .from(displays)
         .innerJoin(users, eq(users.id, displays.userId))
         .where(sql`${displays.id} = ${displayId}::uuid AND ${users.googleId} = ${googleId}`);
@@ -49,7 +48,7 @@ export const handler: Handler = async (event) => {
         ownerRows.length > 0
           ? []
           : await db
-              .select({ id: displays.id })
+              .select({ id: displays.id, name: displays.name })
               .from(displayCollaborators)
               .innerJoin(users, eq(users.id, displayCollaborators.userId))
               .innerJoin(displays, eq(displays.id, displayCollaborators.displayId))
@@ -77,6 +76,12 @@ export const handler: Handler = async (event) => {
             : undefined
         );
       }
+
+      const displayName = ownerRows[0]?.name ?? collabRows[0]?.name;
+      const config =
+        displayName && displayName.length > 0
+          ? { ...written.document, name: displayName }
+          : written.document;
 
       await db
         .insert(displayConfigs)

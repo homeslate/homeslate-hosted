@@ -1,10 +1,10 @@
 # Theme Token Contract
 
-This document is the human-readable companion to `schemas/theme-document.schema.json`.
+This document is the human-readable companion to `packages/schema/schemas/theme-document.schema.json`.
 
 ## Canonical Artifacts
 
-- Machine validation: `schemas/theme-document.schema.json`
+- Machine validation: `packages/schema/schemas/theme-document.schema.json`
 - Product roadmap and rationale: `theming.md`
 
 ## Theme Document Shape
