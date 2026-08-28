@@ -1,6 +1,7 @@
 {
   "name": "homeslate",
   "private": true,
+  "workspaces": ["packages/*"],
   "version": "0.0.0",
   "type": "module",
   "scripts": {

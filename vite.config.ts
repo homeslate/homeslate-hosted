@@ -1,9 +1,17 @@
 /// <reference types="vitest" />
+import { fileURLToPath } from 'node:url'
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 
 export default defineConfig(() => ({
+  resolve: {
+    alias: {
+      '@homeslate/schema': fileURLToPath(
+        new URL('./packages/schema/src/index.ts', import.meta.url)
+      ),
+    },
+  },
   build: {
     rollupOptions: {
       output: {
