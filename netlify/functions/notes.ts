@@ -2,7 +2,7 @@ import type { Handler } from '@netlify/functions';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { getDb, displayConfigs, displays } from '../../src/db';
-import { readStoredConfig, writeStoredConfig } from '../../src/displayDocumentBridge';
+import { readStoredConfig, writeKioskConfig } from '../../src/displayDocumentBridge';
 import type { NotesPatchRequest } from '../../src/types/api';
 import { PUBLIC_JSON_HEADERS, errorResponse, jsonResponse, optionsResponse } from './_shared/http';
 
@@ -40,9 +40,8 @@ export const handler: Handler = async (event) => {
       }
       const parsed = NotesBodySchema.safeParse(body);
       if (!parsed.success) {
-        return errorResponse(400, 'Invalid notes payload', PUBLIC_JSON_HEADERS, {
-          details: parsed.error.flatten(),
-        });
+        console.warn('Notes save: invalid payload', parsed.error.flatten());
+        return errorResponse(400, 'Invalid notes payload', PUBLIC_JSON_HEADERS);
       }
       const notes = parsed.data.notes;
 
@@ -70,10 +69,11 @@ export const handler: Handler = async (event) => {
           view.id === layoutId ? { ...view, notes } : view
         ),
       };
-      const written = writeStoredConfig(next);
-      if (!written.ok) {
-        return errorResponse(400, 'Invalid notes payload', PUBLIC_JSON_HEADERS, {
-          details: written.errors,
+      const written = writeKioskConfig(next);
+      if (written.errors.length > 0) {
+        console.warn('Notes save: stored config fails validation, persisting anyway', {
+          publicDisplayId,
+          errors: written.errors,
         });
       }
       await db

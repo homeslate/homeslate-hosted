@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { migrateDisplayDocument } from '@homeslate/schema';
-import { readStoredConfig, toLegacyConfig, writeStoredConfig } from './displayDocumentBridge';
+import {
+  readStoredConfig,
+  toLegacyConfig,
+  writeKioskConfig,
+  writeStoredConfig,
+} from './displayDocumentBridge';
 
 const v0 = {
   layouts: [
@@ -231,5 +236,63 @@ describe('writeStoredConfig / readStoredConfig', () => {
     const read = readStoredConfig(written.document);
     expect((read.legacy.layouts as unknown[]).length).toBe(1);
     expect(read.document.schemaVersion).toBe(1);
+  });
+});
+
+describe('writeKioskConfig', () => {
+  function patchTodos(document: ReturnType<typeof readStoredConfig>['document']) {
+    return {
+      ...document,
+      views: document.views.map((view) => ({
+        ...view,
+        widgets: view.widgets.map((widget) => ({
+          ...widget,
+          config: { ...widget.config, items: [{ id: 't1', text: 'milk', checked: false }] },
+        })),
+      })),
+    };
+  }
+
+  it('reports no errors and returns the patched document for a valid row', () => {
+    const { document } = readStoredConfig(v0);
+    const written = writeKioskConfig(patchTodos(document));
+    expect(written.errors).toEqual([]);
+    expect(written.document.views[0].widgets[0].config.items).toEqual([
+      { id: 't1', text: 'milk', checked: false },
+    ]);
+  });
+
+  it('still returns the patched document when the stored row has an empty view name', () => {
+    const { document } = readStoredConfig({
+      ...v0,
+      layouts: [{ ...v0.layouts[0], name: '' }],
+    });
+    const written = writeKioskConfig(patchTodos(document));
+    expect(written.errors.map((e) => e.path)).toContain('views.0.name');
+    expect(written.document.views[0].widgets[0].config.items).toEqual([
+      { id: 't1', text: 'milk', checked: false },
+    ]);
+  });
+
+  it('still returns the patched document when activeThemeId is dangling', () => {
+    const { document } = readStoredConfig({ ...v0, activeThemeId: 'missing-theme' });
+    const written = writeKioskConfig(patchTodos(document));
+    expect(written.errors.map((e) => e.path)).toContain('activeThemeId');
+    expect(written.document.activeThemeId).toBe('missing-theme');
+    expect(written.document.views[0].widgets[0].config.items).toEqual([
+      { id: 't1', text: 'milk', checked: false },
+    ]);
+  });
+
+  it('keeps an existing document name instead of forcing the default', () => {
+    const named = readStoredConfig({ ...v0, name: 'Kitchen' });
+    expect(writeKioskConfig(patchTodos(named.document)).document.name).toBe('Kitchen');
+
+    const invalidRow = readStoredConfig({
+      ...v0,
+      name: 'Kitchen',
+      layouts: [{ ...v0.layouts[0], name: '' }],
+    });
+    expect(writeKioskConfig(patchTodos(invalidRow.document)).document.name).toBe('Kitchen');
   });
 });

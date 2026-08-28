@@ -133,6 +133,24 @@ export function writeStoredConfig(raw: unknown): DisplayValidationResult {
   return validateDisplayDocument(raw);
 }
 
+/**
+ * Kiosk writes (todos, notes) patch one widget or one view's notes on an
+ * unauthenticated endpoint. A stored row that predates the v1 contract can fail
+ * strict validation for reasons the caller cannot fix, so the patched document
+ * is always returned for persistence and the validation errors are reported
+ * separately for logging.
+ */
+export function writeKioskConfig(next: DisplayDocument): {
+  document: DisplayDocument;
+  errors: DisplayValidationError[];
+} {
+  const written = writeStoredConfig(next);
+  if (written.ok) {
+    return { document: written.document, errors: [] };
+  }
+  return { document: migrateDisplayDocument(next), errors: written.errors };
+}
+
 export function readStoredConfig(raw: unknown): {
   document: DisplayDocument;
   legacy: Record<string, unknown>;
