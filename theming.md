@@ -17,7 +17,7 @@ This is the concrete JSON shape to use for DB storage, import/export, and editor
 
 Canonical files:
 
-- `schemas/theme-document.schema.json` (machine validation contract)
+- `packages/schema/schemas/theme-document.schema.json` (machine validation contract)
 - `docs/theme-token-contract.md` (human-readable required/optional matrix)
 
 ### Example payload

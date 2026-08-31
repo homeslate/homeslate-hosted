@@ -1,9 +1,7 @@
 import type { Handler } from '@netlify/functions';
 import { eq, sql } from 'drizzle-orm';
-import { z } from 'zod';
 import { getDb, displays, displayConfigs, displayCollaborators, users } from '../../src/db';
-import type { ConfigUpsertRequest } from '../../src/types/api';
-import { validateThemeDocument } from '../../src/themes/themeDocumentValidation';
+import { writeStoredConfig } from '../../src/displayDocumentBridge';
 import { AUTH_JSON_HEADERS, errorResponse, jsonResponse, optionsResponse } from './_shared/http';
 import { requireGoogleId } from './_shared/googleAuth';
 
@@ -12,45 +10,6 @@ function isDebugEnabled(event: Parameters<Handler>[0]): boolean {
   const envDebug = process.env.DEBUG_CONFIG === '1';
   return queryDebug || envDebug;
 }
-
-const ConfigBodySchema = z
-  .object({
-    layouts: z.array(z.unknown()),
-    activeLayoutId: z.string().nullable(),
-    rotationEnabled: z.boolean(),
-    rotationIntervalMs: z.number().int().positive(),
-    themes: z.array(z.unknown()).optional(),
-    activeThemeId: z.string().nullable().optional(),
-    colorMode: z.enum(['light', 'dark']).optional(),
-    stickyNotesEnabled: z.boolean().optional(),
-    voiceEnabled: z.boolean().optional(),
-    holidayEffectsEnabled: z.boolean().optional(),
-    holidayPreviewId: z
-      .enum([
-        'new-years-day',
-        'valentines-day',
-        'st-patricks-day',
-        'independence-day',
-        'halloween',
-        'thanksgiving',
-        'christmas',
-        'new-years-eve',
-      ])
-      .optional(),
-    alarms: z
-      .array(
-        z.object({
-          id: z.string(),
-          label: z.string(),
-          enabled: z.boolean(),
-          time: z.string(),
-          days: z.array(z.number().int().min(0).max(6)),
-          toneId: z.enum(['chime', 'bell', 'radar']),
-        })
-      )
-      .optional(),
-  })
-  .passthrough();
 
 export const handler: Handler = async (event) => {
   if (event.httpMethod === 'OPTIONS') {
@@ -71,48 +30,16 @@ export const handler: Handler = async (event) => {
       } catch {
         return errorResponse(400, 'Invalid JSON body', AUTH_JSON_HEADERS);
       }
-      const parsedConfig = ConfigBodySchema.safeParse(rawBody);
-      if (!parsedConfig.success) {
+      const written = writeStoredConfig(rawBody);
+      if (!written.ok) {
         return errorResponse(400, 'Invalid config payload', AUTH_JSON_HEADERS, {
-          details: parsedConfig.error.flatten(),
+          details: written.errors,
         });
       }
-      if (parsedConfig.data.themes !== undefined) {
-        const issues = parsedConfig.data.themes.flatMap((document, index) => {
-          const validation = validateThemeDocument(document);
-          if (validation.ok) return [];
-          return validation.issues.map((issue) => ({
-            path: `themes[${index}].${issue.path}`,
-            message: issue.message,
-          }));
-        });
-        if (issues.length > 0) {
-          return errorResponse(400, 'Invalid themes payload', AUTH_JSON_HEADERS, {
-            details: { issues },
-          });
-        }
-      }
-      if (
-        parsedConfig.data.themes !== undefined &&
-        parsedConfig.data.activeThemeId !== undefined &&
-        parsedConfig.data.activeThemeId !== null
-      ) {
-        const activeThemeId = parsedConfig.data.activeThemeId;
-        const ids = parsedConfig.data.themes
-          .map((document) => (typeof document === 'object' && document && 'id' in document ? (document as { id?: unknown }).id : undefined))
-          .filter((id): id is string => typeof id === 'string');
-        if (!ids.includes(activeThemeId)) {
-          return errorResponse(400, 'activeThemeId must exist in themes', AUTH_JSON_HEADERS);
-        }
-      }
-      const config: ConfigUpsertRequest = {
-        ...parsedConfig.data,
-        themes: parsedConfig.data.themes as ConfigUpsertRequest['themes'],
-      };
       const db = getDb();
 
       const ownerRows = await db
-        .select({ id: displays.id })
+        .select({ id: displays.id, name: displays.name })
         .from(displays)
         .innerJoin(users, eq(users.id, displays.userId))
         .where(sql`${displays.id} = ${displayId}::uuid AND ${users.googleId} = ${googleId}`);
@@ -121,7 +48,7 @@ export const handler: Handler = async (event) => {
         ownerRows.length > 0
           ? []
           : await db
-              .select({ id: displays.id })
+              .select({ id: displays.id, name: displays.name })
               .from(displayCollaborators)
               .innerJoin(users, eq(users.id, displayCollaborators.userId))
               .innerJoin(displays, eq(displays.id, displayCollaborators.displayId))
@@ -149,6 +76,12 @@ export const handler: Handler = async (event) => {
             : undefined
         );
       }
+
+      const displayName = ownerRows[0]?.name ?? collabRows[0]?.name;
+      const config =
+        displayName && displayName.length > 0
+          ? { ...written.document, name: displayName }
+          : written.document;
 
       await db
         .insert(displayConfigs)

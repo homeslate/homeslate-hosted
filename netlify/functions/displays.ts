@@ -8,6 +8,7 @@ import {
   displayConfigs,
   displayCollaborators,
 } from '../../src/db';
+import { readStoredConfig } from '../../src/displayDocumentBridge';
 import { AUTH_JSON_HEADERS, errorResponse, jsonResponse, optionsResponse } from './_shared/http';
 import { requireGoogleId } from './_shared/googleAuth';
 
@@ -97,7 +98,7 @@ export const handler: Handler = async (event) => {
         name: r.name,
         created_at: r.createdAt,
         passcode_enabled: r.passcodeEnabled,
-        config: stripLegacyThemeFields(r.config),
+        config: r.config == null ? null : readStoredConfig(stripLegacyThemeFields(r.config)).legacy,
         config_updated_at: r.configUpdatedAt,
         is_owner: r.isOwner,
       }));

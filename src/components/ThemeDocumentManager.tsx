@@ -951,7 +951,7 @@ export function ThemeDocumentManager({
                     )}
 
                     <Text size="xs" c="dimmed">
-                      Validation matches <Code>schemas/theme-document.schema.json</Code>.
+                      Validation matches <Code>packages/schema/schemas/theme-document.schema.json</Code>.
                     </Text>
                   </Stack>
                 </div>

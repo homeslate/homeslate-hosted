@@ -22,7 +22,12 @@
     "noUnusedParameters": true,
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true,
-    "noUncheckedSideEffectImports": true
+    "noUncheckedSideEffectImports": true,
+
+    "baseUrl": ".",
+    "paths": {
+      "@homeslate/schema": ["packages/schema/src/index.ts"]
+    }
   },
-  "include": ["src"]
+  "include": ["src", "packages/schema/src"]
 }

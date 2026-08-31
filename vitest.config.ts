@@ -1,12 +1,24 @@
 /// <reference types="vitest" />
+import { fileURLToPath } from "node:url";
 import { defineConfig } from "vitest/config";
 import react from "@vitejs/plugin-react";
 
 export default defineConfig({
+  resolve: {
+    alias: {
+      "@homeslate/schema": fileURLToPath(
+        new URL("./packages/schema/src/index.ts", import.meta.url)
+      ),
+    },
+  },
   plugins: [react()],
   test: {
     environment: "node",
-    include: ["src/**/*.test.ts", "src/**/*.test.tsx"],
+    include: [
+      "src/**/*.test.ts",
+      "src/**/*.test.tsx",
+      "packages/schema/src/**/*.test.ts",
+    ],
     globals: false,
     css: false,
   },
