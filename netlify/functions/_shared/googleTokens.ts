@@ -19,7 +19,10 @@ async function parseGoogleTokenError(res: Response): Promise<string> {
   const text = await res.text();
   try {
     const data = JSON.parse(text) as { error?: string; error_description?: string };
-    return data.error_description ?? data.error ?? text;
+    const parts = [data.error, data.error_description].filter(
+      (part): part is string => typeof part === 'string' && part.length > 0
+    );
+    return parts.length > 0 ? parts.join(': ') : text;
   } catch {
     return text;
   }

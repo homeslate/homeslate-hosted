@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import type { GoogleCalendar, ParsedCalendarEvent, CalendarEventInput } from '../services/googleCalendar';
-import { getNextPollDelay } from './polling';
+import { isFatalGoogleAuthFailure } from '../services/displayCalendarAuth';
+import { displayCalendarUserMessage } from '../widgets/googleCalendarError';
+import { getDisplayCalendarPollDelay } from './polling';
 
 const REFRESH_INTERVAL_MS = 5 * 60 * 1000;
 
@@ -63,6 +65,7 @@ export function useDisplayCalendar({
   const [events, setEvents] = useState<ParsedCalendarEvent[]>([]);
   const [lastUpdated, setLastUpdated] = useState<number | null>(null);
   const [consecutiveFailures, setConsecutiveFailures] = useState(0);
+  const [authFailureReason, setAuthFailureReason] = useState<string | null>(null);
   const selectedCalendarIdsKey = selectedCalendarIds.join(',');
 
   const fetchData = useCallback(async () => {
@@ -71,6 +74,7 @@ export function useDisplayCalendar({
       setEvents([]);
       setLastUpdated(null);
       setConsecutiveFailures(0);
+      setAuthFailureReason(null);
       setIsLoading(false);
       return;
     }
@@ -103,7 +107,8 @@ export function useDisplayCalendar({
           reason: data.reason,
           details: data.details,
         });
-        setError(data.error ?? 'Failed to load calendar');
+        setAuthFailureReason(data.reason ?? null);
+        setError(displayCalendarUserMessage(data.error ?? 'Failed to load calendar', data.reason));
         return;
       }
       console.info('[display-calendar] request succeeded', {
@@ -119,12 +124,14 @@ export function useDisplayCalendar({
       setCalendars(calList);
       setEvents((data.events ?? []).map(parseEventFromServer));
       setLastUpdated(Date.now());
+      setAuthFailureReason(null);
       setConsecutiveFailures(0);
     } catch (err) {
       console.warn('[display-calendar] network error', {
         displayId,
         error: err instanceof Error ? err.message : String(err),
       });
+      setAuthFailureReason(null);
       setError(err instanceof Error ? err.message : 'Failed to load calendar');
       setConsecutiveFailures((prev) => prev + 1);
     } finally {
@@ -136,6 +143,7 @@ export function useDisplayCalendar({
     if (!displayId) {
       setIsLoading(false);
       setError(null);
+      setAuthFailureReason(null);
       setCalendars([]);
       setEvents([]);
       setLastUpdated(null);
@@ -146,9 +154,16 @@ export function useDisplayCalendar({
 
   useEffect(() => {
     if (!displayId || selectedCalendarIdsKey.length === 0) return;
-    const t = setTimeout(fetchData, getNextPollDelay(REFRESH_INTERVAL_MS, consecutiveFailures));
+    const t = setTimeout(
+      fetchData,
+      getDisplayCalendarPollDelay(
+        REFRESH_INTERVAL_MS,
+        consecutiveFailures,
+        isFatalGoogleAuthFailure(authFailureReason)
+      )
+    );
     return () => clearTimeout(t);
-  }, [displayId, selectedCalendarIdsKey, fetchData, consecutiveFailures]);
+  }, [displayId, selectedCalendarIdsKey, fetchData, consecutiveFailures, authFailureReason]);
 
   if (!displayId) return EMPTY_RESULT;
 

@@ -24,7 +24,7 @@ Canonical files:
 
 ```json
 {
-  "$schema": "https://homeslate.app/schemas/theme-document.schema.json",
+  "$schema": "https://homeslate.dev/schemas/theme-document.schema.json",
   "id": "theme_ocean_dark",
   "name": "Ocean Dark",
   "description": "Low-glare dark theme with cyan accents",
@@ -122,7 +122,7 @@ Optional tokens provide richer styling but are not required for baseline renderi
 ```json
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://homeslate.app/schemas/theme-document.schema.json",
+  "$id": "https://homeslate.dev/schemas/theme-document.schema.json",
   "title": "ThemeDocument",
   "type": "object",
   "additionalProperties": false,
