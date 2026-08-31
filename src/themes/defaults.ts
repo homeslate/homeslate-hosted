@@ -1,7 +1,7 @@
 import type { ThemeDocument } from "./themeDocumentValidation";
 import { tailwindPaletteToTokenGroup } from "./tailwindPalette";
 
-const SCHEMA_URL = "https://homeslate.app/schemas/theme-document.schema.json";
+const SCHEMA_URL = "https://homeslate.dev/schemas/theme-document.schema.json";
 
 const SHARED_SPACING = {
   "0": { $type: "dimension", $value: "0px" },

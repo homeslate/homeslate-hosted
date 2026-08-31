@@ -1,6 +1,7 @@
 import type { Handler } from '@netlify/functions';
 import { sql } from 'drizzle-orm';
 import { getDb } from '../../src/db';
+import { userTokenPersistFields } from '../../src/services/displayCalendarAuth';
 import { AUTH_JSON_HEADERS, errorResponse, jsonResponse, optionsResponse } from './_shared/http';
 import { exchangeRefreshToken } from './_shared/googleTokens';
 
@@ -27,16 +28,26 @@ export const handler: Handler = async (event) => {
 
   try {
     const tokenData = await exchangeRefreshToken(refreshToken);
-    const expiresAt = new Date(Date.now() + (tokenData.expires_in ?? 3600) * 1000).toISOString();
+    const fields = userTokenPersistFields(tokenData);
 
     try {
       const db = getDb();
-      await db.execute(sql`
-        UPDATE users
-        SET access_token = ${tokenData.access_token},
-            access_token_expires_at = ${expiresAt}::timestamptz
-        WHERE refresh_token = ${refreshToken}
-      `);
+      if (fields.rotatedRefreshToken) {
+        await db.execute(sql`
+          UPDATE users
+          SET access_token = ${fields.accessToken},
+              access_token_expires_at = ${fields.expiresAt}::timestamptz,
+              refresh_token = ${fields.rotatedRefreshToken}
+          WHERE refresh_token = ${refreshToken}
+        `);
+      } else {
+        await db.execute(sql`
+          UPDATE users
+          SET access_token = ${fields.accessToken},
+              access_token_expires_at = ${fields.expiresAt}::timestamptz
+          WHERE refresh_token = ${refreshToken}
+        `);
+      }
     } catch (persistErr) {
       console.warn('[refresh-token] failed to persist access token for displays', persistErr);
     }
@@ -46,6 +57,7 @@ export const handler: Handler = async (event) => {
       {
         access_token: tokenData.access_token,
         expires_in: tokenData.expires_in,
+        ...(fields.rotatedRefreshToken ? { refresh_token: fields.rotatedRefreshToken } : {}),
       },
       AUTH_JSON_HEADERS
     );

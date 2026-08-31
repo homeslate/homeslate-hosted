@@ -3,8 +3,10 @@ import {
   classifyRefreshFailure,
   describeTokenRow,
   extractRows,
+  isFatalGoogleAuthFailure,
   normalizeTokenRow,
   summarizeTokenCandidates,
+  userTokenPersistFields,
 } from './displayCalendarAuth';
 
 describe('extractRows', () => {
@@ -129,7 +131,59 @@ describe('classifyRefreshFailure', () => {
     ).toBe('invalid_grant');
   });
 
+  it('detects Google expired-or-revoked refresh tokens', () => {
+    expect(
+      classifyRefreshFailure(
+        new Error('Refresh token exchange failed: Token has been expired or revoked.')
+      )
+    ).toBe('token_revoked');
+  });
+
+  it('treats expired-or-revoked as more specific than invalid_grant', () => {
+    expect(
+      classifyRefreshFailure(
+        new Error('Refresh token exchange failed: invalid_grant: Token has been expired or revoked.')
+      )
+    ).toBe('token_revoked');
+  });
+
   it('falls back to refresh_failed', () => {
     expect(classifyRefreshFailure(new Error('network down'))).toBe('refresh_failed');
+  });
+});
+
+describe('userTokenPersistFields', () => {
+  it('captures a rotated refresh token when Google returns one', () => {
+    expect(
+      userTokenPersistFields(
+        {
+          access_token: 'new-access',
+          expires_in: 3600,
+          refresh_token: 'rotated-refresh',
+        },
+        Date.parse('2026-08-31T00:00:00.000Z')
+      )
+    ).toEqual({
+      accessToken: 'new-access',
+      expiresAt: '2026-08-31T01:00:00.000Z',
+      rotatedRefreshToken: 'rotated-refresh',
+    });
+  });
+
+  it('leaves refresh token unchanged when Google does not rotate it', () => {
+    expect(
+      userTokenPersistFields(
+        { access_token: 'new-access', expires_in: 3600 },
+        Date.parse('2026-08-31T00:00:00.000Z')
+      ).rotatedRefreshToken
+    ).toBeNull();
+  });
+});
+
+describe('isFatalGoogleAuthFailure', () => {
+  it('treats revoked and invalid_grant as fatal', () => {
+    expect(isFatalGoogleAuthFailure('token_revoked')).toBe(true);
+    expect(isFatalGoogleAuthFailure('invalid_grant')).toBe(true);
+    expect(isFatalGoogleAuthFailure('refresh_failed')).toBe(false);
   });
 });

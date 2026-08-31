@@ -109,7 +109,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
         return null;
       }
-      const data = await res.json() as { access_token: string; expires_in: number };
+      const data = await res.json() as {
+        access_token: string;
+        expires_in: number;
+        refresh_token?: string;
+      };
+      if (data.refresh_token) {
+        localStorage.setItem(REFRESH_TOKEN_KEY, data.refresh_token);
+      }
       storeToken(data.access_token, data.expires_in);
       return data.access_token;
     } catch (err) {

@@ -29,7 +29,36 @@ export interface TokenCandidateSummary {
 export type RefreshFailureReason =
   | 'missing_oauth_credentials'
   | 'invalid_grant'
+  | 'token_revoked'
   | 'refresh_failed';
+
+export interface GoogleTokenPersistInput {
+  access_token: string;
+  expires_in?: number;
+  refresh_token?: string;
+}
+
+export interface UserTokenPersistFields {
+  accessToken: string;
+  expiresAt: string;
+  rotatedRefreshToken: string | null;
+}
+
+export function isFatalGoogleAuthFailure(reason: string | null | undefined): boolean {
+  return reason === 'invalid_grant' || reason === 'token_revoked';
+}
+
+export function userTokenPersistFields(
+  tokenData: GoogleTokenPersistInput,
+  nowMs: number = Date.now()
+): UserTokenPersistFields {
+  const rotated = tokenData.refresh_token?.trim();
+  return {
+    accessToken: tokenData.access_token,
+    expiresAt: new Date(nowMs + (tokenData.expires_in ?? 3600) * 1000).toISOString(),
+    rotatedRefreshToken: rotated && rotated.length > 0 ? rotated : null,
+  };
+}
 
 function asNonEmptyString(value: unknown): string | null {
   if (typeof value !== 'string') return null;
@@ -97,6 +126,7 @@ export function summarizeTokenCandidates(
 export function classifyRefreshFailure(err: unknown): RefreshFailureReason {
   const message = err instanceof Error ? err.message : String(err);
   if (/Missing Google OAuth credentials/i.test(message)) return 'missing_oauth_credentials';
+  if (/expired or revoked/i.test(message)) return 'token_revoked';
   if (/invalid_grant/i.test(message)) return 'invalid_grant';
   return 'refresh_failed';
 }

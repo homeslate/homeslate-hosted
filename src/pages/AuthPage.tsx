@@ -1,5 +1,6 @@
-import { Center, Paper, Title, Text, Button, Stack } from '@mantine/core';
+import { Center, Paper, Title, Text, Button, Stack, Anchor } from '@mantine/core';
 import { IconLayoutDashboard, IconBrandGoogle } from '@tabler/icons-react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import classes from './AuthPage.module.css';
 
@@ -29,6 +30,19 @@ export function AuthPage() {
             >
               Sign in with Google
             </Button>
+            <Text size="xs" c="dimmed" ta="center">
+              <Anchor component={Link} to="/" c="dimmed" underline="hover">
+                About Homeslate
+              </Anchor>
+              {' · '}
+              <Anchor component={Link} to="/privacy" c="dimmed" underline="hover">
+                Privacy
+              </Anchor>
+              {' · '}
+              <Anchor component={Link} to="/terms" c="dimmed" underline="hover">
+                Terms
+              </Anchor>
+            </Text>
           </Stack>
         </Paper>
       </Center>

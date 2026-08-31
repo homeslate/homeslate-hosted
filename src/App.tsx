@@ -22,7 +22,11 @@ import {
   persistDisplayId,
   resolveDisplayId,
 } from './displayPersistence';
+import { resolveAppSurface } from './appSurface';
 const AuthPage = lazy(() => import('./pages/AuthPage').then((m) => ({ default: m.AuthPage })));
+const HomePage = lazy(() => import('./pages/HomePage').then((m) => ({ default: m.HomePage })));
+const PrivacyPage = lazy(() => import('./pages/PrivacyPage').then((m) => ({ default: m.PrivacyPage })));
+const TermsPage = lazy(() => import('./pages/TermsPage').then((m) => ({ default: m.TermsPage })));
 const DisplayListPage = lazy(() => import('./pages/DisplayListPage').then((m) => ({ default: m.DisplayListPage })));
 const DisplayDetailPage = lazy(() => import('./pages/DisplayDetailPage').then((m) => ({ default: m.DisplayDetailPage })));
 const ViewEditorPage = lazy(() => import('./pages/ViewEditorPage').then((m) => ({ default: m.ViewEditorPage })));
@@ -95,8 +99,24 @@ function AppInner() {
   const { preview, closePreview } = useDashboardStore();
   useWakeLock();
 
-  // Unauthenticated pairing page for headless displays (no keyboard/mouse).
-  if (pathname === '/pair') {
+  // Display device mode: ?display=<uuid> → fullscreen viewer, no auth needed.
+  // Falls back to sessionStorage (OAuth) and localStorage (installed PWA).
+  const displayParam = resolveDisplayId();
+  const surface = resolveAppSurface({
+    pathname,
+    isAuthenticated,
+    displayId: displayParam,
+    preview: !!preview,
+  });
+
+  // No display for this tab — clear the short-lived session copy so the
+  // management UI is reachable. Keep localStorage so the installed app still
+  // reopens the pinned display on next standalone launch.
+  if (surface !== 'display' && surface !== 'pair') {
+    clearSessionDisplayId();
+  }
+
+  if (surface === 'pair') {
     return (
       <Suspense fallback={<PageLoader />}>
         <PairPage />
@@ -104,20 +124,28 @@ function AppInner() {
     );
   }
 
-  // Display device mode: ?display=<uuid> → fullscreen viewer, no auth needed.
-  // Falls back to sessionStorage (OAuth) and localStorage (installed PWA).
-  const displayParam = resolveDisplayId();
-  if (displayParam) return <DisplayViewer displayId={displayParam} />;
+  if (surface === 'display' && displayParam) {
+    return <DisplayViewer displayId={displayParam} />;
+  }
 
-  // No display for this tab — clear the short-lived session copy so the
-  // management UI is reachable. Keep localStorage so the installed app still
-  // reopens the pinned display on next standalone launch.
-  clearSessionDisplayId();
+  if (surface === 'home') {
+    return <Suspense fallback={<PageLoader />}><HomePage /></Suspense>;
+  }
 
-  if (!isAuthenticated) return <Suspense fallback={<PageLoader />}><AuthPage /></Suspense>;
+  if (surface === 'privacy') {
+    return <Suspense fallback={<PageLoader />}><PrivacyPage /></Suspense>;
+  }
+
+  if (surface === 'terms') {
+    return <Suspense fallback={<PageLoader />}><TermsPage /></Suspense>;
+  }
+
+  if (surface === 'auth') {
+    return <Suspense fallback={<PageLoader />}><AuthPage /></Suspense>;
+  }
 
   // In-app preview mode: render the viewer with an exit button overlay
-  if (preview) {
+  if (surface === 'preview' && preview) {
     return (
       <div style={{ position: 'relative', width: '100%', height: '100%' }}>
         <DisplayViewer
@@ -147,7 +175,6 @@ function AppInner() {
 
   return (
     <Routes>
-      <Route path="/" element={<Navigate to="/displays" replace />} />
       <Route path="/displays" element={<ManagementLayout />}>
         <Route index element={<Suspense fallback={<PageLoader />}><DisplayListPage /></Suspense>} />
         <Route path=":displayId" element={<Suspense fallback={<PageLoader />}><DisplayDetailPage /></Suspense>} />

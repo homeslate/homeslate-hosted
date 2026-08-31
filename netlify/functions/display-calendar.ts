@@ -6,10 +6,13 @@ import {
   describeTokenRow,
   errorMessage,
   isAccessTokenUnexpired,
+  isFatalGoogleAuthFailure,
   normalizeTokenRow,
   summarizeTokenCandidates,
+  userTokenPersistFields,
   type TokenCandidate,
 } from '../../src/services/displayCalendarAuth';
+import { DISPLAY_GOOGLE_RECONNECT_MESSAGE } from '../../src/widgets/googleCalendarError';
 import { exchangeRefreshToken } from './_shared/googleTokens';
 
 const CORS = {
@@ -25,9 +28,37 @@ function json(statusCode: number, body: unknown) {
   return { statusCode, headers: CORS, body: JSON.stringify(body) };
 }
 
-async function exchangeRefreshForAccess(refreshToken: string): Promise<{ access_token: string; expires_in: number }> {
+async function exchangeRefreshForAccess(refreshToken: string) {
   const data = await exchangeRefreshToken(refreshToken);
-  return { access_token: data.access_token, expires_in: data.expires_in ?? 3600 };
+  return {
+    access_token: data.access_token,
+    expires_in: data.expires_in ?? 3600,
+    refresh_token: data.refresh_token,
+  };
+}
+
+async function persistRefreshedTokens(
+  db: ReturnType<typeof getDb>,
+  userId: string,
+  tokenData: { access_token: string; expires_in: number; refresh_token?: string }
+) {
+  const fields = userTokenPersistFields(tokenData);
+  if (fields.rotatedRefreshToken) {
+    await db.execute(sql`
+      UPDATE users
+      SET access_token = ${fields.accessToken},
+          access_token_expires_at = ${fields.expiresAt}::timestamptz,
+          refresh_token = ${fields.rotatedRefreshToken}
+      WHERE id = ${userId}::uuid
+    `);
+    return;
+  }
+  await db.execute(sql`
+    UPDATE users
+    SET access_token = ${fields.accessToken},
+        access_token_expires_at = ${fields.expiresAt}::timestamptz
+    WHERE id = ${userId}::uuid
+  `);
 }
 
 interface GoogleCalendarEvent {
@@ -185,17 +216,12 @@ export const handler: Handler = async (event) => {
           const exchanged = await exchangeRefreshForAccess(candidate.refresh_token);
           token = exchanged.access_token;
           chosenSource = candidate.source;
-          const expiresAt = new Date(Date.now() + exchanged.expires_in * 1000).toISOString();
-          await db.execute(sql`
-            UPDATE users
-            SET access_token = ${exchanged.access_token},
-                access_token_expires_at = ${expiresAt}::timestamptz
-            WHERE id = ${candidate.user_id}::uuid
-          `);
+          await persistRefreshedTokens(db, candidate.user_id, exchanged);
           console.info(`${LOG_PREFIX} refresh succeeded`, {
             displayId,
             source: candidate.source,
             expiresIn: exchanged.expires_in,
+            rotatedRefreshToken: !!exchanged.refresh_token,
           });
           break;
         } catch (err) {
@@ -231,7 +257,9 @@ export const handler: Handler = async (event) => {
       };
       console.warn(`${LOG_PREFIX} no usable token`, { displayId, reason, ...details });
       return json(404, {
-        error: 'A display owner or linked collaborator needs to sign in from the management app to refresh calendar access',
+        error: isFatalGoogleAuthFailure(reason)
+          ? DISPLAY_GOOGLE_RECONNECT_MESSAGE
+          : 'A display owner or linked collaborator needs to sign in from the management app to refresh calendar access',
         reason,
         details,
       });
