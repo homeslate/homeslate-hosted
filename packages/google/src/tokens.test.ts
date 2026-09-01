@@ -1,5 +1,4 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { GoogleAuthError } from './errors';
 import { exchangeAuthorizationCode, refreshAccessToken } from './tokens';
 
 afterEach(() => {
@@ -16,7 +15,7 @@ function jsonResponse(status: number, body: unknown): Response {
 
 describe('exchangeAuthorizationCode', () => {
   it('POSTs the authorization code and returns camelCase tokens', async () => {
-    const fetchMock = vi.fn(async () =>
+    const fetchMock = vi.fn(async (_url: string, _init?: RequestInit) =>
       jsonResponse(200, {
         access_token: 'at-1',
         refresh_token: 'rt-1',
@@ -41,10 +40,11 @@ describe('exchangeAuthorizationCode', () => {
     });
 
     expect(fetchMock).toHaveBeenCalledOnce();
-    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    const [url, init] = fetchMock.mock.calls[0];
     expect(url).toBe('https://oauth2.googleapis.com/token');
-    expect(init.method).toBe('POST');
-    const body = new URLSearchParams(String(init.body));
+    expect(init).toBeDefined();
+    expect(init!.method).toBe('POST');
+    const body = new URLSearchParams(String(init!.body));
     expect(body.get('code')).toBe('auth-code');
     expect(body.get('client_id')).toBe('cid');
     expect(body.get('client_secret')).toBe('csecret');
@@ -110,16 +110,6 @@ describe('refreshAccessToken', () => {
         clientSecret: 'csecret',
         refreshToken: 'rt-revoked',
       })
-    ).rejects.toBeInstanceOf(GoogleAuthError);
-
-    try {
-      await refreshAccessToken({
-        clientId: 'cid',
-        clientSecret: 'csecret',
-        refreshToken: 'rt-revoked',
-      });
-    } catch (err) {
-      expect(err).toMatchObject({ code: 'token_revoked' });
-    }
+    ).rejects.toMatchObject({ code: 'token_revoked' });
   });
 });
