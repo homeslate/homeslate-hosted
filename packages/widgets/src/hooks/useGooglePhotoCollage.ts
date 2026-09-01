@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { useAuth } from '../contexts/AuthContext';
+import { useGoogleRuntime } from '../googleRuntime';
 import {
   createPickerSession,
   getPickerSession,
@@ -69,7 +69,7 @@ export function useGooglePhotoCollage({
   rotationInterval = 10_000,
   savedImages = [],
 }: UseGooglePhotoCollageOptions): UseGooglePhotoCollageResult {
-  const { accessToken, isAuthenticated } = useAuth();
+  const { accessToken, isAuthenticated } = useGoogleRuntime();
 
   const [pickerStatus, setPickerStatus] = useState<CollagePickerStatus>(
     savedImages.length > 0 ? 'ready' : 'idle'

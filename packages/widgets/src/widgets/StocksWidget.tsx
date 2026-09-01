@@ -16,9 +16,9 @@ import {
   IconRefresh,
   IconExternalLink,
 } from '@tabler/icons-react';
-import type { WidgetProps, WidgetConfig } from '../types/widget';
+import type { WidgetProps, WidgetConfig } from '../types';
 import { useStocks } from '../hooks/useStocks';
-import { WidgetDataStatus } from '../components/WidgetDataStatus';
+import { WidgetDataStatus } from '../chrome/WidgetDataStatus';
 import { popularStocks, popularIndices, type StockQuote } from '../services/stocks';
 import classes from './StocksWidget.module.css';
 

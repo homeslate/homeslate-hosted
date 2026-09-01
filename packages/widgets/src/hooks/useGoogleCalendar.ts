@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useAuth } from '../contexts/AuthContext';
+import { useGoogleRuntime } from '../googleRuntime';
 import {
   fetchCalendarList,
   fetchAllCalendarEvents,
@@ -47,7 +47,7 @@ export function useGoogleCalendar({
   refreshInterval = 5 * 60 * 1000,
   enabled = true,
 }: UseGoogleCalendarOptions): UseGoogleCalendarResult {
-  const { accessToken, isAuthenticated, refreshAccessToken } = useAuth();
+  const { accessToken, isAuthenticated, refreshAccessToken } = useGoogleRuntime();
   const { getEntry, setEntry } = useCalendarCacheStore();
   const cacheKey = calendarCacheKey(selectedCalendarIds, daysAhead);
 

@@ -2,11 +2,12 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActionIcon, Box, Button, Group, NumberInput, Paper, Select, Stack, Switch, Text, TextInput } from '@mantine/core';
 import { IconPlayerPause, IconPlayerPlay, IconPlus, IconTrash, IconX } from '@tabler/icons-react';
 import { v4 as uuidv4 } from 'uuid';
-import { ALARM_TONE_OPTIONS, type AlarmToneId } from '../alarms/types';
+import type { AlarmToneId } from '@homeslate/schema';
+import { ALARM_TONE_OPTIONS } from '../alarms/tones';
 import { useTimers } from '../timers/TimersContext';
 import { formatDurationMs, remainingMs } from '../timers/format';
 import type { TimerPreset, TimersWidgetConfig } from '../timers/types';
-import type { WidgetConfig, WidgetProps } from '../types/widget';
+import type { WidgetConfig, WidgetProps } from '../types';
 import classes from './TimersWidget.module.css';
 
 export interface TimersConfig extends TimersWidgetConfig, WidgetConfig {

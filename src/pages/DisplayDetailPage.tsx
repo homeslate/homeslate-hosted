@@ -44,7 +44,7 @@ import {
   IconPalette,
 } from '@tabler/icons-react';
 import { IconPickerModal } from '../components/IconPickerModal';
-import { AlarmListEditor } from '../alarms/AlarmListEditor';
+import { AlarmListEditor } from '@homeslate/widgets';
 import {
   DndContext,
   closestCenter,
@@ -68,7 +68,7 @@ import { useDashboardStore } from '../store/dashboardStore';
 import { ThemeDocumentManager } from '../components/ThemeDocumentManager';
 import { HOLIDAY_PREVIEW_OPTIONS } from '../holidays/registry';
 import type { HolidayId } from '../holidays/registry';
-import { getWidgetByType } from '../widgets/registry';
+import { getWidgetByType } from '@homeslate/widgets';
 import type { ColorMode } from '../types/theme';
 import type { DashboardLayout, WidgetDefinition } from '../types/widget';
 import { apiClient, ApiError } from '../services/apiClient';

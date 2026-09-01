@@ -1,5 +1,5 @@
 import { Box, Stack, Text, Group, Switch } from '@mantine/core';
-import type { WidgetProps, WidgetConfig } from '../types/widget';
+import type { WidgetProps, WidgetConfig } from '../types';
 import { useAlarms } from '../alarms/AlarmsContext';
 import { AlarmListEditor } from '../alarms/AlarmListEditor';
 import classes from './AlarmsWidget.module.css';

@@ -1,143 +1,54 @@
-import { useEffect, useRef, useState } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
-  Box, Text, Stack, Button, Group, Loader, Alert, Anchor, NumberInput, Progress,
-  Tabs, TextInput, ActionIcon, SimpleGrid, Image, Tooltip,
+  Box, Text, Stack, TextInput, NumberInput, Select, Switch, Button, Group,
+  ActionIcon, Loader, Alert, Anchor, Progress, Image, SimpleGrid, Tooltip,
+  Tabs,
 } from '@mantine/core';
-import {
-  IconLayoutGrid, IconBrandGoogle, IconUpload, IconLink, IconExternalLink,
-  IconPlus, IconX, IconPhoto, IconTrash,
-} from '@tabler/icons-react';
-import type { WidgetProps, WidgetConfig } from '../types/widget';
-import { useGooglePhotoCollage } from '../hooks/useGooglePhotoCollage';
+import { IconTrash, IconPlus, IconPhoto, IconBrandGoogle, IconUpload, IconLink, IconExternalLink, IconX } from '@tabler/icons-react';
+import type { WidgetProps, WidgetConfig } from '../types';
 import { useGooglePhotos } from '../hooks/useGooglePhotos';
-import { useAuth } from '../contexts/AuthContext';
+import { useGoogleRuntime } from '../googleRuntime';
 import { loadStoredImage } from '../services/googlePhotos';
-import type { StoredImage } from '../services/googlePhotos';
-import type { Photo, StoredPhoto } from './PhotoWidget';
-import classes from './GooglePhotoCollageWidget.module.css';
+import classes from './PhotoWidget.module.css';
 
-export interface GooglePhotoCollageConfig extends WidgetConfig {
-  rotationInterval: number;      // seconds between individual photo changes
-  transparentBackground: boolean;
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+/** A URL-based photo (no server storage needed — fetched directly in the browser). */
+export interface UrlPhoto {
+  type: 'url';
+  url: string;
+  caption?: string;
+}
+
+/** A photo stored in Netlify Blobs (from Google Photos picker or device upload). */
+export interface StoredPhoto {
+  type: 'stored';
+  key: string;
+  filename: string;
+  caption?: string;
+  /** Transient preview URL — populated at runtime, never persisted. */
+  previewUrl?: string;
+}
+
+export type Photo = UrlPhoto | StoredPhoto;
+
+export interface PhotoConfig extends WidgetConfig {
   photos: Photo[];
+  interval: number;
+  transition: 'fade' | 'slide' | 'none';
+  showCaption: boolean;
+  transparentBackground: boolean;
 }
 
-// ── Layout helpers ────────────────────────────────────────────────────────────
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
-/**
- * Given pixel dimensions of the widget, compute how many masonry columns and
- * rows to use and the CSS grid-template-columns/rows strings.
- *
- * Strategy:
- *   - Target ~200px per cell (minimum)
- *   - cols = max(1, floor(width / 200))
- *   - rows = max(1, floor(height / 200))
- *   - slotCount = cols * rows
- */
-function computeLayout(width: number, height: number) {
-  const TARGET_CELL = 200;
-  const cols = Math.max(1, Math.floor(width / TARGET_CELL));
-  const rows = Math.max(1, Math.floor(height / TARGET_CELL));
-  const slotCount = cols * rows;
-
-  // Assign varying grid spans to make it feel masonry-like.
-  // We tile a repeating pattern of span configurations.
-  // For a 2-col grid: alternating tall/wide cells.
-  // For 3+ cols: some cells span 2 columns or 2 rows.
-  const spans = buildSpanPattern(cols, rows, slotCount);
-
-  return { cols, rows, slotCount, spans };
+/** Returns the displayable src for a photo (URL or pre-loaded blob URL). */
+function photoSrc(photo: Photo): string | null {
+  if (photo.type === 'url') return photo.url;
+  return photo.previewUrl ?? null;
 }
 
-interface CellSpan {
-  colSpan: number;
-  rowSpan: number;
-}
-
-/**
- * Produce a list of {colSpan, rowSpan} for `slotCount` cells that tile within
- * a `cols × rows` grid without overflowing. Uses a simple greedy packing
- * algorithm with a fixed pattern of "large" and "small" cells.
- */
-function buildSpanPattern(cols: number, rows: number, slotCount: number): CellSpan[] {
-  // For very small grids (1 cell) just fill.
-  if (slotCount === 1) return [{ colSpan: 1, rowSpan: 1 }];
-
-  // Build an occupancy grid
-  const occupied = Array.from({ length: rows }, () => Array(cols).fill(false));
-
-  function firstFree(): [number, number] | null {
-    for (let r = 0; r < rows; r++) {
-      for (let c = 0; c < cols; c++) {
-        if (!occupied[r][c]) return [r, c];
-      }
-    }
-    return null;
-  }
-
-  function canPlace(r: number, c: number, rs: number, cs: number): boolean {
-    if (r + rs > rows || c + cs > cols) return false;
-    for (let dr = 0; dr < rs; dr++) {
-      for (let dc = 0; dc < cs; dc++) {
-        if (occupied[r + dr][c + dc]) return false;
-      }
-    }
-    return true;
-  }
-
-  function place(r: number, c: number, rs: number, cs: number) {
-    for (let dr = 0; dr < rs; dr++) {
-      for (let dc = 0; dc < cs; dc++) {
-        occupied[r + dr][c + dc] = true;
-      }
-    }
-  }
-
-  const result: CellSpan[] = [];
-
-  // Candidates in priority order: try larger spans first for variety
-  const candidates: [number, number][] =
-    cols >= 3 && rows >= 3
-      ? [[2, 2], [2, 1], [1, 2], [1, 1]]
-      : cols >= 2 && rows >= 2
-      ? [[2, 1], [1, 2], [1, 1]]
-      : [[1, 1]];
-
-  // Every ~4 cells insert a larger cell for variety; rest are 1×1
-  let cellsPlaced = 0;
-
-  while (result.length < slotCount) {
-    const pos = firstFree();
-    if (!pos) break;
-    const [r, c] = pos;
-
-    // Try a larger span every 3 placements for visual variety
-    let placed = false;
-    if (cellsPlaced % 3 === 0 && candidates[0][0] > 1) {
-      for (const [rs, cs] of candidates) {
-        if (rs === 1 && cs === 1) continue; // skip 1×1 in "large" turn
-        if (canPlace(r, c, rs, cs)) {
-          place(r, c, rs, cs);
-          result.push({ colSpan: cs, rowSpan: rs });
-          placed = true;
-          break;
-        }
-      }
-    }
-
-    if (!placed) {
-      place(r, c, 1, 1);
-      result.push({ colSpan: 1, rowSpan: 1 });
-    }
-
-    cellsPlaced++;
-  }
-
-  return result;
-}
-
-// ── Upload helper (shared with PhotoWidget) ────────────────────────────────────
-
+/** Upload a data-URL or remote URL to Netlify Blobs via /api/photo-upload. */
 async function uploadPhoto(payload: { dataUrl?: string; url?: string; filename?: string }): Promise<{ key: string; filename: string }> {
   const res = await fetch('/api/photo-upload', {
     method: 'POST',
@@ -151,135 +62,131 @@ async function uploadPhoto(payload: { dataUrl?: string; url?: string; filename?:
   return res.json() as Promise<{ key: string; filename: string }>;
 }
 
-// ── Convert Photo[] to StoredImage[] for the collage hook ─────────────────────
+// ─── Display component ────────────────────────────────────────────────────────
 
-function photosToStoredImages(photos: Photo[]): StoredImage[] {
-  return photos
-    .filter((p): p is StoredPhoto => p.type === 'stored')
-    .map((p) => ({ key: p.key, filename: p.filename }));
-}
+// Sample photos shown when widget has no photos configured
+const samplePhotos: UrlPhoto[] = [
+  { type: 'url', url: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800&h=600&fit=crop', caption: 'Mountain Sunrise' },
+  { type: 'url', url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=800&h=600&fit=crop', caption: 'Ocean Waves' },
+  { type: 'url', url: 'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=800&h=600&fit=crop', caption: 'Forest Path' },
+  { type: 'url', url: 'https://images.unsplash.com/photo-1472214103451-9374bd1c798e?w=800&h=600&fit=crop', caption: 'Golden Fields' },
+];
 
-// ── Main widget ───────────────────────────────────────────────────────────────
+export function PhotoWidget({ widget }: WidgetProps<PhotoConfig>) {
+  const { photos, interval, transition, showCaption, transparentBackground } = widget.config;
 
-export function GooglePhotoCollageWidget({ widget }: WidgetProps<GooglePhotoCollageConfig>) {
-  const { rotationInterval, transparentBackground, photos } = widget.config;
+  const [resolvedPhotos, setResolvedPhotos] = useState<Photo[]>([]);
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [isTransitioning, setIsTransitioning] = useState(false);
+  const blobUrlsRef = useRef<Map<string, string>>(new Map());
 
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [dimensions, setDimensions] = useState({ width: 400, height: 300 });
-
-  // Observe container size
+  // Resolve stored photos to blob URLs
   useEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
-    const ro = new ResizeObserver((entries) => {
-      const { width, height } = entries[0].contentRect;
-      setDimensions({ width, height });
-    });
-    ro.observe(el);
-    return () => ro.disconnect();
+    if (photos.length === 0) {
+      setResolvedPhotos(samplePhotos);
+      return;
+    }
+
+    let cancelled = false;
+
+    const resolve = async () => {
+      const result: Photo[] = await Promise.all(
+        photos.map(async (photo) => {
+          if (photo.type === 'url') return photo;
+          // Check if we already have a blob URL cached
+          const cached = blobUrlsRef.current.get(photo.key);
+          if (cached) return { ...photo, previewUrl: cached };
+          try {
+            const blobUrl = await loadStoredImage(photo.key);
+            if (!cancelled) {
+              blobUrlsRef.current.set(photo.key, blobUrl);
+            }
+            return { ...photo, previewUrl: blobUrl };
+          } catch {
+            return photo; // display nothing if load fails
+          }
+        })
+      );
+      if (!cancelled) setResolvedPhotos(result);
+    };
+
+    void resolve();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [photos]);
+
+  // Revoke blob URLs on unmount
+  useEffect(() => {
+    const blobUrls = blobUrlsRef.current;
+    return () => {
+      blobUrls.forEach((url) => URL.revokeObjectURL(url));
+      blobUrls.clear();
+    };
   }, []);
 
-  const { cols, rows, slotCount, spans } = computeLayout(dimensions.width, dimensions.height);
+  // Reset index when photo count changes
+  useEffect(() => {
+    setCurrentIndex(0);
+  }, [resolvedPhotos.length]);
 
-  // Convert Photo[] to StoredImage[] for the collage hook (only stored photos are supported)
-  const savedImages: StoredImage[] = photos && photos.length > 0 ? photosToStoredImages(photos) : [];
+  const nextPhoto = useCallback(() => {
+    if (resolvedPhotos.length <= 1) return;
+    setIsTransitioning(true);
+    setTimeout(() => {
+      setCurrentIndex((prev) => (prev + 1) % resolvedPhotos.length);
+      setIsTransitioning(false);
+    }, 500);
+  }, [resolvedPhotos.length]);
 
-  const { pickerStatus, error, slots, transitioningSlot } =
-    useGooglePhotoCollage({
-      slotCount,
-      rotationInterval: rotationInterval * 1000,
-      savedImages,
-    });
+  useEffect(() => {
+    if (resolvedPhotos.length <= 1) return;
+    const timer = setInterval(nextPhoto, interval * 1000);
+    return () => clearInterval(timer);
+  }, [interval, nextPhoto, resolvedPhotos.length]);
 
-  const containerClass = `${classes.container} ${transparentBackground ? classes.transparent : ''}`;
-
-  if (!photos || photos.length === 0) {
-    return (
-      <Box ref={containerRef} className={containerClass}>
-        <div className={classes.stateContainer}>
-          <IconLayoutGrid size={48} className={classes.emptyIcon} />
-          <Text size="lg" fw={500}>No Photos Selected</Text>
-          <Text size="sm" c="dimmed" ta="center">
-            Open widget settings to add photos to your collage
-          </Text>
-        </div>
-      </Box>
-    );
-  }
-
-  if (pickerStatus === 'uploading') {
-    return (
-      <Box ref={containerRef} className={containerClass}>
-        <div className={classes.stateContainer}>
-          <Loader size="lg" color="blue" />
-          <Text size="sm" c="dimmed" mt="sm">Saving photos...</Text>
-        </div>
-      </Box>
-    );
-  }
-
-  if (error) {
-    return (
-      <Box ref={containerRef} className={containerClass}>
-        <Alert color="red" variant="light" m="sm">
-          <Text size="sm">{error}</Text>
-        </Alert>
-      </Box>
-    );
-  }
-
-  // Show loading state while resolving URLs
-  if (savedImages.length === 0 && photos.length > 0) {
-    return (
-      <Box ref={containerRef} className={containerClass}>
-        <div className={classes.stateContainer}>
-          <Loader size="lg" color="blue" />
-          <Text size="sm" c="dimmed" mt="sm">Loading photos...</Text>
-        </div>
-      </Box>
-    );
-  }
-
-  // ── Photo grid ──────────────────────────────────────────────────────────────
-
-  const gridStyle: React.CSSProperties = {
-    gridTemplateColumns: `repeat(${cols}, 1fr)`,
-    gridTemplateRows: `repeat(${rows}, 1fr)`,
-  };
+  const currentPhoto = resolvedPhotos[currentIndex];
+  const src = currentPhoto ? photoSrc(currentPhoto) : null;
 
   return (
-    <Box ref={containerRef} className={containerClass}>
-      <div className={classes.grid} style={gridStyle}>
-        {slots.slice(0, slotCount).map((photo, idx) => {
-          const span = spans[idx] ?? { colSpan: 1, rowSpan: 1 };
-          const isFading = transitioningSlot === idx;
-
-          return (
-            <div
-              key={idx}
-              className={classes.cell}
-              style={{
-                gridColumn: `span ${span.colSpan}`,
-                gridRow: `span ${span.rowSpan}`,
-              }}
-            >
-              {photo ? (
-                <div
-                  className={`${classes.photo} ${isFading ? classes.fading : ''}`}
-                  style={{ backgroundImage: `url(${photo.objectUrl})` }}
-                />
-              ) : (
-                <div className={classes.photoSkeleton} />
-              )}
-            </div>
-          );
-        })}
-      </div>
+    <Box className={`${classes.container} ${transparentBackground ? classes.transparent : ''}`}>
+      {src ? (
+        <div
+          className={`${classes.photo} ${isTransitioning ? classes[transition] : ''}`}
+          style={{ backgroundImage: `url(${src})` }}
+        />
+      ) : (
+        <div className={classes.photo} />
+      )}
+      <div className={classes.overlay} />
+      {showCaption && currentPhoto?.caption && (
+        <div className={classes.caption}>
+          <Text className={classes.captionText}>{currentPhoto.caption}</Text>
+        </div>
+      )}
+      {resolvedPhotos.length > 1 && (
+        <div className={classes.dots}>
+          {resolvedPhotos.map((_, index) => (
+            <button
+              key={index}
+              className={`${classes.dot} ${index === currentIndex ? classes.activeDot : ''}`}
+              onClick={() => setCurrentIndex(index)}
+            />
+          ))}
+        </div>
+      )}
+      {photos.length === 0 && (
+        <div className={classes.demoNotice}>
+          <IconPhoto size={16} />
+          <Text size="xs">Demo photos — add your own in settings</Text>
+        </div>
+      )}
     </Box>
   );
 }
 
-// ── Thumbnail grid (settings) ─────────────────────────────────────────────────
+// ─── Photo thumbnail grid ─────────────────────────────────────────────────────
 
 interface PhotoThumbGridProps {
   photos: Photo[];
@@ -363,6 +270,11 @@ function PhotoThumbGrid({ photos, onRemove }: PhotoThumbGridProps) {
                 <IconX size={10} />
               </ActionIcon>
             </Tooltip>
+            {photo.caption && (
+              <Text size="xs" className={classes.thumbCaption} lineClamp={1}>
+                {photo.caption}
+              </Text>
+            )}
           </Box>
         );
       })}
@@ -370,25 +282,22 @@ function PhotoThumbGrid({ photos, onRemove }: PhotoThumbGridProps) {
   );
 }
 
-// ── Settings ──────────────────────────────────────────────────────────────────
+// ─── Settings component ───────────────────────────────────────────────────────
 
-const ROTATION_PRESETS = [
+const INTERVAL_PRESETS = [
   { value: 5, label: '5s' },
   { value: 10, label: '10s' },
   { value: 30, label: '30s' },
   { value: 60, label: '1m' },
   { value: 300, label: '5m' },
 ];
-const ROTATION_PRESET_VALUES = ROTATION_PRESETS.map((p) => p.value);
 
-export function GooglePhotoCollageWidgetSettings({
-  widget,
-  onConfigChange,
-}: WidgetProps<GooglePhotoCollageConfig>) {
-  const { rotationInterval, photos = [] } = widget.config;
+export function PhotoWidgetSettings({ widget, onConfigChange }: WidgetProps<PhotoConfig>) {
+  const { photos, interval, transition, showCaption } = widget.config;
 
   // URL tab state
   const [newUrl, setNewUrl] = useState('');
+  const [newCaption, setNewCaption] = useState('');
   const [urlError, setUrlError] = useState<string | null>(null);
   const [urlUploading, setUrlUploading] = useState(false);
 
@@ -398,7 +307,7 @@ export function GooglePhotoCollageWidgetSettings({
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Google Photos tab
-  const { isAuthenticated, isLoading: authLoading, signIn } = useAuth();
+  const { isAuthenticated, isLoading: authLoading, signIn } = useGoogleRuntime();
   const {
     pickerStatus,
     uploadProgress,
@@ -436,11 +345,12 @@ export function GooglePhotoCollageWidgetSettings({
     }
   }, [pickerStatus, storedImages, photos, onConfigChange]);
 
+  // Remove a photo by index
   const removePhoto = (index: number) => {
     onConfigChange({ photos: photos.filter((_, i) => i !== index) });
   };
 
-  // Add a URL photo — store on server to avoid CORS issues
+  // Add a URL photo — store on server to avoid CORS issues with CSS background-image
   const addUrlPhoto = async () => {
     if (!newUrl.trim()) return;
     setUrlError(null);
@@ -448,9 +358,10 @@ export function GooglePhotoCollageWidgetSettings({
     try {
       const { key, filename } = await uploadPhoto({ url: newUrl.trim(), filename: newUrl.split('/').pop() });
       onConfigChange({
-        photos: [...photos, { type: 'stored', key, filename } as StoredPhoto],
+        photos: [...photos, { type: 'stored', key, filename, caption: newCaption.trim() || undefined }],
       });
       setNewUrl('');
+      setNewCaption('');
     } catch (err) {
       setUrlError(err instanceof Error ? err.message : 'Failed to add photo');
     } finally {
@@ -491,8 +402,6 @@ export function GooglePhotoCollageWidgetSettings({
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
-
-
   return (
     <Stack gap="md">
       {/* Current photos */}
@@ -523,6 +432,12 @@ export function GooglePhotoCollageWidgetSettings({
               onKeyDown={(e) => { if (e.key === 'Enter') void addUrlPhoto(); }}
               size="sm"
               leftSection={<IconLink size={14} />}
+            />
+            <TextInput
+              placeholder="Caption (optional)"
+              value={newCaption}
+              onChange={(e) => setNewCaption(e.currentTarget.value)}
+              size="sm"
             />
             {urlError && <Alert color="red" variant="light"><Text size="xs">{urlError}</Text></Alert>}
             <Button
@@ -623,50 +538,64 @@ export function GooglePhotoCollageWidgetSettings({
         </Tabs.Panel>
       </Tabs>
 
-      {/* Rotation speed */}
-      <Stack gap="xs">
-        <Text size="sm" fw={500}>Rotation Speed</Text>
-        <Text size="xs" c="dimmed">
-          How often a single photo in the collage is replaced
-        </Text>
-        <Group gap="xs" wrap="wrap">
-          {ROTATION_PRESETS.map(({ value, label }) => (
+      {/* Slideshow settings */}
+      <Stack gap="sm" mt="xs">
+        <Text size="sm" fw={500}>Slideshow</Text>
+        <Stack gap="xs">
+          <Text size="xs" c="dimmed">Interval</Text>
+          <Group gap="xs" wrap="wrap">
+            {INTERVAL_PRESETS.map(({ value, label }) => (
+              <Button
+                key={value}
+                size="xs"
+                variant={interval === value ? 'filled' : 'default'}
+                onClick={() => onConfigChange({ interval: value })}
+              >
+                {label}
+              </Button>
+            ))}
             <Button
-              key={value}
               size="xs"
-              variant={rotationInterval === value ? 'filled' : 'default'}
-              onClick={() => onConfigChange({ rotationInterval: value })}
+              variant={!INTERVAL_PRESETS.some((p) => p.value === interval) ? 'filled' : 'default'}
+              onClick={() => {
+                if (INTERVAL_PRESETS.some((p) => p.value === interval)) {
+                  onConfigChange({ interval: 20 });
+                }
+              }}
             >
-              {label}
+              Custom
             </Button>
-          ))}
-          <Button
-            size="xs"
-            variant={!ROTATION_PRESET_VALUES.includes(rotationInterval) ? 'filled' : 'default'}
-            onClick={() => {
-              if (ROTATION_PRESET_VALUES.includes(rotationInterval)) {
-                onConfigChange({ rotationInterval: 20 });
-              }
-            }}
-          >
-            Custom
-          </Button>
-        </Group>
-        {!ROTATION_PRESET_VALUES.includes(rotationInterval) && (
-          <NumberInput
-            placeholder="Seconds"
-            value={rotationInterval}
-            onChange={(val) => {
-              const num = typeof val === 'number' ? val : parseInt(String(val), 10);
-              if (!isNaN(num) && num >= 5) onConfigChange({ rotationInterval: num });
-            }}
-            min={5}
-            max={86400}
-            size="sm"
-            w={160}
-            suffix=" s"
+          </Group>
+          {!INTERVAL_PRESETS.some((p) => p.value === interval) && (
+            <NumberInput
+              placeholder="Seconds"
+              min={3}
+              max={86400}
+              value={interval}
+              onChange={(value) => onConfigChange({ interval: Number(value) || 10 })}
+              size="sm"
+              w={160}
+              suffix=" s"
+            />
+          )}
+        </Stack>
+        <Select
+          label="Transition Effect"
+          data={[
+            { value: 'fade', label: 'Fade' },
+            { value: 'slide', label: 'Slide' },
+            { value: 'none', label: 'None' },
+          ]}
+          value={transition}
+          onChange={(value) => onConfigChange({ transition: (value as PhotoConfig['transition']) || 'fade' })}
+        />
+        <Group justify="space-between">
+          <Text size="sm">Show Caption</Text>
+          <Switch
+            checked={showCaption}
+            onChange={(e) => onConfigChange({ showCaption: e.currentTarget.checked })}
           />
-        )}
+        </Group>
       </Stack>
 
       {/* Remove all */}

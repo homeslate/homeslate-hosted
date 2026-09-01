@@ -4,14 +4,13 @@ import {
   Modal, TextInput, Textarea, Switch, Alert, ActionIcon, ScrollArea,
 } from '@mantine/core';
 import { IconBrandGoogle, IconPlus, IconCheck } from '@tabler/icons-react';
-import { GoogleCalendarEmptyState } from '../components/GoogleCalendarEmptyState';
+import { GoogleCalendarEmptyState } from '../chrome/GoogleCalendarEmptyState';
 import { displayCalendarEmptyDetail } from './googleCalendarError';
 import dayjs from 'dayjs';
-import type { WidgetProps, WidgetConfig } from '../types/widget';
+import type { WidgetProps, WidgetConfig } from '../types';
 import { useGoogleCalendar } from '../hooks/useGoogleCalendar';
 import { useDisplayCalendar } from '../hooks/useDisplayCalendar';
-import { useDisplayId, useIsPreviewDisplay } from '../contexts/DisplayContext';
-import { useAuth } from '../contexts/AuthContext';
+import { useGoogleRuntime } from '../googleRuntime';
 import type { ParsedCalendarEvent, CalendarEventInput } from '../services/googleCalendar';
 import classes from './WeekCalendarWidget.module.css';
 
@@ -188,12 +187,10 @@ function formDataToEventInput(data: EventFormData): CalendarEventInput {
 
 export function WeekCalendarWidget({ widget }: WidgetProps<WeekCalendarConfig>) {
   const { selectedCalendarIds, viewMode, weekStartsOn, startHour, endHour, transparentBackground } = widget.config;
-  const displayId = useDisplayId();
-  const isPreviewDisplay = useIsPreviewDisplay();
-  const isDisplayMode = !!displayId && !isPreviewDisplay;
+  const { displayId, isPreview, isAuthenticated } = useGoogleRuntime();
+  const isDisplayMode = !!displayId && !isPreview;
   const displayData = useDisplayCalendar({ displayId, selectedCalendarIds, daysAhead: 14 });
   const googleData = useGoogleCalendar({ selectedCalendarIds, daysAhead: 14, enabled: !isDisplayMode });
-  const { isAuthenticated } = useAuth();
   const { events, calendars, addEvent } = isDisplayMode ? displayData : googleData;
 
   // ── Create-event form state ──
@@ -658,7 +655,7 @@ export function WeekCalendarWidgetSettings({
   onConfigChange,
 }: WidgetProps<WeekCalendarConfig>) {
   const { selectedCalendarIds, viewMode, weekStartsOn, startHour, endHour } = widget.config;
-  const { isAuthenticated, isLoading, signIn } = useAuth();
+  const { isAuthenticated, isLoading, signIn } = useGoogleRuntime();
   const { calendars } = useGoogleCalendar({ selectedCalendarIds, daysAhead: 14 });
 
   const calendarOptions = calendars.map((cal) => ({

@@ -28,14 +28,13 @@ import {
   IconPlus,
   IconCheck,
 } from '@tabler/icons-react';
-import { GoogleCalendarEmptyState } from '../components/GoogleCalendarEmptyState';
+import { GoogleCalendarEmptyState } from '../chrome/GoogleCalendarEmptyState';
 import { displayCalendarEmptyDetail } from './googleCalendarError';
-import type { WidgetProps, WidgetConfig } from '../types/widget';
+import type { WidgetProps, WidgetConfig } from '../types';
 import { useGoogleCalendar } from '../hooks/useGoogleCalendar';
 import { useDisplayCalendar } from '../hooks/useDisplayCalendar';
-import { WidgetDataStatus } from '../components/WidgetDataStatus';
-import { useDisplayId, useIsPreviewDisplay } from '../contexts/DisplayContext';
-import { useAuth } from '../contexts/AuthContext';
+import { WidgetDataStatus } from '../chrome/WidgetDataStatus';
+import { useGoogleRuntime } from '../googleRuntime';
 import type { ParsedCalendarEvent, CalendarEventInput } from '../services/googleCalendar';
 import classes from './GoogleCalendarMonthWidget.module.css';
 import dayjs from 'dayjs';
@@ -108,12 +107,10 @@ function formatTimeRange(event: ParsedCalendarEvent): string {
 
 export function GoogleCalendarMonthWidget({ widget }: WidgetProps<GoogleCalendarMonthConfig>) {
   const { selectedCalendarIds, daysAhead, transparentBackground } = widget.config;
-  const displayId = useDisplayId();
-  const isPreviewDisplay = useIsPreviewDisplay();
-  const isDisplayMode = !!displayId && !isPreviewDisplay;
+  const { displayId, isPreview, isAuthenticated } = useGoogleRuntime();
+  const isDisplayMode = !!displayId && !isPreview;
   const displayData = useDisplayCalendar({ displayId, selectedCalendarIds, daysAhead });
   const googleData = useGoogleCalendar({ selectedCalendarIds, daysAhead, enabled: !isDisplayMode });
-  const { isAuthenticated } = useAuth();
   const { isLoading, events, calendars, lastUpdated, error, refresh, addEvent } = isDisplayMode ? displayData : googleData;
 
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
@@ -474,7 +471,7 @@ export function GoogleCalendarMonthWidgetSettings({
   onConfigChange,
 }: WidgetProps<GoogleCalendarMonthConfig>) {
   const { selectedCalendarIds, daysAhead } = widget.config;
-  const { isAuthenticated, isLoading: authLoading, signIn } = useAuth();
+  const { isAuthenticated, isLoading: authLoading, signIn } = useGoogleRuntime();
   const { calendars } = useGoogleCalendar({ selectedCalendarIds, daysAhead });
 
   const calendarOptions = calendars.map((cal) => ({

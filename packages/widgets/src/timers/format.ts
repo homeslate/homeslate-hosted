@@ -1,4 +1,4 @@
-import type { AlarmToneId } from '../alarms/types';
+import type { AlarmToneId } from '@homeslate/schema';
 import type { TimerPreset, TimerRuntime } from './types';
 
 export function formatDurationMs(ms: number): string {

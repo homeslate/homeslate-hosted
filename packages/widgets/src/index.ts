@@ -1,23 +1,22 @@
+import './builtins'; // side-effect: register built-ins
 export const WIDGETS_PACKAGE_NAME = '@homeslate/widgets';
-
-export type {
-  TextAlign,
-  WidgetConfig,
-  WidgetDefinition,
-  WidgetProps,
-  WidgetRegistryEntry,
-} from './types';
-
-export {
-  clearWidgetRegistry,
-  getWidgetByType,
-  getWidgetTypes,
-  registerWidget,
-} from './registry';
-
+export { registerWidget, getWidgetByType, getWidgetTypes, clearWidgetRegistry } from './registry';
+export type { WidgetConfig, WidgetDefinition, WidgetProps, WidgetRegistryEntry, TextAlign } from './types';
+export { GoogleRuntimeProvider, useGoogleRuntime, DEFAULT_GOOGLE_RUNTIME } from './googleRuntime';
 export type { GoogleRuntime } from './googleRuntime';
+export { AlarmsProvider, useAlarms } from './alarms/AlarmsContext';
+export { AlarmListEditor } from './alarms/AlarmListEditor';
+export { ALARM_TONE_OPTIONS } from './alarms/tones';
+export { TimersProvider, useTimers } from './timers/TimersContext';
+export { coerceTimerPresets } from './widgets/TimersWidget';
+export type { ClockConfig } from './widgets/ClockWidget';
+export type { TodoItem, TodoConfig } from './widgets/TodoWidget';
+export type { Photo, UrlPhoto, StoredPhoto, PhotoConfig } from './widgets/PhotoWidget';
+export { loadStoredImage } from './services/googlePhotos';
+export { useGooglePhotos } from './hooks/useGooglePhotos';
+export type { PickerStatus, CurrentPhoto } from './hooks/useGooglePhotos';
+export type { WidgetHealthStatus } from './chrome/WidgetDataStatus';
 export {
-  DEFAULT_GOOGLE_RUNTIME,
-  GoogleRuntimeProvider,
-  useGoogleRuntime,
-} from './googleRuntime';
+  DISPLAY_GOOGLE_RECONNECT_MESSAGE,
+  displayCalendarUrl,
+} from './widgets/googleCalendarError';

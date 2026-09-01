@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { loadStoredImage } from '../services/googlePhotos';
+import { loadStoredImage } from '@homeslate/widgets';
 import type { DashboardLayout } from '../types/widget';
-import type { Photo } from '../widgets/PhotoWidget';
+import type { Photo } from '@homeslate/widgets';
 
 interface BackgroundSlideshowProps {
   layout: DashboardLayout;

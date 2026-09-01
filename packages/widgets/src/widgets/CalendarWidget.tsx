@@ -15,9 +15,9 @@ import {
 } from '@mantine/core';
 import { Calendar } from '@mantine/dates';
 import { IconCalendarEvent, IconRefresh, IconChevronDown, IconChevronUp } from '@tabler/icons-react';
-import type { WidgetProps, WidgetConfig } from '../types/widget';
+import type { WidgetProps, WidgetConfig } from '../types';
 import { useCalendar } from '../hooks/useCalendar';
-import { WidgetDataStatus } from '../components/WidgetDataStatus';
+import { WidgetDataStatus } from '../chrome/WidgetDataStatus';
 import type { CalendarEvent } from '../services/calendar';
 import classes from './CalendarWidget.module.css';
 import dayjs from 'dayjs';

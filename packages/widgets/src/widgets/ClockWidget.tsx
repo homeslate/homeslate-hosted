@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Box, Text, Stack, Switch, Select, Group } from '@mantine/core';
-import type { WidgetProps, WidgetConfig, TextAlign } from '../types/widget';
+import type { WidgetProps, WidgetConfig, TextAlign } from '../types';
 import classes from './ClockWidget.module.css';
 
 export interface ClockConfig extends WidgetConfig {

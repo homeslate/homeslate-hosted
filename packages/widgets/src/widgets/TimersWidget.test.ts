@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { getWidgetByType } from './registry';
+import { getWidgetByType } from '@homeslate/widgets';
 import { coerceTimerPresets } from './TimersWidget';
 
 describe('Timers widget', () => {

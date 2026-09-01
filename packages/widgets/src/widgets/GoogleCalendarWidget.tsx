@@ -35,13 +35,12 @@ import {
   IconX,
   IconPlus,
 } from '@tabler/icons-react';
-import { GoogleCalendarEmptyState } from '../components/GoogleCalendarEmptyState';
-import type { WidgetProps, WidgetConfig } from '../types/widget';
+import { GoogleCalendarEmptyState } from '../chrome/GoogleCalendarEmptyState';
+import type { WidgetProps, WidgetConfig } from '../types';
 import { useGoogleCalendar } from '../hooks/useGoogleCalendar';
 import { useDisplayCalendar } from '../hooks/useDisplayCalendar';
-import { WidgetDataStatus } from '../components/WidgetDataStatus';
-import { useDisplayId, useIsPreviewDisplay } from '../contexts/DisplayContext';
-import { useAuth } from '../contexts/AuthContext';
+import { WidgetDataStatus } from '../chrome/WidgetDataStatus';
+import { useGoogleRuntime } from '../googleRuntime';
 import type { ParsedCalendarEvent } from '../services/googleCalendar';
 import type { CalendarEventInput } from '../services/googleCalendar';
 import { displayCalendarEmptyDetail, shouldShowGoogleCalendarErrorAlert } from './googleCalendarError';
@@ -152,9 +151,8 @@ function formDataToEventInput(data: EventFormData): CalendarEventInput {
 
 export function GoogleCalendarWidget({ widget }: WidgetProps<GoogleCalendarConfig>) {
   const { selectedCalendarIds, maxEvents, daysAhead, showCalendar, transparentBackground } = widget.config;
-  const displayId = useDisplayId();
-  const isPreviewDisplay = useIsPreviewDisplay();
-  const isDisplayMode = !!displayId && !isPreviewDisplay;
+  const { displayId, isPreview } = useGoogleRuntime();
+  const isDisplayMode = !!displayId && !isPreview;
   const displayData = useDisplayCalendar({ displayId, selectedCalendarIds, daysAhead });
   const googleData = useGoogleCalendar({ selectedCalendarIds, daysAhead, enabled: !isDisplayMode });
   const {
@@ -721,7 +719,7 @@ export function GoogleCalendarWidgetSettings({
 }: WidgetProps<GoogleCalendarConfig>) {
   const { selectedCalendarIds, maxEvents, daysAhead, showCalendar } = widget.config;
 
-  const { isAuthenticated, isLoading, signIn } = useAuth();
+  const { isAuthenticated, isLoading, signIn } = useGoogleRuntime();
   const { calendars } = useGoogleCalendar({ selectedCalendarIds, daysAhead });
 
   const calendarOptions = calendars.map((cal) => ({

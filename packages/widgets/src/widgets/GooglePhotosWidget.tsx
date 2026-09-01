@@ -1,9 +1,9 @@
 import { useEffect, useRef } from 'react';
 import { Box, Text, Stack, Switch, Button, Group, Loader, Alert, Anchor, Progress } from '@mantine/core';
 import { IconBrandGoogle, IconPhoto, IconExternalLink } from '@tabler/icons-react';
-import type { WidgetProps, WidgetConfig } from '../types/widget';
+import type { WidgetProps, WidgetConfig } from '../types';
 import { useGooglePhotos } from '../hooks/useGooglePhotos';
-import { useAuth } from '../contexts/AuthContext';
+import { useGoogleRuntime } from '../googleRuntime';
 import type { StoredImage } from '../services/googlePhotos';
 import classes from './GooglePhotosWidget.module.css';
 
@@ -124,7 +124,7 @@ export function GooglePhotosWidgetSettings({
 }: WidgetProps<GooglePhotosConfig>) {
   const { showCaption, refreshInterval, savedImages } = widget.config;
 
-  const { isAuthenticated, isLoading, signIn } = useAuth();
+  const { isAuthenticated, isLoading, signIn } = useGoogleRuntime();
   const {
     pickerStatus,
     uploadProgress,

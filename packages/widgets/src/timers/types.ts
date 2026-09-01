@@ -1,4 +1,4 @@
-import type { AlarmToneId } from '../alarms/types';
+import type { AlarmToneId } from '@homeslate/schema';
 
 export interface TimerPreset {
   id: string;

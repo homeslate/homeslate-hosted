@@ -17,9 +17,9 @@ import {
   IconTrophy,
   IconRefresh,
 } from '@tabler/icons-react';
-import type { WidgetProps, WidgetConfig } from '../types/widget';
+import type { WidgetProps, WidgetConfig } from '../types';
 import { useScores } from '../hooks/useScores';
-import { WidgetDataStatus } from '../components/WidgetDataStatus';
+import { WidgetDataStatus } from '../chrome/WidgetDataStatus';
 import { LEAGUES, fetchLeagueTeams, type SportsTeam } from '../services/sports';
 import type { SportGame, RaceSession } from '../services/sports';
 import classes from './SportsWidget.module.css';

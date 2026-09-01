@@ -23,14 +23,12 @@ import {
   IconChevronLeft, IconChevronRight, IconX, IconUpload, IconPhoto,
   IconLink, IconBrandGoogle, IconPlus, IconTrash, IconExternalLink,
 } from '@tabler/icons-react';
-import { getWidgetTypes } from '../widgets/registry';
+import { getWidgetTypes, useGooglePhotos, loadStoredImage } from '@homeslate/widgets';
 import { useDashboardStore } from '../store/dashboardStore';
 import { useAuth } from '../contexts/AuthContext';
-import { useGooglePhotos } from '../hooks/useGooglePhotos';
-import { loadStoredImage } from '../services/googlePhotos';
 import { apiClient } from '../services/apiClient';
 import type { DashboardLayout } from '../types/widget';
-import type { Photo, StoredPhoto } from '../widgets/PhotoWidget';
+import type { Photo, StoredPhoto } from '@homeslate/widgets';
 import classes from './WidgetPanel.module.css';
 
 // ── Upload helper ──────────────────────────────────────────────────────────────

@@ -1,5 +1,5 @@
 import { Paper, Text, SimpleGrid, UnstyledButton, Stack } from '@mantine/core';
-import { getWidgetTypes } from '../widgets/registry';
+import { getWidgetTypes } from '@homeslate/widgets';
 import { useDashboardStore } from '../store/dashboardStore';
 import classes from './AddWidgetPanel.module.css';
 

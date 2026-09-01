@@ -2,9 +2,8 @@ import { useEffect, useState, Suspense } from 'react';
 import { Paper, ActionIcon, Group, Text, Modal, Stack, Button, Tooltip, Switch, Divider, Center, Loader } from '@mantine/core';
 import { IconSettings, IconTrash, IconGripVertical, IconArrowsMaximize, IconCircleFilled } from '@tabler/icons-react';
 import type { WidgetDefinition, WidgetConfig } from '../types/widget';
-import { getWidgetByType } from '../widgets/registry';
+import { getWidgetByType, type WidgetHealthStatus } from '@homeslate/widgets';
 import { useDashboardStore } from '../store/dashboardStore';
-import type { WidgetHealthStatus } from './WidgetDataStatus';
 import classes from './WidgetWrapper.module.css';
 
 function WidgetLoader() {

@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { Box, Text, Stack, TextInput, Switch, Group, ActionIcon } from '@mantine/core';
 import { IconCheck, IconPlus, IconX } from '@tabler/icons-react';
 import { v4 as uuidv4 } from 'uuid';
-import type { WidgetProps, WidgetConfig } from '../types/widget';
+import type { WidgetProps, WidgetConfig } from '../types';
 import classes from './TodoWidget.module.css';
 
 export interface TodoItem {

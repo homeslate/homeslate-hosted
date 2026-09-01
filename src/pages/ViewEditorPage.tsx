@@ -23,8 +23,7 @@ import { apiClient } from '../services/apiClient';
 import type { ConfigUpsertRequest } from '../types/api';
 import { Dashboard } from '../components/Dashboard';
 import { WidgetPanel, BgSettings } from '../components/WidgetPanel';
-import { AlarmsProvider } from '../alarms/AlarmsContext';
-import { TimersProvider } from '../timers/TimersContext';
+import { AlarmsProvider, TimersProvider } from '@homeslate/widgets';
 import classes from './ViewEditorPage.module.css';
 
 export function ViewEditorPage() {

@@ -11,9 +11,9 @@ import {
   Anchor,
 } from '@mantine/core';
 import { IconNews, IconRefresh, IconExternalLink } from '@tabler/icons-react';
-import type { WidgetProps, WidgetConfig } from '../types/widget';
+import type { WidgetProps, WidgetConfig } from '../types';
 import { useNews } from '../hooks/useNews';
-import { WidgetDataStatus } from '../components/WidgetDataStatus';
+import { WidgetDataStatus } from '../chrome/WidgetDataStatus';
 import { popularFeeds, type RSSFeed } from '../services/news';
 import classes from './NewsWidget.module.css';
 

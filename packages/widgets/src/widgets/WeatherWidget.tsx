@@ -24,9 +24,9 @@ import {
   IconRefresh,
   IconMapPin,
 } from '@tabler/icons-react';
-import type { WidgetProps, WidgetConfig, TextAlign } from '../types/widget';
+import type { WidgetProps, WidgetConfig, TextAlign } from '../types';
 import { useWeather } from '../hooks/useWeather';
-import { WidgetDataStatus } from '../components/WidgetDataStatus';
+import { WidgetDataStatus } from '../chrome/WidgetDataStatus';
 import {
   searchLocations,
   getWeatherDescription,
