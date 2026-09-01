@@ -4,6 +4,7 @@ import * as TablerIcons from '@tabler/icons-react';
 import { IconLock, IconSun, IconMoon } from '@tabler/icons-react';
 import { useWakeLock } from '../hooks/useWakeLock';
 import { DisplayProvider } from '../contexts/DisplayContext';
+import { HostGoogleRuntime } from '../host/HostGoogleRuntime';
 import type { DashboardLayout, StickyNote, WidgetDefinition } from '../types/widget';
 import type { TodoItem } from '../widgets/TodoWidget';
 import type { ColorMode, ThemeDocument } from '../types/theme';
@@ -425,115 +426,117 @@ export function DisplayViewer({
 
   return (
     <DisplayProvider displayId={displayId} isPreview={isPreview}>
-      <TimersProvider>
-        <AlarmsProvider alarms={alarms} readOnly>
-          <div
-            ref={rootRef}
-            className={classes.root}
-            style={tokenVars as React.CSSProperties}
-          >
-            {activeLayout && <BackgroundSlideshow layout={activeLayout} />}
-            {config?.holidayEffectsEnabled && (
-              <HolidayEffects previewHolidayId={config.holidayPreviewId} />
-            )}
-            {config && (
-              <ViewerDashboard
-                layouts={mergedLayouts}
-                activeLayoutId={activeLayoutId}
-                stickyNotesEnabled={config.stickyNotesEnabled}
-                notesOverride={activeLayoutId ? viewerNotesByLayout[activeLayoutId] : undefined}
-                onAddNote={handleAddNote}
-                onRemoveNote={handleRemoveNote}
-                onUpdateNote={handleUpdateNote}
-                onWidgetConfigChange={handleTodoWidgetChange}
-              />
-            )}
-            {showDots && (
-              <>
-                <button
-                  className={classes.navPrev}
-                  onClick={() => { navigate('prev'); resetRotation(); }}
-                  aria-label="Previous view"
+      <HostGoogleRuntime>
+        <TimersProvider>
+          <AlarmsProvider alarms={alarms} readOnly>
+            <div
+              ref={rootRef}
+              className={classes.root}
+              style={tokenVars as React.CSSProperties}
+            >
+              {activeLayout && <BackgroundSlideshow layout={activeLayout} />}
+              {config?.holidayEffectsEnabled && (
+                <HolidayEffects previewHolidayId={config.holidayPreviewId} />
+              )}
+              {config && (
+                <ViewerDashboard
+                  layouts={mergedLayouts}
+                  activeLayoutId={activeLayoutId}
+                  stickyNotesEnabled={config.stickyNotesEnabled}
+                  notesOverride={activeLayoutId ? viewerNotesByLayout[activeLayoutId] : undefined}
+                  onAddNote={handleAddNote}
+                  onRemoveNote={handleRemoveNote}
+                  onUpdateNote={handleUpdateNote}
+                  onWidgetConfigChange={handleTodoWidgetChange}
                 />
-                <button
-                  className={classes.navNext}
-                  onClick={() => { navigate('next'); resetRotation(); }}
-                  aria-label="Next view"
-                />
-                <div className={classes.dots}>
-                  {layouts.map((l) => {
-                    const IconComp = l.icon
-                      ? (TablerIcons as Record<string, unknown>)[l.icon] as React.ComponentType<{ size?: number; stroke?: number }> | undefined
-                      : undefined;
-                    const isActive = l.id === activeLayoutId;
-                    const showProgress = isActive && rotationEnabled;
-                    const circumference = 2 * Math.PI * 20;
-                    return (
-                      <button
-                        key={l.id}
-                        className={`${classes.iconIndicator} ${isActive ? classes.iconIndicatorActive : ''} ${showProgress ? classes.iconIndicatorWithProgress : ''}`}
-                        onClick={() => { setActiveLayoutId(l.id); resetRotation(); }}
-                        aria-label={`Switch to ${l.name}`}
-                      >
-                        {showProgress && (
-                          <svg
-                            key={progressKey}
-                            className={classes.progressRing}
-                            viewBox="0 0 44 44"
-                            width="44"
-                            height="44"
-                            style={{ '--rotation-duration': `${rotationIntervalMs}ms`, '--circumference': circumference } as React.CSSProperties}
-                          >
-                            <circle
-                              className={classes.progressRingFill}
-                              cx="22"
-                              cy="22"
-                              r="20"
-                              fill="none"
-                              strokeWidth="2"
-                            />
-                          </svg>
-                        )}
-                        {IconComp ? (
-                          <IconComp size={20} stroke={isActive ? 2 : 1.5} />
-                        ) : (
-                          <span className={classes.iconPlaceholder} aria-hidden="true" />
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
-              </>
-            )}
-            {config && (
-              <div className={classes.colorModeToggle}>
-                <Tooltip
-                  label={effectiveColorMode === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
-                  position="left"
-                  withArrow
-                >
-                  <ActionIcon
-                    variant="subtle"
-                    size="md"
-                    className={classes.colorModeBtn}
-                    onClick={() => setLocalColorMode(effectiveColorMode === 'dark' ? 'light' : 'dark')}
-                    aria-label="Toggle light/dark mode"
+              )}
+              {showDots && (
+                <>
+                  <button
+                    className={classes.navPrev}
+                    onClick={() => { navigate('prev'); resetRotation(); }}
+                    aria-label="Previous view"
+                  />
+                  <button
+                    className={classes.navNext}
+                    onClick={() => { navigate('next'); resetRotation(); }}
+                    aria-label="Next view"
+                  />
+                  <div className={classes.dots}>
+                    {layouts.map((l) => {
+                      const IconComp = l.icon
+                        ? (TablerIcons as Record<string, unknown>)[l.icon] as React.ComponentType<{ size?: number; stroke?: number }> | undefined
+                        : undefined;
+                      const isActive = l.id === activeLayoutId;
+                      const showProgress = isActive && rotationEnabled;
+                      const circumference = 2 * Math.PI * 20;
+                      return (
+                        <button
+                          key={l.id}
+                          className={`${classes.iconIndicator} ${isActive ? classes.iconIndicatorActive : ''} ${showProgress ? classes.iconIndicatorWithProgress : ''}`}
+                          onClick={() => { setActiveLayoutId(l.id); resetRotation(); }}
+                          aria-label={`Switch to ${l.name}`}
+                        >
+                          {showProgress && (
+                            <svg
+                              key={progressKey}
+                              className={classes.progressRing}
+                              viewBox="0 0 44 44"
+                              width="44"
+                              height="44"
+                              style={{ '--rotation-duration': `${rotationIntervalMs}ms`, '--circumference': circumference } as React.CSSProperties}
+                            >
+                              <circle
+                                className={classes.progressRingFill}
+                                cx="22"
+                                cy="22"
+                                r="20"
+                                fill="none"
+                                strokeWidth="2"
+                              />
+                            </svg>
+                          )}
+                          {IconComp ? (
+                            <IconComp size={20} stroke={isActive ? 2 : 1.5} />
+                          ) : (
+                            <span className={classes.iconPlaceholder} aria-hidden="true" />
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </>
+              )}
+              {config && (
+                <div className={classes.colorModeToggle}>
+                  <Tooltip
+                    label={effectiveColorMode === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+                    position="left"
+                    withArrow
                   >
-                    {effectiveColorMode === 'dark' ? <IconSun size={16} /> : <IconMoon size={16} />}
-                  </ActionIcon>
-                </Tooltip>
-              </div>
-            )}
-            {!isPreview && (
-              <AlertRuntimeBridge
-                alarms={alarms}
-                enabled={!passcodeRequired}
-                voiceEnabled={config?.voiceEnabled ?? false}
-              />
-            )}
-          </div>
-        </AlarmsProvider>
-      </TimersProvider>
+                    <ActionIcon
+                      variant="subtle"
+                      size="md"
+                      className={classes.colorModeBtn}
+                      onClick={() => setLocalColorMode(effectiveColorMode === 'dark' ? 'light' : 'dark')}
+                      aria-label="Toggle light/dark mode"
+                    >
+                      {effectiveColorMode === 'dark' ? <IconSun size={16} /> : <IconMoon size={16} />}
+                    </ActionIcon>
+                  </Tooltip>
+                </div>
+              )}
+              {!isPreview && (
+                <AlertRuntimeBridge
+                  alarms={alarms}
+                  enabled={!passcodeRequired}
+                  voiceEnabled={config?.voiceEnabled ?? false}
+                />
+              )}
+            </div>
+          </AlarmsProvider>
+        </TimersProvider>
+      </HostGoogleRuntime>
     </DisplayProvider>
   );
 }
