@@ -1,3 +1,4 @@
+import '@homeslate/widgets/schemas';
 import {
   validateDisplayDocument,
   migrateDisplayDocument,
