@@ -1,9 +1,10 @@
 import type { Handler } from '@netlify/functions';
+import { refreshAccessToken } from '@homeslate/google';
 import { sql } from 'drizzle-orm';
 import { getDb } from '../../src/db';
 import { userTokenPersistFields } from '../../src/services/displayCalendarAuth';
 import { AUTH_JSON_HEADERS, errorResponse, jsonResponse, optionsResponse } from './_shared/http';
-import { exchangeRefreshToken } from './_shared/googleTokens';
+import { googleOAuthCredentials } from './_shared/googleClient';
 
 export const handler: Handler = async (event) => {
   if (event.httpMethod === 'OPTIONS') {
@@ -27,7 +28,17 @@ export const handler: Handler = async (event) => {
   }
 
   try {
-    const tokenData = await exchangeRefreshToken(refreshToken);
+    const { clientId, clientSecret } = googleOAuthCredentials();
+    const grant = await refreshAccessToken({
+      clientId,
+      clientSecret,
+      refreshToken,
+    });
+    const tokenData = {
+      access_token: grant.accessToken,
+      expires_in: grant.expiresIn,
+      refresh_token: grant.refreshToken,
+    };
     const fields = userTokenPersistFields(tokenData);
 
     try {

@@ -9,6 +9,9 @@ export default defineConfig({
       "@homeslate/schema": fileURLToPath(
         new URL("./packages/schema/src/index.ts", import.meta.url)
       ),
+      "@homeslate/google": fileURLToPath(
+        new URL("./packages/google/src/index.ts", import.meta.url)
+      ),
     },
   },
   plugins: [react()],
@@ -18,6 +21,7 @@ export default defineConfig({
       "src/**/*.test.ts",
       "src/**/*.test.tsx",
       "packages/schema/src/**/*.test.ts",
+      "packages/google/src/**/*.test.ts",
     ],
     globals: false,
     css: false,

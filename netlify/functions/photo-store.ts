@@ -14,6 +14,7 @@
  */
 import type { Handler } from '@netlify/functions';
 import { getStore, connectLambda } from '@netlify/blobs';
+import { fetchPhotoWithAccessToken } from '@homeslate/google';
 import { createHash } from 'crypto';
 
 const CORS = {
@@ -83,12 +84,6 @@ export const handler: Handler = async (event) => {
     return { statusCode: 400, headers: JSON_HEADERS, body: JSON.stringify({ error: 'Invalid request body' }) };
   }
 
-  // Only allow Google Photos / Google user content domains
-  const allowed = /^https:\/\/(lh\d+\.googleusercontent\.com|photos\.googleapis\.com)\//;
-  if (!allowed.test(baseUrl)) {
-    return { statusCode: 400, headers: JSON_HEADERS, body: JSON.stringify({ error: 'URL not allowed' }) };
-  }
-
   const key = makeBlobKey(baseUrl, size);
   const store = getStore('google-photos');
 
@@ -102,22 +97,32 @@ export const handler: Handler = async (event) => {
     };
   }
 
-  // Fetch the image from Google with the user's token
-  const fetchUrl = `${baseUrl}=${size}`;
-  const imgRes = await fetch(fetchUrl, {
-    headers: { Authorization: `Bearer ${accessToken}` },
-  });
-
-  if (!imgRes.ok) {
-    return {
-      statusCode: imgRes.status,
-      headers: JSON_HEADERS,
-      body: JSON.stringify({ error: `Google Photos fetch failed: ${imgRes.status}` }),
-    };
+  let bytes: Uint8Array;
+  try {
+    bytes = await fetchPhotoWithAccessToken(accessToken, { baseUrl, size });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    if (message === 'URL not allowed') {
+      return {
+        statusCode: 400,
+        headers: JSON_HEADERS,
+        body: JSON.stringify({ error: 'URL not allowed' }),
+      };
+    }
+    const failed = /^Google Photos fetch failed: (\d+)$/.exec(message);
+    if (failed) {
+      const status = Number(failed[1]);
+      return {
+        statusCode: status,
+        headers: JSON_HEADERS,
+        body: JSON.stringify({ error: `Google Photos fetch failed: ${status}` }),
+      };
+    }
+    throw err;
   }
 
-  const contentType = imgRes.headers.get('content-type') ?? 'image/jpeg';
-  const arrayBuffer = await imgRes.arrayBuffer();
+  const contentType = 'image/jpeg';
+  const arrayBuffer = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength);
 
   // Store in Netlify Blobs with content-type metadata.
   // Pass arrayBuffer directly — BlobInput accepts ArrayBuffer.

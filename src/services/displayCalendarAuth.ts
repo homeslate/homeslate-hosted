@@ -1,3 +1,5 @@
+import { isGoogleAuthError } from '@homeslate/google';
+
 const ACCESS_TOKEN_SAFETY_MS = 60_000;
 
 export interface TokenRow {
@@ -124,6 +126,10 @@ export function summarizeTokenCandidates(
 }
 
 export function classifyRefreshFailure(err: unknown): RefreshFailureReason {
+  if (isGoogleAuthError(err)) {
+    if (err.code === 'invalid_grant' || err.code === 'token_revoked') return err.code;
+    return 'refresh_failed';
+  }
   const message = err instanceof Error ? err.message : String(err);
   if (/Missing Google OAuth credentials/i.test(message)) return 'missing_oauth_credentials';
   if (/expired or revoked/i.test(message)) return 'token_revoked';

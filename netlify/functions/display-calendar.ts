@@ -1,5 +1,12 @@
 import type { Handler } from '@netlify/functions';
-import { eq, sql } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
+import {
+  isGoogleAuthError,
+  listCalendarsWithAccessToken,
+  listEventsWithAccessToken,
+  type CalendarEvent,
+  type CalendarListItem,
+} from '@homeslate/google';
 import { getDb, displays, users, displayCollaborators } from '../../src/db';
 import {
   classifyRefreshFailure,
@@ -9,11 +16,11 @@ import {
   isFatalGoogleAuthFailure,
   normalizeTokenRow,
   summarizeTokenCandidates,
-  userTokenPersistFields,
   type TokenCandidate,
 } from '../../src/services/displayCalendarAuth';
 import { DISPLAY_GOOGLE_RECONNECT_MESSAGE } from '../../src/widgets/googleCalendarError';
-import { exchangeRefreshToken } from './_shared/googleTokens';
+import { createHostedGoogleClient } from './_shared/googleClient';
+import { createNeonTokenStore } from './_shared/neonTokenStore';
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -21,101 +28,10 @@ const CORS = {
   'Content-Type': 'application/json',
 };
 
-const GOOGLE_API_BASE = 'https://www.googleapis.com/calendar/v3';
 const LOG_PREFIX = '[display-calendar]';
 
 function json(statusCode: number, body: unknown) {
   return { statusCode, headers: CORS, body: JSON.stringify(body) };
-}
-
-async function exchangeRefreshForAccess(refreshToken: string) {
-  const data = await exchangeRefreshToken(refreshToken);
-  return {
-    access_token: data.access_token,
-    expires_in: data.expires_in ?? 3600,
-    refresh_token: data.refresh_token,
-  };
-}
-
-async function persistRefreshedTokens(
-  db: ReturnType<typeof getDb>,
-  userId: string,
-  tokenData: { access_token: string; expires_in: number; refresh_token?: string }
-) {
-  const fields = userTokenPersistFields(tokenData);
-  if (fields.rotatedRefreshToken) {
-    await db.execute(sql`
-      UPDATE users
-      SET access_token = ${fields.accessToken},
-          access_token_expires_at = ${fields.expiresAt}::timestamptz,
-          refresh_token = ${fields.rotatedRefreshToken}
-      WHERE id = ${userId}::uuid
-    `);
-    return;
-  }
-  await db.execute(sql`
-    UPDATE users
-    SET access_token = ${fields.accessToken},
-        access_token_expires_at = ${fields.expiresAt}::timestamptz
-    WHERE id = ${userId}::uuid
-  `);
-}
-
-interface GoogleCalendarEvent {
-  id: string;
-  summary?: string;
-  start: { dateTime?: string; date?: string };
-  end: { dateTime?: string; date?: string };
-  status: string;
-  colorId?: string;
-  htmlLink?: string;
-  description?: string;
-  location?: string;
-}
-
-interface ParsedEvent {
-  id: string;
-  calendarId: string;
-  calendarName?: string;
-  title: string;
-  description?: string;
-  location?: string;
-  start: string;
-  end: string;
-  allDay: boolean;
-  color: string;
-  htmlLink?: string;
-}
-
-const EVENT_COLORS: Record<string, string> = {
-  '1': '#7986CB', '2': '#33B679', '3': '#8E24AA', '4': '#E67C73', '5': '#F6BF26',
-  '6': '#F4511E', '7': '#039BE5', '8': '#3F51B5', '9': '#0F9D58', '10': '#D50000', '11': '#616161',
-};
-
-function parseEvent(
-  event: GoogleCalendarEvent,
-  calendarId: string,
-  calendarColor: string,
-  calendarName?: string
-): ParsedEvent | null {
-  const startStr = event.start?.dateTime ?? event.start?.date;
-  const endStr = event.end?.dateTime ?? event.end?.date;
-  if (!startStr || !endStr) return null;
-  const allDay = !!event.start?.date && !event.start?.dateTime;
-  const color = event.colorId ? (EVENT_COLORS[event.colorId] ?? calendarColor) : calendarColor;
-  return {
-    id: event.id,
-    calendarId,
-    calendarName,
-    title: event.summary ?? '(No title)',
-    description: event.description,
-    location: event.location,
-    start: startStr,
-    end: endStr,
-    allDay,
-    color,
-    htmlLink: event.htmlLink,
-  };
 }
 
 export const handler: Handler = async (event) => {
@@ -206,22 +122,31 @@ export const handler: Handler = async (event) => {
       owner: ownerRow ? describeTokenRow(ownerRow) : null,
     });
 
+    const refreshFailures: Array<{ source: TokenCandidate['source']; reason: string; error: string }> = [];
+    const tokenStore = createNeonTokenStore(db);
+    let client: ReturnType<typeof createHostedGoogleClient> | null = null;
+    try {
+      client = createHostedGoogleClient(tokenStore);
+    } catch (err) {
+      console.warn(`${LOG_PREFIX} google client unavailable`, { error: errorMessage(err) });
+      refreshFailures.push({
+        source: 'owner',
+        reason: classifyRefreshFailure(err),
+        error: errorMessage(err),
+      });
+    }
+
     let token: string | null = null;
     let chosenSource: TokenCandidate['source'] | null = null;
-    const refreshFailures: Array<{ source: TokenCandidate['source']; reason: string; error: string }> = [];
 
     for (const candidate of tokenCandidates) {
-      if (candidate.refresh_token) {
+      if (client) {
         try {
-          const exchanged = await exchangeRefreshForAccess(candidate.refresh_token);
-          token = exchanged.access_token;
+          token = await client.getAccessToken(candidate.user_id);
           chosenSource = candidate.source;
-          await persistRefreshedTokens(db, candidate.user_id, exchanged);
-          console.info(`${LOG_PREFIX} refresh succeeded`, {
+          console.info(`${LOG_PREFIX} token selected via client`, {
             displayId,
             source: candidate.source,
-            expiresIn: exchanged.expires_in,
-            rotatedRefreshToken: !!exchanged.refresh_token,
           });
           break;
         } catch (err) {
@@ -232,6 +157,7 @@ export const handler: Handler = async (event) => {
             source: candidate.source,
             reason,
             error,
+            googleAuth: isGoogleAuthError(err) ? err.code : undefined,
           });
           refreshFailures.push({ source: candidate.source, reason, error });
         }
@@ -271,67 +197,28 @@ export const handler: Handler = async (event) => {
     const timeMin = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const timeMax = new Date(timeMin.getTime() + daysAhead * 24 * 60 * 60 * 1000);
 
-    const calendarListRes = await fetch(`${GOOGLE_API_BASE}/users/me/calendarList`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    if (!calendarListRes.ok) {
-      const googleBody = (await calendarListRes.text()).slice(0, 300);
+    let calendars: CalendarListItem[];
+    try {
+      calendars = await listCalendarsWithAccessToken(token);
+    } catch (err) {
       console.error(`${LOG_PREFIX} calendar list failed`, {
         displayId,
-        status: calendarListRes.status,
-        googleBody,
+        error: errorMessage(err),
       });
       return json(502, {
         error: 'Failed to fetch calendar list',
         reason: 'calendar_list_failed',
-        details: { status: calendarListRes.status },
-      });
-    }
-    const calendarListData = (await calendarListRes.json()) as { items?: Array<{ id: string; summary?: string; backgroundColor?: string }> };
-    const calendars = calendarListData.items ?? [];
-    const calendarMap = new Map(calendars.map((c) => [c.id, c]));
-
-    const allEvents: ParsedEvent[] = [];
-    const calendarFetchFailures: Array<{ calendarId: string; status: number }> = [];
-    for (const calendarId of calendarIds) {
-      const cal = calendarMap.get(calendarId);
-      const color = cal?.backgroundColor ?? '#4285f4';
-      const name = cal?.summary;
-
-      const params = new URLSearchParams({
-        timeMin: timeMin.toISOString(),
-        timeMax: timeMax.toISOString(),
-        maxResults: '100',
-        singleEvents: 'true',
-        orderBy: 'startTime',
-      });
-      const res = await fetch(
-        `${GOOGLE_API_BASE}/calendars/${encodeURIComponent(calendarId)}/events?${params}`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      if (!res.ok) {
-        calendarFetchFailures.push({ calendarId, status: res.status });
-        continue;
-      }
-      const data = (await res.json()) as { items?: GoogleCalendarEvent[] };
-      const items = data.items ?? [];
-      for (const ev of items) {
-        if (ev.status === 'cancelled') continue;
-        const parsed = parseEvent(ev, calendarId, color, name);
-        if (parsed) allEvents.push(parsed);
-      }
-    }
-
-    if (calendarFetchFailures.length > 0) {
-      console.warn(`${LOG_PREFIX} some calendars failed`, {
-        displayId,
-        failures: calendarFetchFailures,
-        googleCalendarCount: calendars.length,
       });
     }
 
-    allEvents.sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime());
+    const allEvents: CalendarEvent[] = await listEventsWithAccessToken(token, {
+      calendarIds,
+      timeMin: timeMin.toISOString(),
+      timeMax: timeMax.toISOString(),
+      calendarList: calendars,
+    });
 
+    const calendarMap = new Map(calendars.map((calendar) => [calendar.id, calendar]));
     const calendarsForClient = calendarIds.map((id) => {
       const c = calendarMap.get(id);
       return { id, summary: c?.summary ?? id, backgroundColor: c?.backgroundColor };
@@ -342,7 +229,6 @@ export const handler: Handler = async (event) => {
       source: chosenSource,
       eventCount: allEvents.length,
       calendarCount: calendarsForClient.length,
-      failedCalendars: calendarFetchFailures.length,
     });
 
     return json(200, { events: allEvents, calendars: calendarsForClient });
