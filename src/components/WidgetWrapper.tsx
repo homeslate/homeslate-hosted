@@ -2,7 +2,7 @@ import { useEffect, useState, Suspense } from 'react';
 import { Paper, ActionIcon, Group, Text, Modal, Stack, Button, Tooltip, Switch, Divider, Center, Loader } from '@mantine/core';
 import { IconSettings, IconTrash, IconGripVertical, IconArrowsMaximize, IconCircleFilled } from '@tabler/icons-react';
 import type { WidgetDefinition, WidgetConfig } from '../types/widget';
-import { getWidgetByType, type WidgetHealthStatus } from '@homeslate/widgets';
+import { getWidgetByType, UnknownWidget, type WidgetHealthStatus } from '@homeslate/widgets';
 import { useDashboardStore } from '../store/dashboardStore';
 import classes from './WidgetWrapper.module.css';
 
@@ -40,11 +40,7 @@ export function WidgetWrapper({ widget, isEditing, onConfigChangeOverride }: Wid
   const widgetEntry = getWidgetByType(widget.type);
 
   if (!widgetEntry) {
-    return (
-      <Paper className={classes.wrapper} p="md">
-        <Text c="red">Unknown widget type: {widget.type}</Text>
-      </Paper>
-    );
+    return <UnknownWidget widget={widget} isEditing={isEditing} onConfigChange={() => {}} />;
   }
 
   const WidgetComponent = widgetEntry.component;

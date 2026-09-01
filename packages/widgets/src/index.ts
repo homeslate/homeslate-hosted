@@ -18,3 +18,4 @@ export type { PickerStatus, CurrentPhoto } from './hooks/useGooglePhotos';
 export type { WidgetHealthStatus } from './chrome/WidgetDataStatus';
 export { DISPLAY_GOOGLE_RECONNECT_MESSAGE } from './widgets/googleCalendarError';
 export { displayCalendarUrl } from './hooks/useDisplayCalendar';
+export { UnknownWidget } from './UnknownWidget';
