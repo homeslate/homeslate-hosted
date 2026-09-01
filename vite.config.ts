@@ -10,6 +10,9 @@ export default defineConfig(() => ({
       '@homeslate/schema': fileURLToPath(
         new URL('./packages/schema/src/index.ts', import.meta.url)
       ),
+      '@homeslate/google': fileURLToPath(
+        new URL('./packages/google/src/index.ts', import.meta.url)
+      ),
     },
   },
   build: {
