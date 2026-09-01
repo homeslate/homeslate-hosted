@@ -27,8 +27,10 @@
     "baseUrl": ".",
     "paths": {
       "@homeslate/schema": ["packages/schema/src/index.ts"],
-      "@homeslate/google": ["packages/google/src/index.ts"]
+      "@homeslate/google": ["packages/google/src/index.ts"],
+      "@homeslate/widgets": ["packages/widgets/src/index.ts"],
+      "@homeslate/widgets/schemas": ["packages/widgets/src/schemas.ts"]
     }
   },
-  "include": ["src", "packages/schema/src", "packages/google/src"]
+  "include": ["src", "packages/schema/src", "packages/google/src", "packages/widgets/src"]
 }

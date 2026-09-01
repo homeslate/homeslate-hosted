@@ -12,6 +12,12 @@ export default defineConfig({
       "@homeslate/google": fileURLToPath(
         new URL("./packages/google/src/index.ts", import.meta.url)
       ),
+      "@homeslate/widgets": fileURLToPath(
+        new URL("./packages/widgets/src/index.ts", import.meta.url)
+      ),
+      "@homeslate/widgets/schemas": fileURLToPath(
+        new URL("./packages/widgets/src/schemas.ts", import.meta.url)
+      ),
     },
   },
   plugins: [react()],
@@ -22,6 +28,7 @@ export default defineConfig({
       "src/**/*.test.tsx",
       "packages/schema/src/**/*.test.ts",
       "packages/google/src/**/*.test.ts",
+      "packages/widgets/src/**/*.test.ts",
     ],
     globals: false,
     css: false,
