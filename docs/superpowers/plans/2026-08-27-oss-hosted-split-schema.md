@@ -29,7 +29,7 @@ The spec’s extraction sequence is six independently shippable plans. Execute t
 | Phase | Plan file | Delivers |
 |---|---|---|
 | 1 | this file | `@homeslate/schema`, v0→v1, live API persists v1 |
-| 2 | `docs/superpowers/plans/2026-08-27-oss-hosted-split-google.md` (not written yet) | `@homeslate/google`, thin Netlify wrappers |
+| 2 | `docs/superpowers/plans/2026-08-27-oss-hosted-split-google.md` | `@homeslate/google`, thin Netlify wrappers |
 | 3 | not written yet | `@homeslate/widgets` + `registerWidget()` + built-in `configSchema`s |
 | 4 | not written yet | `@homeslate/editor` + `@homeslate/display` |
 | 5 | not written yet | `@homeslate/adapters` + `apps/reference` |
