@@ -1,8 +1,9 @@
 import type { Handler } from '@netlify/functions';
+import { exchangeAuthorizationCode } from '@homeslate/google';
 import { eq, sql } from 'drizzle-orm';
 import { getDb, users, displays } from '../../src/db';
 import { verifyGoogleToken } from './_shared/googleAuth';
-import { exchangeAuthCode } from './_shared/googleTokens';
+import { googleOAuthCredentials } from './_shared/googleClient';
 import { errorResponse, jsonResponse, optionsResponse } from './_shared/http';
 
 const EXCHANGE_CODE_HEADERS = {
@@ -39,10 +40,16 @@ export const handler: Handler = async (event) => {
   }
 
   try {
-    const tokenData = await exchangeAuthCode(code, redirectUri);
-    const accessToken = tokenData.access_token;
-    const refreshToken = tokenData.refresh_token;
-    const expiresIn = tokenData.expires_in ?? 3600;
+    const { clientId, clientSecret } = googleOAuthCredentials();
+    const grant = await exchangeAuthorizationCode({
+      clientId,
+      clientSecret,
+      code,
+      redirectUri,
+    });
+    const accessToken = grant.accessToken;
+    const refreshToken = grant.refreshToken;
+    const expiresIn = grant.expiresIn;
 
     const tokenInfo = await verifyGoogleToken(accessToken);
     const googleId = tokenInfo.sub;
