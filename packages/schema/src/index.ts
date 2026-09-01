@@ -12,7 +12,11 @@ export type {
   WidgetLayout,
 } from './types';
 export { migrateDisplayDocument } from './migrate';
-export { validateDisplayDocument, registerWidgetConfigSchema } from './validate';
+export {
+  validateDisplayDocument,
+  registerWidgetConfigSchema,
+  clearWidgetConfigSchemas,
+} from './validate';
 export type { DisplayValidationError, DisplayValidationResult } from './validate';
 export {
   validateThemeDocument,
