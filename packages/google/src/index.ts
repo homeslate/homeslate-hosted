@@ -3,6 +3,7 @@ export { listCalendarsWithAccessToken, listEventsWithAccessToken } from './calen
 export { createGoogleClient } from './client';
 export { GoogleAuthError, isGoogleAuthError } from './errors';
 export type { GoogleAuthErrorCode } from './errors';
+export { fetchPhotoWithAccessToken } from './photos';
 export { exchangeAuthorizationCode, refreshAccessToken } from './tokens';
 export type { TokenGrant } from './tokens';
 export type {
