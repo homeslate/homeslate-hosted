@@ -1,4 +1,5 @@
 export const GOOGLE_PACKAGE_NAME = '@homeslate/google';
+export { listCalendarsWithAccessToken, listEventsWithAccessToken } from './calendar';
 export { createGoogleClient } from './client';
 export { GoogleAuthError, isGoogleAuthError } from './errors';
 export type { GoogleAuthErrorCode } from './errors';

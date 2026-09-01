@@ -1,3 +1,4 @@
+import { listCalendarsWithAccessToken, listEventsWithAccessToken } from './calendar';
 import { GoogleAuthError, isGoogleAuthError } from './errors';
 import { exchangeAuthorizationCode, refreshAccessToken } from './tokens';
 import type { GoogleClient, GoogleTokens, TokenStore } from './types';
@@ -88,11 +89,13 @@ export function createGoogleClient(opts: {
   return {
     exchangeAuthCode,
     getAccessToken,
-    async listCalendars() {
-      throw new Error('listCalendars not implemented');
+    async listCalendars(accountId: string) {
+      const token = await getAccessToken(accountId);
+      return listCalendarsWithAccessToken(token);
     },
-    async listEvents() {
-      throw new Error('listEvents not implemented');
+    async listEvents(accountId, params) {
+      const token = await getAccessToken(accountId);
+      return listEventsWithAccessToken(token, params);
     },
     async fetchPhoto() {
       throw new Error('fetchPhoto not implemented');
