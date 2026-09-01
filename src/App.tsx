@@ -9,6 +9,7 @@ import { ThemeProvider, useTheme } from './contexts/ThemeContext';
 import { useDashboardStore } from './store/dashboardStore';
 import { mantineThemeFromResolved } from './themes/mantineBridge';
 import { ManagementLayout } from './components/ManagementLayout';
+import { HostGoogleRuntime } from './host/HostGoogleRuntime';
 import '@mantine/core/styles.css';
 import '@mantine/dates/styles.css';
 import './App.css';
@@ -188,13 +189,15 @@ function AppInner() {
 function App() {
   return (
     <AuthProvider>
-      <ThemeProvider>
-        <MantineBridge>
-          <BrowserRouter>
-            <AppInner />
-          </BrowserRouter>
-        </MantineBridge>
-      </ThemeProvider>
+      <HostGoogleRuntime>
+        <ThemeProvider>
+          <MantineBridge>
+            <BrowserRouter>
+              <AppInner />
+            </BrowserRouter>
+          </MantineBridge>
+        </ThemeProvider>
+      </HostGoogleRuntime>
     </AuthProvider>
   );
 }

@@ -14,3 +14,10 @@ export {
   getWidgetTypes,
   registerWidget,
 } from './registry';
+
+export type { GoogleRuntime } from './googleRuntime';
+export {
+  DEFAULT_GOOGLE_RUNTIME,
+  GoogleRuntimeProvider,
+  useGoogleRuntime,
+} from './googleRuntime';
