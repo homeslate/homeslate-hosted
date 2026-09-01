@@ -21,6 +21,10 @@ function Dummy({}: WidgetProps) {
   return null;
 }
 
+function DummyIcon({}: { size?: number | string }) {
+  return null;
+}
+
 const validDoc = {
   schemaVersion: 1 as const,
   name: 'Kitchen',
@@ -54,7 +58,7 @@ describe('registerWidget', () => {
       type: 'clock',
       name: 'Clock',
       description: 'Time',
-      icon: Dummy,
+      icon: DummyIcon,
       component: Dummy,
       defaultConfig: { showSeconds: true },
       defaultLayout: { w: 3, h: 2 },
@@ -68,7 +72,7 @@ describe('registerWidget', () => {
       type: 'clock',
       name: 'Clock',
       description: 'Time',
-      icon: Dummy,
+      icon: DummyIcon,
       component: Dummy,
       defaultConfig: {},
       defaultLayout: { w: 3, h: 2 },
@@ -99,7 +103,7 @@ describe('registerWidget', () => {
       type: 'custom-weather',
       name: 'Custom',
       description: 'Host widget',
-      icon: Dummy,
+      icon: DummyIcon,
       component: Dummy,
       defaultConfig: { foo: 1 },
       defaultLayout: { w: 2, h: 2 },
