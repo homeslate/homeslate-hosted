@@ -1,7 +1,19 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useGoogleRuntime } from '../googleRuntime';
 import type { GoogleCalendar, ParsedCalendarEvent, CalendarEventInput } from '../services/googleCalendar';
-import { displayCalendarUrl, displayCalendarUserMessage, isFatalGoogleAuthFailure } from '../widgets/googleCalendarError';
+import { displayCalendarUserMessage, isFatalGoogleAuthFailure } from '../widgets/googleCalendarError';
+
+export function displayCalendarUrl(
+  kioskFetchBaseUrl: string,
+  params: { displayId: string; calendarIds: string; daysAhead: number }
+): string {
+  const search = new URLSearchParams({
+    displayId: params.displayId,
+    calendarIds: params.calendarIds,
+    daysAhead: String(params.daysAhead),
+  });
+  return `${kioskFetchBaseUrl}/display-calendar?${search}`;
+}
 import { getDisplayCalendarPollDelay } from './polling';
 
 const REFRESH_INTERVAL_MS = 5 * 60 * 1000;
@@ -82,17 +94,18 @@ export function useDisplayCalendar({
     setIsLoading(true);
     setError(null);
     try {
-      const params = new URLSearchParams({
-        displayId,
-        calendarIds: selectedCalendarIdsKey,
-        daysAhead: String(daysAhead),
-      });
       console.info('[display-calendar] fetching', {
         displayId,
         calendarCount: selectedCalendarIds.length,
         daysAhead,
       });
-      const res = await fetch(displayCalendarUrl(kioskFetchBaseUrl, params));
+      const res = await fetch(
+        displayCalendarUrl(kioskFetchBaseUrl, {
+          displayId,
+          calendarIds: selectedCalendarIdsKey,
+          daysAhead,
+        })
+      );
       const data = await res.json() as {
         error?: string;
         reason?: string;

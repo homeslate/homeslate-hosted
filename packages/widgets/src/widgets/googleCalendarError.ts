@@ -32,10 +32,3 @@ export function shouldShowGoogleCalendarErrorAlert(
 export function isFatalGoogleAuthFailure(reason: string | null | undefined): boolean {
   return reason === 'invalid_grant' || reason === 'token_revoked';
 }
-
-export function displayCalendarUrl(
-  kioskFetchBaseUrl: string,
-  params: URLSearchParams | string
-): string {
-  return `${kioskFetchBaseUrl}/display-calendar?${params}`;
-}

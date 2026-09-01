@@ -5,5 +5,5 @@ export {
   displayCalendarEmptyDetail,
   shouldShowGoogleCalendarErrorAlert,
   isFatalGoogleAuthFailure,
-  displayCalendarUrl,
 } from '../../packages/widgets/src/widgets/googleCalendarError';
+export { displayCalendarUrl } from '../../packages/widgets/src/hooks/useDisplayCalendar';

@@ -252,7 +252,7 @@ export function getAccessToken(): string | null {
 
 /**
  * Clear cached calendar token in this tab (does not revoke with Google — same
- * rationale as AuthContext.signOut: server-held tokens power kiosk displays).
+ * rationale as app signOut: server-held tokens power kiosk displays).
  */
 export function clearGoogleAuth(): void {
   clearCachedToken();

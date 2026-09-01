@@ -18,7 +18,7 @@ import { getNextPollDelay } from './polling';
 
 interface UseGoogleCalendarOptions {
   // clientId is kept in the type for config backward-compatibility but is no
-  // longer used — the shared AuthContext token is used instead.
+  // longer used — the shared GoogleRuntime token is used instead.
   clientId?: string;
   selectedCalendarIds: string[];
   daysAhead?: number;
