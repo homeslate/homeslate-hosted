@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { GoogleAuthError } from '@homeslate/google';
 import {
   classifyRefreshFailure,
   describeTokenRow,
@@ -149,6 +150,18 @@ describe('classifyRefreshFailure', () => {
 
   it('falls back to refresh_failed', () => {
     expect(classifyRefreshFailure(new Error('network down'))).toBe('refresh_failed');
+  });
+
+  it('reads GoogleAuthError codes', () => {
+    expect(classifyRefreshFailure(new GoogleAuthError('invalid_grant', 'nope'))).toBe(
+      'invalid_grant'
+    );
+    expect(classifyRefreshFailure(new GoogleAuthError('token_revoked', 'nope'))).toBe(
+      'token_revoked'
+    );
+    expect(classifyRefreshFailure(new GoogleAuthError('missing_tokens', 'nope'))).toBe(
+      'refresh_failed'
+    );
   });
 });
 
