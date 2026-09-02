@@ -485,6 +485,7 @@ export function WidgetPanel(props: {
   const { document, viewId, onChange, widgetRegistry } = props;
   const [collapsed, setCollapsed] = useState(false);
   const documentRef = useRef(document);
+  // eslint-disable-next-line react-hooks/refs -- keeps the ref current for edits that land in the same tick
   documentRef.current = document;
   const widgetTypes = (widgetRegistry?.getWidgetTypes ?? getWidgetTypes)();
 

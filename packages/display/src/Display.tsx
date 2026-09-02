@@ -47,6 +47,7 @@ export function Display(props: {
   const rootRef = useRef<HTMLDivElement>(null);
   const [progressKey, setProgressKey] = useState(0);
   const documentRef = useRef(document);
+  // eslint-disable-next-line react-hooks/refs -- keeps the ref current for edits that land in the same tick
   documentRef.current = document;
 
   const alarms = useMemo(() => coerceAlarms(document.alarms), [document.alarms]);
@@ -154,6 +155,7 @@ export function Display(props: {
   const rotationEnabled = previewViewId ? false : forceRotation || Boolean(document.rotation.enabled);
   const rotationIntervalMs = document.rotation.intervalMs ?? 30_000;
   const navigateRef = useRef(navigate);
+  // eslint-disable-next-line react-hooks/refs -- keeps the ref current for edits that land in the same tick
   navigateRef.current = navigate;
 
   useEffect(() => {

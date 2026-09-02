@@ -43,6 +43,7 @@ export function Editor(props: EditorProps): JSX.Element {
   } = props;
   const [bgSettingsOpen, setBgSettingsOpen] = useState(false);
   const documentRef = useRef(document);
+  // eslint-disable-next-line react-hooks/refs -- keeps the ref current for edits that land in the same tick
   documentRef.current = document;
 
   const view = document.views.find((item) => item.id === viewId);

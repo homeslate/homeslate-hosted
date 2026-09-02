@@ -32,7 +32,7 @@ export function BackgroundSlideshow({ view }: BackgroundSlideshowProps): JSX.Ele
   const image = background.image;
   const imageSize = background.imageSize ?? 'cover';
   const overlayOpacity = background.overlayOpacity ?? 0.5;
-  const photos = useMemo(() => asPhotos(background.photos), [background.photos]);
+  const photos = useMemo(() => asPhotos(view.background?.photos), [view.background?.photos]);
   const intervalSeconds = background.intervalSeconds ?? 10;
 
   const hasPhotos = photos.length > 0;

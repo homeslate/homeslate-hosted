@@ -185,6 +185,7 @@ export function DisplayViewer({
   }, [schemaDocument, viewerNotesByLayout, viewerTodoItemsByKey]);
 
   const lastDocumentRef = useRef<DisplayDocument | null>(null);
+  // eslint-disable-next-line react-hooks/refs -- keeps the ref current for edits that land in the same tick
   lastDocumentRef.current = mergedDocument;
 
   const handleDocumentChange = useCallback(
