@@ -19,3 +19,12 @@ export {
 } from './theme/tailwindPalette';
 export type { ResolvedTheme, ThemeOverride } from './theme/resolvedTypes';
 export type { ColorMode } from '@homeslate/schema';
+export {
+  addWidget,
+  applyWidgetLayouts,
+  patchView,
+  patchViewNotes,
+  patchWidgetConfig,
+  removeWidget,
+  replaceViewWidgets,
+} from './patchDocument';
