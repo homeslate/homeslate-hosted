@@ -5,3 +5,6 @@ export { createEmptyDisplayDocument } from './emptyDocument';
 export { assertValidDisplayDocument } from './validateDocument';
 export { FileDisplayStore } from './fileDisplayStore';
 export { FileTokenStore } from './fileTokenStore';
+export { openSqlite } from './sqlite';
+export { SqliteDisplayStore } from './sqliteDisplayStore';
+export { SqliteGoogleBindingStore } from './sqliteGoogleBindingStore';
