@@ -33,4 +33,18 @@ describe('@homeslate/editor', () => {
       /const next = addWidget\(documentRef\.current, viewId, widget\);\s*documentRef\.current = next;\s*onChange\?\.\(next\);/,
     );
   });
+
+  it('exports ThemeEditor', async () => {
+    const { ThemeEditor } = await import('@homeslate/editor');
+    expect(typeof ThemeEditor).toBe('function');
+  });
+
+  it('ThemeEditor source does not import hosted auth, api, or store', () => {
+    const source = readFileSync(new URL('./ThemeEditor.tsx', import.meta.url), 'utf8');
+    expect(source).not.toMatch(/AuthContext/);
+    expect(source).not.toMatch(/apiClient/);
+    expect(source).not.toMatch(/dashboardStore/);
+    expect(source).toMatch(/previewViews/);
+    expect(source).toMatch(/DocumentCanvas/);
+  });
 });

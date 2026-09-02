@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 
-const source = readFileSync(new URL("./ThemeDocumentManager.tsx", import.meta.url), "utf8");
-const styles = readFileSync(new URL("./ThemeDocumentManager.module.css", import.meta.url), "utf8");
+const source = readFileSync(new URL("./ThemeEditor.tsx", import.meta.url), "utf8");
+const styles = readFileSync(new URL("./ThemeEditor.module.css", import.meta.url), "utf8");
 
-describe("ThemeDocumentManager markup", () => {
+describe("ThemeEditor markup", () => {
   it("does not render the dirty badge inside a paragraph", () => {
     expect(source).toMatch(
       /<Text\s+size="sm"\s+c="dimmed"\s+component="div">[\s\S]*?<Badge\s+ml="xs"\s+size="xs"\s+color="orange"\s+variant="light">/
@@ -63,9 +63,9 @@ describe("ThemeDocumentManager markup", () => {
   });
 
   it("uses the real dashboard surface for draft theme preview", () => {
-    expect(source).toContain("Dashboard");
-    expect(source).toContain("previewLayouts");
-    expect(source).toContain("previewLayoutId");
+    expect(source).toContain("DocumentCanvas");
+    expect(source).toContain("previewViews");
+    expect(source).toContain("previewViewId");
   });
 
   it("does not show explanatory page copy above the editor shell", () => {

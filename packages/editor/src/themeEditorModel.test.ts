@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getPresetById } from "./defaults";
+import { getPresetById } from "@homeslate/display/canvas";
 import {
   buildReferenceOptions,
   buildColorReferenceOptions,

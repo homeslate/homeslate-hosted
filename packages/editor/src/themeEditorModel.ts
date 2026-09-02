@@ -1,4 +1,4 @@
-import type { ColorMode, ThemeDocument } from "../types/theme";
+import type { ColorMode, ThemeDocument } from "@homeslate/schema";
 
 export type EditableTokenType = "color" | "fontFamily" | "dimension";
 

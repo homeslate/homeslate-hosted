@@ -65,7 +65,8 @@ import { ShareDisplayModal } from '../components/ShareDisplayModal';
 import { InviteModal } from '../components/InviteModal';
 import { useAuth } from '../contexts/AuthContext';
 import { useDashboardStore } from '../store/dashboardStore';
-import { ThemeDocumentManager } from '../components/ThemeDocumentManager';
+import { ThemeEditor } from '@homeslate/editor';
+import { displayRecordToDocument } from '../displayDocumentBridge';
 import { HOLIDAY_PREVIEW_OPTIONS } from '../holidays/registry';
 import type { HolidayId } from '../holidays/registry';
 import { getWidgetByType } from '@homeslate/widgets';
@@ -965,11 +966,11 @@ export function DisplayDetailPage() {
 
           {activePage === 'theme' && (
             <section className={`${classes.section} ${classes.themeSection}`}>
-              <ThemeDocumentManager
+              <ThemeEditor
                 documents={display.themes}
                 activeThemeDocumentId={display.activeThemeId}
-                previewLayouts={display.layouts}
-                initialPreviewLayoutId={display.activeLayoutId}
+                previewViews={displayRecordToDocument(display).views.filter((v) => !v.hidden)}
+                initialPreviewViewId={display.activeLayoutId}
                 onChange={(themes, activeThemeId) => {
                   upsertDisplay({
                     ...display,
