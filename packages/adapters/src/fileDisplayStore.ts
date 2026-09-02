@@ -92,6 +92,9 @@ export class FileDisplayStore implements DisplayStore {
   }
 
   private pathFor(id: string): string {
+    if (id.includes('/') || id.includes('\\')) {
+      throw new Error(`Invalid display id: ${id}`);
+    }
     return join(this.dir, `${id}.json`);
   }
 }

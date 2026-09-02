@@ -1,4 +1,4 @@
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -14,7 +14,18 @@ describe('FileDisplayStore', () => {
 
   async function store() {
     dir = await mkdtemp(join(tmpdir(), 'homeslate-file-'));
-    return new FileDisplayStore({ dir });
+    return new FileDisplayStore({ dir: join(dir, 'store') });
+  }
+
+  async function writeExternalRecord() {
+    const record = {
+      id: '../secret',
+      publicId: 'public-secret',
+      document: createEmptyDisplayDocument('Secret'),
+    };
+    const path = join(dir, 'secret.json');
+    await writeFile(path, JSON.stringify(record), 'utf8');
+    return { path, record };
   }
 
   it('create, get, getByPublicId, list, put, remove round-trip', async () => {
@@ -49,5 +60,30 @@ describe('FileDisplayStore', () => {
     await expect(
       displays.put('missing', createEmptyDisplayDocument()),
     ).rejects.toBeInstanceOf(DisplayNotFoundError);
+  });
+
+  it('get rejects an id that escapes the store directory', async () => {
+    const displays = await store();
+    await writeExternalRecord();
+
+    await expect(displays.get('../secret')).rejects.toThrow('Invalid display id');
+  });
+
+  it('put rejects an escaping id without changing the external file', async () => {
+    const displays = await store();
+    const { path, record } = await writeExternalRecord();
+
+    await expect(
+      displays.put('../secret', createEmptyDisplayDocument('Changed')),
+    ).rejects.toThrow('Invalid display id');
+    expect(JSON.parse(await readFile(path, 'utf8'))).toEqual(record);
+  });
+
+  it('remove rejects an escaping id without deleting the external file', async () => {
+    const displays = await store();
+    const { path, record } = await writeExternalRecord();
+
+    await expect(displays.remove('../secret')).rejects.toThrow('Invalid display id');
+    expect(JSON.parse(await readFile(path, 'utf8'))).toEqual(record);
   });
 });
