@@ -33,7 +33,7 @@ Phase 1 (`docs/superpowers/plans/2026-08-27-oss-hosted-split-schema.md`) is done
 |---|---|---|
 | 1 | `docs/superpowers/plans/2026-08-27-oss-hosted-split-schema.md` | `@homeslate/schema`, v0→v1, live API persists v1 |
 | 2 | this file | `@homeslate/google`, thin Netlify wrappers |
-| 3 | not written yet | `@homeslate/widgets` + `registerWidget()` + built-in `configSchema`s |
+| 3 | `docs/superpowers/plans/2026-08-27-oss-hosted-split-widgets.md` (done) | `@homeslate/widgets` + `registerWidget()` + built-in `configSchema`s |
 | 4 | not written yet | `@homeslate/editor` + `@homeslate/display` |
 | 5 | not written yet | `@homeslate/adapters` + `apps/reference` |
 | 6 | not written yet | hosted entitlements + private repo split |
