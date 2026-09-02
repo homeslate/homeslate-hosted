@@ -33,8 +33,8 @@ import {
 import type { ColorMode } from '../types/theme';
 import type { ThemeDocument } from '../types/theme';
 import type { DashboardLayout } from '../types/widget';
-import { BackgroundSlideshow } from './BackgroundSlideshow';
-import { Dashboard } from './Dashboard';
+import { BackgroundSlideshow, DocumentCanvas } from '@homeslate/display/canvas';
+import { displayRecordToDocument } from '../displayDocumentBridge';
 import {
   validateThemeDocument,
   type ThemeValidationIssue,
@@ -72,6 +72,8 @@ function themeDocumentToPreviewVars(doc: ThemeDocument, mode: ColorMode) {
   return themeToVars(resolved);
 }
 import classes from './ThemeDocumentManager.module.css';
+
+const Dashboard = DocumentCanvas;
 
 interface ThemeDocumentManagerProps {
   documents: ThemeDocument[] | undefined;
@@ -503,6 +505,20 @@ export function ThemeDocumentManager({
   );
 
   const activePreviewLayout = previewLayouts.find((layout) => layout.id === previewLayoutId) ?? previewLayouts[0] ?? null;
+  const previewDocument = useMemo(
+    () =>
+      displayRecordToDocument({
+        layouts: previewLayouts,
+        activeLayoutId: previewLayouts[0]?.id ?? null,
+        rotationEnabled: false,
+        rotationIntervalMs: 30000,
+      }),
+    [previewLayouts],
+  );
+  const activePreviewView =
+    previewDocument.views.find((v) => v.id === activePreviewLayout?.id) ??
+    previewDocument.views[0] ??
+    null;
 
   const updateToken = (entry: EditableTokenEntry, value: string) => {
     if (previewResult.status !== 'ok') return;
@@ -991,12 +1007,11 @@ export function ThemeDocumentManager({
                           className={classes.previewCanvas}
                           style={previewResult.vars as CSSProperties}
                         >
-                          {activePreviewLayout ? (
+                          {activePreviewView ? (
                             <div className={classes.actualPreviewViewport}>
-                              <BackgroundSlideshow layout={activePreviewLayout} />
+                              <BackgroundSlideshow view={activePreviewView} />
                               <Dashboard
-                                layoutId={activePreviewLayout.id}
-                                externalLayouts={previewLayouts}
+                                view={activePreviewView}
                                 isEditing={false}
                               />
                             </div>

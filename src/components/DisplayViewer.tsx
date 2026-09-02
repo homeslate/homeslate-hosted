@@ -5,7 +5,7 @@ import { IconLock, IconSun, IconMoon } from '@tabler/icons-react';
 import { useWakeLock } from '../hooks/useWakeLock';
 import { DisplayProvider } from '../contexts/DisplayContext';
 import { HostGoogleRuntime } from '../host/HostGoogleRuntime';
-import type { DashboardLayout, StickyNote, WidgetDefinition } from '../types/widget';
+import type { DashboardLayout, StickyNote } from '../types/widget';
 import type { TodoItem } from '@homeslate/widgets';
 import type { ColorMode, ThemeDocument } from '../types/theme';
 import type { HolidayId } from '../holidays/registry';
@@ -16,8 +16,9 @@ import type { AlarmDefinition } from '../alarms/types';
 import { coerceAlarms } from '../alarms/schedule';
 import { AlarmRuntime } from '../alarms/AlarmRuntime';
 import { AlarmsProvider, TimersProvider, useTimers } from '@homeslate/widgets';
-import { BackgroundSlideshow } from './BackgroundSlideshow';
-import { Dashboard } from './Dashboard';
+import { BackgroundSlideshow, DocumentCanvas } from '@homeslate/display/canvas';
+import { displayRecordToDocument } from '../displayDocumentBridge';
+import type { View } from '@homeslate/schema';
 import { HolidayEffects } from './HolidayEffects';
 import { createViewRotationClock } from './viewRotationClock';
 import classes from './DisplayViewer.module.css';
@@ -247,23 +248,29 @@ export function DisplayViewer({
     [activeLayoutId, writeTodos]
   );
 
-  const layoutList = config?.layouts;
-  const mergedLayouts = useMemo(() => {
-    if (!layoutList) return [];
-    return layoutList.map((layout) => ({
-      ...layout,
-      widgets: (layout.widgets ?? []).map((widget) => {
+  const schemaDocument = useMemo(
+    () => (config ? displayRecordToDocument(config) : null),
+    [config],
+  );
+
+  const mergedViews = useMemo(() => {
+    if (!schemaDocument) return [];
+    return schemaDocument.views.map((view) => ({
+      ...view,
+      widgets: view.widgets.map((widget) => {
         if (widget.type !== 'todo') return widget;
-        const key = `${layout.id}:${widget.id}`;
+        const key = `${view.id}:${widget.id}`;
         const override = viewerTodoItemsByKey[key];
         if (!override) return widget;
         return {
           ...widget,
           config: { ...widget.config, items: override },
-        } as WidgetDefinition;
+        };
       }),
     }));
-  }, [layoutList, viewerTodoItemsByKey]);
+  }, [schemaDocument, viewerTodoItemsByKey]);
+
+  const schemaView = mergedViews.find((v) => v.id === activeLayoutId);
 
   const navigate = useCallback((direction: 'next' | 'prev') => {
     if (!config) return;
@@ -421,7 +428,6 @@ export function DisplayViewer({
 
   const effectiveColorMode: ColorMode =
     localColorMode ?? colorMode ?? config?.colorMode ?? 'dark';
-  const activeLayout = config?.layouts.find((l) => l.id === activeLayoutId);
 
   return (
     <DisplayProvider displayId={displayId} isPreview={isPreview}>
@@ -433,15 +439,14 @@ export function DisplayViewer({
               className={classes.root}
               style={tokenVars as React.CSSProperties}
             >
-              {activeLayout && <BackgroundSlideshow layout={activeLayout} />}
+              {schemaView && <BackgroundSlideshow view={schemaView} />}
               {config?.holidayEffectsEnabled && (
                 <HolidayEffects previewHolidayId={config.holidayPreviewId} />
               )}
-              {config && (
+              {schemaView && (
                 <ViewerDashboard
-                  layouts={mergedLayouts}
-                  activeLayoutId={activeLayoutId}
-                  stickyNotesEnabled={config.stickyNotesEnabled}
+                  view={schemaView}
+                  stickyNotesEnabled={config?.stickyNotesEnabled}
                   notesOverride={activeLayoutId ? viewerNotesByLayout[activeLayoutId] : undefined}
                   onAddNote={handleAddNote}
                   onRemoveNote={handleRemoveNote}
@@ -557,8 +562,7 @@ function AlertRuntimeBridge(props: {
 }
 
 function ViewerDashboard({
-  layouts,
-  activeLayoutId,
+  view,
   stickyNotesEnabled,
   notesOverride,
   onAddNote,
@@ -566,8 +570,7 @@ function ViewerDashboard({
   onUpdateNote,
   onWidgetConfigChange,
 }: {
-  layouts: DashboardLayout[];
-  activeLayoutId: string | null;
+  view: View;
   stickyNotesEnabled?: boolean;
   notesOverride?: StickyNote[];
   onAddNote?: (note: StickyNote) => void;
@@ -576,10 +579,9 @@ function ViewerDashboard({
   onWidgetConfigChange?: (widgetId: string, config: Record<string, unknown>) => void;
 }) {
   return (
-    <Dashboard
-      layoutId={activeLayoutId ?? undefined}
+    <DocumentCanvas
+      view={view}
       isEditing={false}
-      externalLayouts={layouts}
       stickyNotesEnabled={stickyNotesEnabled}
       notesOverride={notesOverride}
       onAddNote={onAddNote}

@@ -28,3 +28,8 @@ export {
   removeWidget,
   replaceViewWidgets,
 } from './patchDocument';
+export { DocumentCanvas } from './DocumentCanvas';
+export type { WidgetRegistryApi } from './WidgetWrapper';
+export { WidgetWrapper } from './WidgetWrapper';
+export { StickyNote } from './StickyNote';
+export { BackgroundSlideshow } from './BackgroundSlideshow';

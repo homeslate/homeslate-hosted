@@ -17,11 +17,11 @@ import { IconArrowLeft, IconDeviceTv, IconLogout, IconCloudCheck, IconSun, IconM
 import { useAuth } from '../contexts/AuthContext';
 import { useDashboardStore } from '../store/dashboardStore';
 import { useTheme } from '../contexts/ThemeContext';
-import { BackgroundSlideshow } from '../components/BackgroundSlideshow';
+import { BackgroundSlideshow, DocumentCanvas } from '@homeslate/display/canvas';
 import type { ColorMode } from '../types/theme';
 import { apiClient } from '../services/apiClient';
 import type { ConfigUpsertRequest } from '../types/api';
-import { Dashboard } from '../components/Dashboard';
+import { displayRecordToDocument } from '../displayDocumentBridge';
 import { WidgetPanel, BgSettings } from '../components/WidgetPanel';
 import { AlarmsProvider, TimersProvider } from '@homeslate/widgets';
 import classes from './ViewEditorPage.module.css';
@@ -107,6 +107,24 @@ export function ViewEditorPage() {
 
   if (!display || !view) return null;
 
+  const document = displayRecordToDocument({
+    name: display.name,
+    layouts: display.layouts,
+    activeLayoutId: display.activeLayoutId,
+    rotationEnabled: display.rotationEnabled,
+    rotationIntervalMs: display.rotationIntervalMs,
+    themes: display.themes,
+    activeThemeId: display.activeThemeId,
+    colorMode: display.colorMode,
+    stickyNotesEnabled: display.stickyNotesEnabled,
+    voiceEnabled: display.voiceEnabled,
+    holidayEffectsEnabled: display.holidayEffectsEnabled,
+    holidayPreviewId: display.holidayPreviewId,
+    alarms: display.alarms,
+  });
+  const schemaView = document.views.find((v) => v.id === view.id);
+  if (!schemaView) return null;
+
   const breadcrumbs = [
     <Anchor key="display" size="sm" onClick={() => navigate(`/displays/${display.id}`)} style={{ cursor: 'pointer' }}>
       {display.name}
@@ -189,13 +207,23 @@ export function ViewEditorPage() {
       <div className={classes.body}>
         <WidgetPanel />
         <main className={classes.main} style={themeVars as React.CSSProperties}>
-          <BackgroundSlideshow layout={view} />
+          <BackgroundSlideshow view={schemaView} />
           <TimersProvider>
             <AlarmsProvider
               alarms={display.alarms ?? []}
               onAlarmsChange={(next) => setAlarms(display.id, next)}
             >
-              <Dashboard layoutId={selectedViewId ?? undefined} isEditing={true} />
+              <DocumentCanvas
+                view={schemaView}
+                isEditing
+                stickyNotesEnabled={display.stickyNotesEnabled ?? false}
+                onLayoutChange={(layouts) => useDashboardStore.getState().updateAllWidgetLayouts(layouts)}
+                onWidgetConfigChange={(id, config) => useDashboardStore.getState().updateWidgetConfig(id, config)}
+                onRemoveWidget={(id) => useDashboardStore.getState().removeWidget(id)}
+                onAddNote={(note) => useDashboardStore.getState().addNote(view.id, note)}
+                onRemoveNote={(id) => useDashboardStore.getState().removeNote(view.id, id)}
+                onUpdateNote={(id, updates) => useDashboardStore.getState().updateNote(view.id, id, updates)}
+              />
             </AlarmsProvider>
           </TimersProvider>
         </main>

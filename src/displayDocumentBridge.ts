@@ -96,6 +96,10 @@ function viewToLegacyLayout(view: View): Record<string, unknown> {
   return layout;
 }
 
+export function displayRecordToDocument(raw: unknown): DisplayDocument {
+  return migrateDisplayDocument(raw);
+}
+
 export function toLegacyConfig(document: DisplayDocument): Record<string, unknown> {
   const legacy: Record<string, unknown> = {
     layouts: document.views.map(viewToLegacyLayout),

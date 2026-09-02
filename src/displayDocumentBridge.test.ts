@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { migrateDisplayDocument } from '@homeslate/schema';
 import {
+  displayRecordToDocument,
   readStoredConfig,
   toLegacyConfig,
   writeKioskConfig,
@@ -38,6 +39,13 @@ const v0 = {
   voiceEnabled: true,
   colorMode: 'light',
 };
+
+describe('displayRecordToDocument', () => {
+  it('displayRecordToDocument maps v0 backgroundImage onto view.background.image', () => {
+    const document = displayRecordToDocument(v0);
+    expect(document.views[0].background?.image).toBe('https://example.com/bg.jpg');
+  });
+});
 
 describe('toLegacyConfig', () => {
   it('round-trips v0 through v1 back to layouts for the current UI', () => {
