@@ -84,6 +84,12 @@ describe('patchDocument', () => {
     expect(removeWidget(start, 'missing', 'w1')).toBe(start);
   });
 
+  it('unknown widgetId returns the same document reference', () => {
+    const start = doc();
+    expect(patchWidgetConfig(start, 'morning', 'missing', { showSeconds: false })).toBe(start);
+    expect(removeWidget(start, 'morning', 'missing')).toBe(start);
+  });
+
   it('replaceViewWidgets swaps the widget list', () => {
     const next = replaceViewWidgets(doc(), 'morning', [widget('w9')]);
     expect(next.views[0].widgets.map((w) => w.id)).toEqual(['w9']);

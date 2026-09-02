@@ -3,15 +3,19 @@ import type { DisplayDocument, StickyNote, View, WidgetInstance } from '@homesla
 function mapView(
   document: DisplayDocument,
   viewId: string,
-  fn: (view: View) => View,
+  fn: (view: View) => View | null,
 ): DisplayDocument {
   let found = false;
+  let changed = false;
   const views = document.views.map((view) => {
     if (view.id !== viewId) return view;
     found = true;
-    return fn(view);
+    const next = fn(view);
+    if (next === null) return view;
+    changed = true;
+    return next;
   });
-  if (!found) return document;
+  if (!found || !changed) return document;
   return { ...document, views };
 }
 
@@ -37,14 +41,17 @@ export function patchWidgetConfig(
   widgetId: string,
   config: Record<string, unknown>,
 ): DisplayDocument {
-  return mapView(document, viewId, (view) => ({
-    ...view,
-    widgets: view.widgets.map((widget) =>
-      widget.id === widgetId
-        ? { ...widget, config: { ...widget.config, ...config } }
-        : widget,
-    ),
-  }));
+  return mapView(document, viewId, (view) => {
+    if (!view.widgets.some((widget) => widget.id === widgetId)) return null;
+    return {
+      ...view,
+      widgets: view.widgets.map((widget) =>
+        widget.id === widgetId
+          ? { ...widget, config: { ...widget.config, ...config } }
+          : widget,
+      ),
+    };
+  });
 }
 
 export function removeWidget(
@@ -52,10 +59,13 @@ export function removeWidget(
   viewId: string,
   widgetId: string,
 ): DisplayDocument {
-  return mapView(document, viewId, (view) => ({
-    ...view,
-    widgets: view.widgets.filter((widget) => widget.id !== widgetId),
-  }));
+  return mapView(document, viewId, (view) => {
+    if (!view.widgets.some((widget) => widget.id === widgetId)) return null;
+    return {
+      ...view,
+      widgets: view.widgets.filter((widget) => widget.id !== widgetId),
+    };
+  });
 }
 
 export function addWidget(
