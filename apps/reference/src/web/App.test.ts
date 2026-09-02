@@ -12,4 +12,11 @@ describe('reference web host', () => {
     expect(source).not.toMatch(/netlify/);
     expect(source).not.toMatch(/drizzle-orm/);
   });
+
+  it('flushes the pending editor PUT on unmount', () => {
+    const source = readFileSync(new URL('./App.tsx', import.meta.url), 'utf8');
+    expect(source).toMatch(/createDebouncedPersist/);
+    expect(source).toMatch(/\.flush\(/);
+  });
 });
+

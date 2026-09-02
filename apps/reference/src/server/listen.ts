@@ -9,6 +9,7 @@ const app = createReferenceApp({
   dataDir,
   googleClientId: process.env.GOOGLE_CLIENT_ID,
   googleClientSecret: process.env.GOOGLE_CLIENT_SECRET,
+  publicBaseUrl: 'http://127.0.0.1:5174',
 });
 
 const listed = await app.request('/api/displays');

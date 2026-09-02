@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, Navigate, Route, BrowserRouter, Routes, useNavigate, useParams } from 'react-router-dom';
 import { Anchor, AppShell, Button, Group, Loader, Stack, Text, Title } from '@mantine/core';
 import type { DisplayDocument } from '@homeslate/schema';
 import { Editor } from '@homeslate/editor';
 import { Display } from '@homeslate/display';
+import { createDebouncedPersist } from './editorPersist';
 import { ReferenceGoogleRuntime } from './ReferenceGoogleRuntime';
 
 type DisplaySummary = { id: string; name: string };
@@ -109,7 +110,19 @@ function EditorPage() {
   const { id } = useParams<{ id: string }>();
   const [record, setRecord] = useState<DisplayRecord | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const putTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const persist = useMemo(
+    () =>
+      createDebouncedPersist((next: DisplayDocument) => {
+        if (!id) return;
+        void fetch(`/api/displays/${id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(next),
+        });
+      }, EDITOR_PUT_DEBOUNCE_MS),
+    [id],
+  );
 
   useEffect(() => {
     if (!id) return;
@@ -129,29 +142,14 @@ function EditorPage() {
 
   useEffect(() => {
     return () => {
-      if (putTimer.current) clearTimeout(putTimer.current);
+      persist.flush();
     };
-  }, []);
-
-  const persist = useCallback(
-    (next: DisplayDocument) => {
-      if (!id) return;
-      if (putTimer.current) clearTimeout(putTimer.current);
-      putTimer.current = setTimeout(() => {
-        void fetch(`/api/displays/${id}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(next),
-        });
-      }, EDITOR_PUT_DEBOUNCE_MS);
-    },
-    [id],
-  );
+  }, [persist]);
 
   const onChange = useCallback(
     (next: DisplayDocument) => {
       setRecord((current) => (current ? { ...current, document: next } : current));
-      persist(next);
+      persist.schedule(next);
     },
     [persist],
   );
