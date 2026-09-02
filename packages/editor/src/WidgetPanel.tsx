@@ -507,7 +507,9 @@ export function WidgetPanel(props: {
         maxH: widgetDef.defaultLayout.maxH,
       },
     };
-    onChange?.(addWidget(documentRef.current, viewId, widget));
+    const next = addWidget(documentRef.current, viewId, widget);
+    documentRef.current = next;
+    onChange?.(next);
   };
 
   return (

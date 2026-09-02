@@ -26,4 +26,11 @@ describe('@homeslate/editor', () => {
     expect(source).not.toMatch(/dashboardStore/);
     expect(source).toMatch(/useGoogleRuntime/);
   });
+
+  it('WidgetPanel writes the patched document onto documentRef before onChange', () => {
+    const source = readFileSync(new URL('./WidgetPanel.tsx', import.meta.url), 'utf8');
+    expect(source).toMatch(
+      /const next = addWidget\(documentRef\.current, viewId, widget\);\s*documentRef\.current = next;\s*onChange\?\.\(next\);/,
+    );
+  });
 });
