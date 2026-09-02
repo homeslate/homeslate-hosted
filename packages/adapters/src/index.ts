@@ -4,3 +4,4 @@ export { DisplayNotFoundError, InvalidDisplayDocumentError } from './types';
 export { createEmptyDisplayDocument } from './emptyDocument';
 export { assertValidDisplayDocument } from './validateDocument';
 export { FileDisplayStore } from './fileDisplayStore';
+export { FileTokenStore } from './fileTokenStore';
