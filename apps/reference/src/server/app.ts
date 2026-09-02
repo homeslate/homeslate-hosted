@@ -16,12 +16,17 @@ import {
 import {
   DISPLAY_GOOGLE_RECONNECT_MESSAGE,
   DISPLAY_OWNER_SIGN_IN_MESSAGE,
-} from '@homeslate/widgets';
+} from '@homeslate/widgets/server';
 import { Hono, type Context } from 'hono';
+import { deleteCookie, getCookie, setCookie } from 'hono/cookie';
 import {
   DEFAULT_REFERENCE_PUBLIC_BASE_URL,
+  GOOGLE_OAUTH_STATE_COOKIE,
+  GOOGLE_OAUTH_STATE_MAX_AGE_S,
+  createOAuthState,
   googleAuthorizationUrl,
   googleRedirectUri,
+  isMatchingOAuthState,
 } from './google';
 import { referenceDatabasePath, referenceTokensPath } from './paths';
 
@@ -65,13 +70,7 @@ export function createReferenceApp(opts: ReferenceAppOptions): Hono {
       await bindings.setAccountIdForDisplay(record.id, REFERENCE_LOCAL_ACCOUNT_ID);
       return c.json(record, 201);
     } catch (error) {
-      if (error instanceof InvalidDisplayDocumentError) {
-        return c.json({ errors: error.errors }, 400);
-      }
-      if (error instanceof SyntaxError) {
-        return c.json({ error: 'Invalid JSON' }, 400);
-      }
-      throw error;
+      return documentWriteError(c, error);
     }
   });
 
@@ -170,13 +169,38 @@ export function createReferenceApp(opts: ReferenceAppOptions): Hono {
 
   app.get('/api/google/connect', (c) => {
     if (!google) return c.json({ error: 'Google OAuth is not configured' }, 404);
-    return c.redirect(googleAuthorizationUrl(googleClientId, redirectUri));
+    const state = createOAuthState();
+    setCookie(c, GOOGLE_OAUTH_STATE_COOKIE, state, {
+      httpOnly: true,
+      // Lax still sends the cookie on Google's top-level redirect back to us.
+      sameSite: 'Lax',
+      secure: publicBaseUrl.startsWith('https://'),
+      path: '/',
+      maxAge: GOOGLE_OAUTH_STATE_MAX_AGE_S,
+    });
+    return c.redirect(googleAuthorizationUrl(googleClientId, redirectUri, state));
   });
 
   app.get('/api/google/callback', async (c) => {
     if (!google) return c.json({ error: 'Google OAuth is not configured' }, 404);
+    const expectedState = getCookie(c, GOOGLE_OAUTH_STATE_COOKIE);
+    deleteCookie(c, GOOGLE_OAUTH_STATE_COOKIE, { path: '/' });
+
+    const authError = c.req.query('error');
+    if (authError) {
+      return c.json(
+        { error: `Google sign-in was not completed: ${authError}`, reason: authError },
+        400,
+      );
+    }
+    if (!isMatchingOAuthState(c.req.query('state'), expectedState)) {
+      return c.json(
+        { error: 'Google sign-in state did not match. Start again from Connect.', reason: 'state_mismatch' },
+        400,
+      );
+    }
     const code = c.req.query('code');
-    if (!code) return c.json({ error: 'Missing code' }, 400);
+    if (!code) return c.json({ error: 'Missing code', reason: 'missing_code' }, 400);
     await google.exchangeAuthCode(REFERENCE_LOCAL_ACCOUNT_ID, code, redirectUri);
     return c.redirect('/');
   });
@@ -212,6 +236,9 @@ function documentWriteError(
   }
   if (error instanceof DisplayNotFoundError) {
     return c.json({ error: 'Display not found' }, 404);
+  }
+  if (error instanceof SyntaxError) {
+    return c.json({ error: 'Invalid JSON' }, 400);
   }
   throw error;
 }

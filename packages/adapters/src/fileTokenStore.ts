@@ -1,6 +1,10 @@
-import { mkdir, readFile, rename, unlink, writeFile } from 'node:fs/promises';
+import { chmod, mkdir, readFile, rename, unlink, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import type { GoogleTokens, TokenStore } from '@homeslate/google';
+
+/** Refresh tokens are long-lived credentials; keep them owner-only on disk. */
+const TOKEN_DIR_MODE = 0o700;
+const TOKEN_FILE_MODE = 0o600;
 
 export class FileTokenStore implements TokenStore {
   private readonly dir: string;
@@ -23,10 +27,17 @@ export class FileTokenStore implements TokenStore {
   }
 
   async putTokens(accountId: string, tokens: GoogleTokens): Promise<void> {
-    await mkdir(this.dir, { recursive: true });
     const path = this.pathFor(accountId);
+    await mkdir(this.dir, { recursive: true, mode: TOKEN_DIR_MODE });
+    // mkdir only applies the mode when it creates the directory.
+    await chmod(this.dir, TOKEN_DIR_MODE);
     const temporaryPath = `${path}.tmp`;
-    await writeFile(temporaryPath, JSON.stringify(tokens), 'utf8');
+    await writeFile(temporaryPath, JSON.stringify(tokens), {
+      encoding: 'utf8',
+      mode: TOKEN_FILE_MODE,
+    });
+    // writeFile only applies the mode when it creates the file.
+    await chmod(temporaryPath, TOKEN_FILE_MODE);
     await rename(temporaryPath, path);
   }
 

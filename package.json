@@ -9,6 +9,7 @@
     "dev:reference": "npm run dev -w homeslate-reference",
     "dev:netlify": "netlify dev",
     "build": "tsc -b && vite build",
+    "typecheck:reference": "tsc -b apps/reference --pretty false",
     "postbuild": "node scripts/write-redirects.mjs",
     "lint": "eslint .",
     "preview": "vite preview",

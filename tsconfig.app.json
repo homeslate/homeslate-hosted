@@ -30,11 +30,12 @@
       "@homeslate/google": ["packages/google/src/index.ts"],
       "@homeslate/widgets": ["packages/widgets/src/index.ts"],
       "@homeslate/widgets/schemas": ["packages/widgets/src/schemas.ts"],
+      "@homeslate/widgets/server": ["packages/widgets/src/server.ts"],
       "@homeslate/display/canvas": ["packages/display/src/canvas/index.ts"],
       "@homeslate/display": ["packages/display/src/index.ts"],
       "@homeslate/editor": ["packages/editor/src/index.ts"],
       "@homeslate/adapters": ["packages/adapters/src/index.ts"]
     }
   },
-  "include": ["src", "packages/schema/src", "packages/google/src", "packages/widgets/src", "packages/display/src", "packages/editor/src", "packages/adapters/src", "apps/reference/src"]
+  "include": ["src", "packages/schema/src", "packages/google/src", "packages/widgets/src", "packages/display/src", "packages/editor/src", "packages/adapters/src"]
 }

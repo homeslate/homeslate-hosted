@@ -29,7 +29,7 @@ type GoogleCalendarEvent = {
   location?: string;
 };
 
-function authHeaders(accessToken: string): HeadersInit {
+function authHeaders(accessToken: string): Record<string, string> {
   return { Authorization: `Bearer ${accessToken}` };
 }
 

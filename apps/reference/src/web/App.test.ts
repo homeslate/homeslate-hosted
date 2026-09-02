@@ -28,5 +28,31 @@ describe('reference web host', () => {
     expect(persist).toMatch(/keepalive:\s*true/);
     expect(persist).toMatch(/keepalive:\s*false/);
   });
+
+  it('registers the unload flush listeners from an effect so StrictMode stays symmetric', () => {
+    const app = readFileSync(new URL('./App.tsx', import.meta.url), 'utf8');
+    const persist = readFileSync(new URL('./editorPersist.ts', import.meta.url), 'utf8');
+    expect(persist.indexOf('addEventListener')).toBeGreaterThan(persist.indexOf('attach()'));
+    expect(app).toMatch(/persist\.attach\(\)/);
+  });
+
+  it('routes every document PUT through a checked helper instead of a discarded fetch', () => {
+    const source = readFileSync(new URL('./App.tsx', import.meta.url), 'utf8');
+    expect(source).not.toMatch(/void fetch\(/);
+    expect(source).toMatch(/putJson\(`\/api\/displays\//);
+    expect(source).toMatch(/putJson\(`\/api\/public\//);
+    expect(source).toMatch(/if \(!response\.ok\)/);
+  });
+
+  it('surfaces editor and kiosk save failures instead of swallowing them', () => {
+    const source = readFileSync(new URL('./App.tsx', import.meta.url), 'utf8');
+    expect(source.match(/setSaveError\(errorMessage\(cause\)\)/g)).toHaveLength(2);
+    expect(source.match(/Not saved: \{saveError\}/g)).toHaveLength(2);
+  });
+
+  it('renders server validation errors, not just the error field', () => {
+    const source = readFileSync(new URL('./App.tsx', import.meta.url), 'utf8');
+    expect(source).toMatch(/body\.errors/);
+  });
 });
 

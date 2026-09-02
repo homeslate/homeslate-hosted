@@ -39,12 +39,46 @@ describe('createDebouncedPersist', () => {
     const put = vi.fn();
     const unloadTarget = new EventTarget();
     const persist = createDebouncedPersist(put, 400, { unloadTarget });
+    const detach = persist.attach();
 
     persist.schedule({ name: 'Kitchen' });
     unloadTarget.dispatchEvent(new Event('pagehide'));
 
     expect(put).toHaveBeenCalledTimes(1);
     expect(put).toHaveBeenCalledWith({ name: 'Kitchen' }, { keepalive: true });
-    persist.dispose();
+    detach();
+  });
+
+  it('does not flush on unload events before attach or after detach', () => {
+    vi.useFakeTimers();
+    const put = vi.fn();
+    const unloadTarget = new EventTarget();
+    const persist = createDebouncedPersist(put, 400, { unloadTarget });
+
+    persist.schedule({ name: 'Kitchen' });
+    unloadTarget.dispatchEvent(new Event('pagehide'));
+    expect(put).not.toHaveBeenCalled();
+
+    const detach = persist.attach();
+    detach();
+    unloadTarget.dispatchEvent(new Event('beforeunload'));
+    expect(put).not.toHaveBeenCalled();
+  });
+
+  it('re-attaches after a detach so StrictMode double-invoke keeps the unload flush', () => {
+    vi.useFakeTimers();
+    const put = vi.fn();
+    const unloadTarget = new EventTarget();
+    const persist = createDebouncedPersist(put, 400, { unloadTarget });
+
+    persist.attach()();
+    const detach = persist.attach();
+
+    persist.schedule({ name: 'Kitchen' });
+    unloadTarget.dispatchEvent(new Event('pagehide'));
+
+    expect(put).toHaveBeenCalledTimes(1);
+    expect(put).toHaveBeenCalledWith({ name: 'Kitchen' }, { keepalive: true });
+    detach();
   });
 });

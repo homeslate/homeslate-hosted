@@ -3,7 +3,8 @@ export type PersistPutOptions = { keepalive: boolean };
 export type DebouncedPersist<T> = {
   schedule: (value: T) => void;
   flush: () => void;
-  dispose: () => void;
+  /** Registers the unload flush listeners; returns the matching detach. */
+  attach: () => () => void;
 };
 
 export function createDebouncedPersist<T>(
@@ -30,9 +31,6 @@ export function createDebouncedPersist<T>(
   const flush = () => commit({ keepalive: false });
   const flushUnload = () => commit({ keepalive: true });
 
-  unloadTarget?.addEventListener('pagehide', flushUnload);
-  unloadTarget?.addEventListener('beforeunload', flushUnload);
-
   return {
     schedule(value: T) {
       pending = value;
@@ -40,9 +38,13 @@ export function createDebouncedPersist<T>(
       timer = setTimeout(flush, delayMs);
     },
     flush,
-    dispose() {
-      unloadTarget?.removeEventListener('pagehide', flushUnload);
-      unloadTarget?.removeEventListener('beforeunload', flushUnload);
+    attach() {
+      unloadTarget?.addEventListener('pagehide', flushUnload);
+      unloadTarget?.addEventListener('beforeunload', flushUnload);
+      return () => {
+        unloadTarget?.removeEventListener('pagehide', flushUnload);
+        unloadTarget?.removeEventListener('beforeunload', flushUnload);
+      };
     },
   };
 }

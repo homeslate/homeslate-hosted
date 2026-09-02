@@ -15,6 +15,9 @@ export default defineConfig({
       "@homeslate/widgets/schemas": fileURLToPath(
         new URL("./packages/widgets/src/schemas.ts", import.meta.url)
       ),
+      "@homeslate/widgets/server": fileURLToPath(
+        new URL("./packages/widgets/src/server.ts", import.meta.url)
+      ),
       "@homeslate/widgets": fileURLToPath(
         new URL("./packages/widgets/src/index.ts", import.meta.url)
       ),

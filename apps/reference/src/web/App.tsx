@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState, type CSSProperties } from 'react';
 import { Link, Navigate, Route, BrowserRouter, Routes, useNavigate, useParams } from 'react-router-dom';
 import { Anchor, AppShell, Button, Group, Loader, Stack, Text, Title } from '@mantine/core';
 import type { DisplayDocument } from '@homeslate/schema';
@@ -12,6 +12,15 @@ type DisplayRecord = { id: string; publicId: string; document: DisplayDocument }
 
 const EDITOR_PUT_DEBOUNCE_MS = 400;
 const KIOSK_POLL_MS = 10_000;
+
+const KIOSK_SAVE_ERROR_STYLE: CSSProperties = {
+  position: 'fixed',
+  insetInline: 0,
+  top: 0,
+  zIndex: 1000,
+  textAlign: 'center',
+  background: 'rgba(0, 0, 0, 0.75)',
+};
 
 export function App() {
   return (
@@ -46,7 +55,7 @@ function DisplayListPage() {
         );
         if (!cancelled) setDisplays(withPublicIds);
       } catch (cause) {
-        if (!cancelled) setError(cause instanceof Error ? cause.message : String(cause));
+        if (!cancelled) setError(errorMessage(cause));
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -63,7 +72,7 @@ function DisplayListPage() {
       const record = await postJson<DisplayRecord>('/api/displays');
       navigate(`/edit/${record.id}`);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : String(cause));
+      setError(errorMessage(cause));
       setCreating(false);
     }
   };
@@ -110,17 +119,16 @@ function EditorPage() {
   const { id } = useParams<{ id: string }>();
   const [record, setRecord] = useState<DisplayRecord | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   const persist = useMemo(
     () =>
       createDebouncedPersist((next: DisplayDocument, { keepalive }) => {
         if (!id) return;
-        void fetch(`/api/displays/${id}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(next),
-          keepalive,
-        });
+        void putJson(`/api/displays/${id}`, next, { keepalive }).then(
+          () => setSaveError(null),
+          (cause: unknown) => setSaveError(errorMessage(cause)),
+        );
       }, EDITOR_PUT_DEBOUNCE_MS),
     [id],
   );
@@ -133,7 +141,7 @@ function EditorPage() {
         const next = await getJson<DisplayRecord>(`/api/displays/${id}`);
         if (!cancelled) setRecord(next);
       } catch (cause) {
-        if (!cancelled) setError(cause instanceof Error ? cause.message : String(cause));
+        if (!cancelled) setError(errorMessage(cause));
       }
     })();
     return () => {
@@ -142,9 +150,10 @@ function EditorPage() {
   }, [id]);
 
   useEffect(() => {
+    const detach = persist.attach();
     return () => {
+      detach();
       persist.flush();
-      persist.dispose();
     };
   }, [persist]);
 
@@ -170,9 +179,16 @@ function EditorPage() {
               <Anchor component={Link} to="/">Displays</Anchor>
               <Title order={4}>{record.document.name}</Title>
             </Group>
-            <Button component={Link} to={`/d/${record.publicId}`} variant="default">
-              Open kiosk
-            </Button>
+            <Group>
+              {saveError && (
+                <Text c="red" size="sm" role="alert">
+                  Not saved: {saveError}
+                </Text>
+              )}
+              <Button component={Link} to={`/d/${record.publicId}`} variant="default">
+                Open kiosk
+              </Button>
+            </Group>
           </Group>
         </AppShell.Header>
         <AppShell.Main style={{ height: 'calc(100vh - 56px)', display: 'flex' }}>
@@ -191,6 +207,7 @@ function KioskPage() {
   const { publicId } = useParams<{ publicId: string }>();
   const [document, setDocument] = useState<DisplayDocument | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!publicId) return;
@@ -204,7 +221,7 @@ function KioskPage() {
           setError(null);
         }
       } catch (cause) {
-        if (!cancelled) setError(cause instanceof Error ? cause.message : String(cause));
+        if (!cancelled) setError(errorMessage(cause));
       }
     };
 
@@ -220,11 +237,10 @@ function KioskPage() {
     (next: DisplayDocument) => {
       setDocument(next);
       if (!publicId) return;
-      void fetch(`/api/public/${publicId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(next),
-      });
+      void putJson(`/api/public/${publicId}`, next).then(
+        () => setSaveError(null),
+        (cause: unknown) => setSaveError(errorMessage(cause)),
+      );
     },
     [publicId],
   );
@@ -234,6 +250,11 @@ function KioskPage() {
 
   return (
     <ReferenceGoogleRuntime displayId={publicId}>
+      {saveError && (
+        <Text c="red" p="xs" role="alert" style={KIOSK_SAVE_ERROR_STYLE}>
+          Not saved: {saveError}
+        </Text>
+      )}
       <Display document={document} onChange={onChange} />
     </ReferenceGoogleRuntime>
   );
@@ -255,11 +276,40 @@ async function postJson<T>(url: string): Promise<T> {
   return response.json() as Promise<T>;
 }
 
+async function putJson(
+  url: string,
+  body: DisplayDocument,
+  options?: { keepalive?: boolean },
+): Promise<void> {
+  const response = await fetch(url, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+    keepalive: options?.keepalive,
+  });
+  if (!response.ok) {
+    throw new Error(await readError(response));
+  }
+}
+
 async function readError(response: Response): Promise<string> {
   try {
-    const body = (await response.json()) as { error?: string };
-    return body.error ?? `${response.status} ${response.statusText}`;
+    const body = (await response.json()) as {
+      error?: string;
+      errors?: Array<{ path?: string; message?: string }>;
+    };
+    if (body.error) return body.error;
+    if (body.errors?.length) {
+      return body.errors
+        .map((issue) => [issue.path, issue.message].filter(Boolean).join(': '))
+        .join('; ');
+    }
   } catch {
-    return `${response.status} ${response.statusText}`;
+    // Body was not JSON; fall back to the status line below.
   }
+  return `${response.status} ${response.statusText}`;
+}
+
+function errorMessage(cause: unknown): string {
+  return cause instanceof Error ? cause.message : String(cause);
 }
