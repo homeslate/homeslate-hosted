@@ -37,7 +37,7 @@ Phases 1–4 are done. Do not start Phase 5 until a Phase 5 plan is written.
 | 2 | `docs/superpowers/plans/2026-08-27-oss-hosted-split-google.md` (done) | `@homeslate/google`, thin Netlify wrappers |
 | 3 | this file (done) | `@homeslate/widgets` + `registerWidget()` + built-in `configSchema`s |
 | 4 | `docs/superpowers/plans/2026-08-27-oss-hosted-split-editor-display.md` (done) | `@homeslate/editor` + `@homeslate/display` |
-| 5 | not written yet | `@homeslate/adapters` + `apps/reference` |
+| 5 | `docs/superpowers/plans/2026-08-27-oss-hosted-split-adapters-reference.md` | `@homeslate/adapters` + `apps/reference` |
 | 6 | not written yet | hosted entitlements + private repo split |
 
 ## Why GoogleRuntime exists in this plan
