@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
-import { PinInput, Stack, Text, Button, ActionIcon, Tooltip } from '@mantine/core';
-import * as TablerIcons from '@tabler/icons-react';
-import { IconLock, IconSun, IconMoon } from '@tabler/icons-react';
+import { PinInput, Stack, Text, Button } from '@mantine/core';
+import { IconLock } from '@tabler/icons-react';
 import { useWakeLock } from '../hooks/useWakeLock';
 import { DisplayProvider } from '../contexts/DisplayContext';
 import { HostGoogleRuntime } from '../host/HostGoogleRuntime';
@@ -9,22 +8,13 @@ import type { DashboardLayout, StickyNote } from '../types/widget';
 import type { TodoItem } from '@homeslate/widgets';
 import type { ColorMode, ThemeDocument } from '../types/theme';
 import type { HolidayId } from '../holidays/registry';
-import { resolveDisplayThemeVars } from '../themes';
 import { apiClient } from '../services/apiClient';
 import type { NotesPatchRequest, TodosPatchRequest } from '../types/api';
 import type { AlarmDefinition } from '../alarms/types';
-import { coerceAlarms } from '../alarms/schedule';
-import { AlarmRuntime } from '../alarms/AlarmRuntime';
-import { AlarmsProvider, TimersProvider, useTimers } from '@homeslate/widgets';
-import { BackgroundSlideshow, DocumentCanvas } from '@homeslate/display/canvas';
+import { Display } from '@homeslate/display';
 import { displayRecordToDocument } from '../displayDocumentBridge';
-import type { View } from '@homeslate/schema';
-import { HolidayEffects } from './HolidayEffects';
-import { createViewRotationClock } from './viewRotationClock';
+import type { DisplayDocument } from '@homeslate/schema';
 import classes from './DisplayViewer.module.css';
-
-const SWIPE_THRESHOLD = 60;
-const SWIPE_ANGLE_RATIO = 1.2;
 
 interface DisplayConfig {
   layouts: DashboardLayout[];
@@ -51,6 +41,10 @@ interface Props {
 
 const POLL_INTERVAL_MS = 30_000;
 
+function sameJson(a: unknown, b: unknown): boolean {
+  return JSON.stringify(a) === JSON.stringify(b);
+}
+
 export function DisplayViewer({
   displayId,
   isPreview = false,
@@ -59,16 +53,11 @@ export function DisplayViewer({
   colorMode,
 }: Props) {
   const [config, setConfig] = useState<DisplayConfig | null>(null);
-  const [activeLayoutId, setActiveLayoutId] = useState<string | null>(null);
-  const [localColorMode, setLocalColorMode] = useState<ColorMode | null>(null);
   const [passcodeRequired, setPasscodeRequired] = useState(false);
   const [passcode, setPasscode] = useState<string | null>(null);
   const [pinInput, setPinInput] = useState('');
   const [pinError, setPinError] = useState(false);
   const [pinVerifying, setPinVerifying] = useState(false);
-  const rotationClockRef = useRef(createViewRotationClock());
-  const rootRef = useRef<HTMLDivElement>(null);
-  const [progressKey, setProgressKey] = useState(0);
 
   const [viewerNotesByLayout, setViewerNotesByLayout] = useState<Record<string, StickyNote[]>>({});
   const pendingWrite = useRef<Record<string, boolean>>({});
@@ -79,17 +68,6 @@ export function DisplayViewer({
   const todoWriteDebounceRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
 
   useWakeLock();
-
-  const alarms = useMemo(() => coerceAlarms(config?.alarms), [config?.alarms]);
-
-  const tokenVars = useMemo(() => {
-    const effectiveMode = localColorMode ?? colorMode ?? config?.colorMode ?? 'dark';
-    return resolveDisplayThemeVars(
-      config?.themes,
-      config?.activeThemeId ?? null,
-      effectiveMode,
-    );
-  }, [config, colorMode, localColorMode]);
 
   useEffect(() => {
     const load = () => {
@@ -112,30 +90,22 @@ export function DisplayViewer({
           const cfg = data.config ?? null;
           if (cfg) {
             setConfig(cfg);
-            const visibleLayouts = cfg.layouts.filter((l) => !l.hidden);
-            setActiveLayoutId((prev) => {
-              if (previewLayoutId) {
-                const previewLayout = cfg.layouts.find((l) => l.id === previewLayoutId);
-                if (previewLayout) return previewLayout.id;
-              }
-              if (prev && visibleLayouts.find((l) => l.id === prev)) return prev;
-              return visibleLayouts[0]?.id ?? cfg.layouts[0]?.id ?? null;
-            });
+            const doc = displayRecordToDocument(cfg);
             setViewerNotesByLayout((prev) => {
               const next = { ...prev };
-              for (const layout of cfg.layouts) {
-                if (!pendingWrite.current[layout.id]) {
-                  next[layout.id] = layout.notes ?? [];
+              for (const view of doc.views) {
+                if (!pendingWrite.current[view.id]) {
+                  next[view.id] = (view.notes ?? []) as StickyNote[];
                 }
               }
               return next;
             });
             setViewerTodoItemsByKey((prev) => {
               const next = { ...prev };
-              for (const layout of cfg.layouts) {
-                for (const widget of layout.widgets ?? []) {
+              for (const view of doc.views) {
+                for (const widget of view.widgets ?? []) {
                   if (widget.type === 'todo' && widget.config?.items) {
-                    const key = `${layout.id}:${widget.id}`;
+                    const key = `${view.id}:${widget.id}`;
                     if (!pendingTodoWrite.current[key]) {
                       next[key] = widget.config.items as TodoItem[];
                     }
@@ -151,7 +121,7 @@ export function DisplayViewer({
     load();
     const interval = setInterval(load, POLL_INTERVAL_MS);
     return () => clearInterval(interval);
-  }, [displayId, passcode, previewLayoutId]);
+  }, [displayId, passcode]);
 
   const writeNotes = useCallback(
     (layoutId: string, notes: StickyNote[]) => {
@@ -168,51 +138,6 @@ export function DisplayViewer({
       }, 1000);
     },
     [displayId]
-  );
-
-  const handleAddNote = useCallback(
-    (note: StickyNote) => {
-      const lid = activeLayoutId;
-      if (!lid) return;
-      setViewerNotesByLayout((prev) => {
-        const current = prev[lid] ?? [];
-        const updated = [...current, note];
-        pendingWrite.current[lid] = true;
-        writeNotes(lid, updated);
-        return { ...prev, [lid]: updated };
-      });
-    },
-    [activeLayoutId, writeNotes]
-  );
-
-  const handleRemoveNote = useCallback(
-    (noteId: string) => {
-      const lid = activeLayoutId;
-      if (!lid) return;
-      setViewerNotesByLayout((prev) => {
-        const current = prev[lid] ?? [];
-        const updated = current.filter((n) => n.id !== noteId);
-        pendingWrite.current[lid] = true;
-        writeNotes(lid, updated);
-        return { ...prev, [lid]: updated };
-      });
-    },
-    [activeLayoutId, writeNotes]
-  );
-
-  const handleUpdateNote = useCallback(
-    (noteId: string, updates: Partial<StickyNote>) => {
-      const lid = activeLayoutId;
-      if (!lid) return;
-      setViewerNotesByLayout((prev) => {
-        const current = prev[lid] ?? [];
-        const updated = current.map((n) => (n.id === noteId ? { ...n, ...updates } : n));
-        pendingWrite.current[lid] = true;
-        writeNotes(lid, updated);
-        return { ...prev, [lid]: updated };
-      });
-    },
-    [activeLayoutId, writeNotes]
   );
 
   const writeTodos = useCallback(
@@ -233,150 +158,66 @@ export function DisplayViewer({
     [displayId]
   );
 
-  const handleTodoWidgetChange = useCallback(
-    (widgetId: string, config: Record<string, unknown>) => {
-      const lid = activeLayoutId;
-      if (!lid || !config.items) return;
-      const key = `${lid}:${widgetId}`;
-      const items = config.items as TodoItem[];
-      setViewerTodoItemsByKey((prev) => {
-        pendingTodoWrite.current[key] = true;
-        writeTodos(lid, widgetId, items);
-        return { ...prev, [key]: items };
-      });
-    },
-    [activeLayoutId, writeTodos]
-  );
-
   const schemaDocument = useMemo(
     () => (config ? displayRecordToDocument(config) : null),
     [config],
   );
 
-  const mergedViews = useMemo(() => {
-    if (!schemaDocument) return [];
-    return schemaDocument.views.map((view) => ({
-      ...view,
-      widgets: view.widgets.map((widget) => {
-        if (widget.type !== 'todo') return widget;
-        const key = `${view.id}:${widget.id}`;
-        const override = viewerTodoItemsByKey[key];
-        if (!override) return widget;
-        return {
-          ...widget,
-          config: { ...widget.config, items: override },
-        };
-      }),
-    }));
-  }, [schemaDocument, viewerTodoItemsByKey]);
-
-  const schemaView = mergedViews.find((v) => v.id === activeLayoutId);
-
-  const navigate = useCallback((direction: 'next' | 'prev') => {
-    if (!config) return;
-    if (previewLayoutId) return;
-    const visibleLayouts = config.layouts.filter((l) => !l.hidden);
-    if (visibleLayouts.length <= 1) return;
-    setActiveLayoutId((curr) => {
-      const idx = visibleLayouts.findIndex((l) => l.id === curr);
-      const currentIdx = idx === -1 ? 0 : idx;
-      const next =
-        direction === 'next'
-          ? (currentIdx + 1) % visibleLayouts.length
-          : (currentIdx - 1 + visibleLayouts.length) % visibleLayouts.length;
-      return visibleLayouts[next].id;
-    });
-  }, [config, previewLayoutId]);
-
-  const visibleCount = config?.layouts.filter((l) => !l.hidden).length ?? 0;
-  const rotationEnabled = previewLayoutId
-    ? false
-    : (forceRotation || Boolean(config?.rotationEnabled));
-  const rotationIntervalMs = config?.rotationIntervalMs ?? 30_000;
-  const navigateRef = useRef(navigate);
-  navigateRef.current = navigate;
-
-  useEffect(() => {
-    const clock = rotationClockRef.current;
-    clock.sync({
-      enabled: rotationEnabled,
-      intervalMs: rotationIntervalMs,
-      visibleCount,
-      onRotate: () => navigateRef.current('next'),
-    });
-    setProgressKey(clock.getProgressGeneration());
-    return () => clock.stop();
-  }, [displayId, rotationEnabled, rotationIntervalMs, visibleCount]);
-
-  const resetRotation = useCallback(() => {
-    const clock = rotationClockRef.current;
-    clock.reset({
-      enabled: rotationEnabled,
-      intervalMs: rotationIntervalMs,
-      visibleCount,
-      onRotate: () => navigateRef.current('next'),
-    });
-    setProgressKey(clock.getProgressGeneration());
-  }, [rotationEnabled, rotationIntervalMs, visibleCount]);
-
-  useEffect(() => {
-    const el = rootRef.current;
-    if (!el) return;
-
-    let startX = 0;
-    let startY = 0;
-    let direction: 'h' | 'v' | null = null;
-
-    const onTouchStart = (e: TouchEvent) => {
-      const visibleCount = config?.layouts.filter((l) => !l.hidden).length ?? 0;
-      if (!config || visibleCount <= 1) return;
-      if (previewLayoutId) return;
-      const t = e.touches[0];
-      startX = t.clientX;
-      startY = t.clientY;
-      direction = null;
+  const mergedDocument = useMemo(() => {
+    if (!schemaDocument) return null;
+    return {
+      ...schemaDocument,
+      views: schemaDocument.views.map((view) => ({
+        ...view,
+        notes: viewerNotesByLayout[view.id] ?? view.notes,
+        widgets: view.widgets.map((widget) => {
+          if (widget.type !== 'todo') return widget;
+          const key = `${view.id}:${widget.id}`;
+          const override = viewerTodoItemsByKey[key];
+          if (!override) return widget;
+          return {
+            ...widget,
+            config: { ...widget.config, items: override },
+          };
+        }),
+      })),
     };
+  }, [schemaDocument, viewerNotesByLayout, viewerTodoItemsByKey]);
 
-    const onTouchMove = (e: TouchEvent) => {
-      if (!config) return;
-      const t = e.touches[0];
-      const dx = t.clientX - startX;
-      const dy = t.clientY - startY;
+  const lastDocumentRef = useRef<DisplayDocument | null>(null);
+  lastDocumentRef.current = mergedDocument;
 
-      if (direction === null) {
-        if (Math.abs(dx) > 5 || Math.abs(dy) > 5) {
-          direction = Math.abs(dx) > Math.abs(dy) * SWIPE_ANGLE_RATIO ? 'h' : 'v';
+  const handleDocumentChange = useCallback(
+    (next: DisplayDocument) => {
+      const prev = lastDocumentRef.current;
+      lastDocumentRef.current = next;
+
+      for (const view of next.views) {
+        const prevView = prev?.views.find((candidate) => candidate.id === view.id);
+        const nextNotes = (view.notes ?? []) as StickyNote[];
+        const prevNotes = (prevView?.notes ?? []) as StickyNote[];
+        if (!sameJson(nextNotes, prevNotes)) {
+          pendingWrite.current[view.id] = true;
+          setViewerNotesByLayout((current) => ({ ...current, [view.id]: nextNotes }));
+          writeNotes(view.id, nextNotes);
+        }
+
+        for (const widget of view.widgets) {
+          if (widget.type !== 'todo') continue;
+          const prevWidget = prevView?.widgets.find((candidate) => candidate.id === widget.id);
+          const nextItems = widget.config.items as TodoItem[] | undefined;
+          const prevItems = prevWidget?.config.items as TodoItem[] | undefined;
+          if (nextItems && !sameJson(nextItems, prevItems)) {
+            const key = `${view.id}:${widget.id}`;
+            pendingTodoWrite.current[key] = true;
+            setViewerTodoItemsByKey((current) => ({ ...current, [key]: nextItems }));
+            writeTodos(view.id, widget.id, nextItems);
+          }
         }
       }
-
-      if (direction === 'h') {
-        e.preventDefault();
-      }
-    };
-
-    const onTouchEnd = (e: TouchEvent) => {
-      if (!config || direction !== 'h') return;
-      const t = e.changedTouches[0];
-      const dx = t.clientX - startX;
-      const dy = t.clientY - startY;
-
-      if (Math.abs(dx) >= SWIPE_THRESHOLD && Math.abs(dx) > Math.abs(dy) * SWIPE_ANGLE_RATIO) {
-        navigate(dx < 0 ? 'next' : 'prev');
-        resetRotation();
-      }
-      direction = null;
-    };
-
-    el.addEventListener('touchstart', onTouchStart, { passive: true });
-    el.addEventListener('touchmove', onTouchMove, { passive: false });
-    el.addEventListener('touchend', onTouchEnd, { passive: true });
-
-    return () => {
-      el.removeEventListener('touchstart', onTouchStart);
-      el.removeEventListener('touchmove', onTouchMove);
-      el.removeEventListener('touchend', onTouchEnd);
-    };
-  }, [config, navigate, previewLayoutId, resetRotation]);
+    },
+    [writeNotes, writeTodos],
+  );
 
   if (passcodeRequired) {
     const handleSubmit = (pin: string) => {
@@ -422,172 +263,21 @@ export function DisplayViewer({
     );
   }
 
-  const allLayouts = config?.layouts ?? [];
-  const layouts = allLayouts.filter((l) => !l.hidden);
-  const showDots = !previewLayoutId && layouts.length > 1;
-
-  const effectiveColorMode: ColorMode =
-    localColorMode ?? colorMode ?? config?.colorMode ?? 'dark';
-
   return (
     <DisplayProvider displayId={displayId} isPreview={isPreview}>
       <HostGoogleRuntime>
-        <TimersProvider>
-          <AlarmsProvider alarms={alarms} readOnly>
-            <div
-              ref={rootRef}
-              className={classes.root}
-              style={tokenVars as React.CSSProperties}
-            >
-              {schemaView && <BackgroundSlideshow view={schemaView} />}
-              {config?.holidayEffectsEnabled && (
-                <HolidayEffects previewHolidayId={config.holidayPreviewId} />
-              )}
-              {schemaView && (
-                <ViewerDashboard
-                  view={schemaView}
-                  stickyNotesEnabled={config?.stickyNotesEnabled}
-                  notesOverride={activeLayoutId ? viewerNotesByLayout[activeLayoutId] : undefined}
-                  onAddNote={handleAddNote}
-                  onRemoveNote={handleRemoveNote}
-                  onUpdateNote={handleUpdateNote}
-                  onWidgetConfigChange={handleTodoWidgetChange}
-                />
-              )}
-              {showDots && (
-                <>
-                  <button
-                    className={classes.navPrev}
-                    onClick={() => { navigate('prev'); resetRotation(); }}
-                    aria-label="Previous view"
-                  />
-                  <button
-                    className={classes.navNext}
-                    onClick={() => { navigate('next'); resetRotation(); }}
-                    aria-label="Next view"
-                  />
-                  <div className={classes.dots}>
-                    {layouts.map((l) => {
-                      const IconComp = l.icon
-                        ? (TablerIcons as Record<string, unknown>)[l.icon] as React.ComponentType<{ size?: number; stroke?: number }> | undefined
-                        : undefined;
-                      const isActive = l.id === activeLayoutId;
-                      const showProgress = isActive && rotationEnabled;
-                      const circumference = 2 * Math.PI * 20;
-                      return (
-                        <button
-                          key={l.id}
-                          className={`${classes.iconIndicator} ${isActive ? classes.iconIndicatorActive : ''} ${showProgress ? classes.iconIndicatorWithProgress : ''}`}
-                          onClick={() => { setActiveLayoutId(l.id); resetRotation(); }}
-                          aria-label={`Switch to ${l.name}`}
-                        >
-                          {showProgress && (
-                            <svg
-                              key={progressKey}
-                              className={classes.progressRing}
-                              viewBox="0 0 44 44"
-                              width="44"
-                              height="44"
-                              style={{ '--rotation-duration': `${rotationIntervalMs}ms`, '--circumference': circumference } as React.CSSProperties}
-                            >
-                              <circle
-                                className={classes.progressRingFill}
-                                cx="22"
-                                cy="22"
-                                r="20"
-                                fill="none"
-                                strokeWidth="2"
-                              />
-                            </svg>
-                          )}
-                          {IconComp ? (
-                            <IconComp size={20} stroke={isActive ? 2 : 1.5} />
-                          ) : (
-                            <span className={classes.iconPlaceholder} aria-hidden="true" />
-                          )}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </>
-              )}
-              {config && (
-                <div className={classes.colorModeToggle}>
-                  <Tooltip
-                    label={effectiveColorMode === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
-                    position="left"
-                    withArrow
-                  >
-                    <ActionIcon
-                      variant="subtle"
-                      size="md"
-                      className={classes.colorModeBtn}
-                      onClick={() => setLocalColorMode(effectiveColorMode === 'dark' ? 'light' : 'dark')}
-                      aria-label="Toggle light/dark mode"
-                    >
-                      {effectiveColorMode === 'dark' ? <IconSun size={16} /> : <IconMoon size={16} />}
-                    </ActionIcon>
-                  </Tooltip>
-                </div>
-              )}
-              {!isPreview && (
-                <AlertRuntimeBridge
-                  alarms={alarms}
-                  enabled={!passcodeRequired}
-                  voiceEnabled={config?.voiceEnabled ?? false}
-                />
-              )}
-            </div>
-          </AlarmsProvider>
-        </TimersProvider>
+        {mergedDocument ? (
+          <Display
+            key={displayId}
+            document={mergedDocument}
+            onChange={handleDocumentChange}
+            isPreview={isPreview}
+            previewViewId={previewLayoutId}
+            forceRotation={forceRotation}
+            colorMode={colorMode}
+          />
+        ) : null}
       </HostGoogleRuntime>
     </DisplayProvider>
-  );
-}
-
-function AlertRuntimeBridge(props: {
-  alarms: AlarmDefinition[];
-  enabled: boolean;
-  voiceEnabled: boolean;
-}) {
-  const { registerEnqueue, restartFromAlert } = useTimers();
-
-  return (
-    <AlarmRuntime
-      {...props}
-      onRegisterEnqueue={registerEnqueue}
-      onTimerRestart={restartFromAlert}
-    />
-  );
-}
-
-function ViewerDashboard({
-  view,
-  stickyNotesEnabled,
-  notesOverride,
-  onAddNote,
-  onRemoveNote,
-  onUpdateNote,
-  onWidgetConfigChange,
-}: {
-  view: View;
-  stickyNotesEnabled?: boolean;
-  notesOverride?: StickyNote[];
-  onAddNote?: (note: StickyNote) => void;
-  onRemoveNote?: (noteId: string) => void;
-  onUpdateNote?: (noteId: string, updates: Partial<StickyNote>) => void;
-  onWidgetConfigChange?: (widgetId: string, config: Record<string, unknown>) => void;
-}) {
-  return (
-    <DocumentCanvas
-      view={view}
-      isEditing={false}
-      stickyNotesEnabled={stickyNotesEnabled}
-      notesOverride={notesOverride}
-      onAddNote={onAddNote}
-      onRemoveNote={onRemoveNote}
-      onUpdateNote={onUpdateNote}
-      onWidgetConfigChange={onWidgetConfigChange}
-    />
   );
 }
