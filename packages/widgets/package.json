@@ -11,6 +11,7 @@
     "@homeslate/schema": "*",
     "@mantine/core": "^8.3.10",
     "@mantine/dates": "^8.3.10",
+    "@mantine/hooks": "^8.3.10",
     "@tabler/icons-react": "^3.35.0",
     "dayjs": "^1.11.19",
     "uuid": "^13.0.0",
