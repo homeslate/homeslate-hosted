@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Group,
@@ -10,21 +10,26 @@ import {
   Menu,
   Breadcrumbs,
   Anchor,
-  Modal,
-  Stack,
 } from '@mantine/core';
-import { IconArrowLeft, IconDeviceTv, IconLogout, IconCloudCheck, IconSun, IconMoon, IconSettings } from '@tabler/icons-react';
+import { IconArrowLeft, IconDeviceTv, IconLogout, IconCloudCheck, IconSun, IconMoon } from '@tabler/icons-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useDashboardStore } from '../store/dashboardStore';
 import { useTheme } from '../contexts/ThemeContext';
-import { BackgroundSlideshow, DocumentCanvas } from '@homeslate/display/canvas';
 import type { ColorMode } from '../types/theme';
 import { apiClient } from '../services/apiClient';
 import type { ConfigUpsertRequest } from '../types/api';
-import { displayRecordToDocument } from '../displayDocumentBridge';
-import { WidgetPanel, BgSettings } from '../components/WidgetPanel';
-import { AlarmsProvider, TimersProvider } from '@homeslate/widgets';
+import { applyDocumentToDisplay, displayRecordToDocument } from '../displayDocumentBridge';
+import type { DisplayDocument } from '@homeslate/schema';
+import { Editor } from '@homeslate/editor';
 import classes from './ViewEditorPage.module.css';
+
+function writeEditorDocument(displayId: string, document: DisplayDocument) {
+  useDashboardStore.setState((state) => ({
+    displays: state.displays.map((display) =>
+      display.id === displayId ? applyDocumentToDisplay(display, document) : display,
+    ),
+  }));
+}
 
 export function ViewEditorPage() {
   const { user, accessToken, signOut } = useAuth();
@@ -35,13 +40,10 @@ export function ViewEditorPage() {
     selectedViewId,
     openPreview,
     setColorMode,
-    setLayoutBackground,
-    setAlarms,
   } = useDashboardStore();
   const { vars: themeVars, colorMode } = useTheme();
   const display = displays.find((d) => d.id === selectedDisplayId);
   const view = display?.layouts.find((l) => l.id === selectedViewId);
-  const [bgSettingsOpen, setBgSettingsOpen] = useState(false);
 
   // Subscribe to store changes and save immediately on each action.
   // We read state directly from the subscription callback so we always
@@ -122,8 +124,6 @@ export function ViewEditorPage() {
     holidayPreviewId: display.holidayPreviewId,
     alarms: display.alarms,
   });
-  const schemaView = document.views.find((v) => v.id === view.id);
-  if (!schemaView) return null;
 
   const breadcrumbs = [
     <Anchor key="display" size="sm" onClick={() => navigate(`/displays/${display.id}`)} style={{ cursor: 'pointer' }}>
@@ -131,11 +131,6 @@ export function ViewEditorPage() {
     </Anchor>,
     <Text key="view" size="sm" c="dimmed">{view.name}</Text>,
   ];
-
-  const updateBg = (updates: Parameters<typeof setLayoutBackground>[1]) => {
-    if (!selectedViewId) return;
-    setLayoutBackground(selectedViewId, updates);
-  };
 
   return (
     <div className={classes.root} style={themeVars as React.CSSProperties}>
@@ -185,15 +180,16 @@ export function ViewEditorPage() {
         </Group>
       </header>
 
-      <div className={classes.pageActions}>
-        <Group gap="sm">
-          <Button
-            variant="default"
-            leftSection={<IconSettings size={16} />}
-            onClick={() => setBgSettingsOpen(true)}
-          >
-            Background Settings
-          </Button>
+      <Editor
+        document={document}
+        viewId={view.id}
+        onChange={(next) => writeEditorDocument(display.id, next)}
+        onUploadBackgroundPhoto={(payload) =>
+          apiClient.post<{ key: string; filename: string }, typeof payload>('/api/photo-upload', {
+            body: payload,
+          })
+        }
+        actions={
           <Button
             variant="light"
             leftSection={<IconDeviceTv size={16} />}
@@ -201,44 +197,8 @@ export function ViewEditorPage() {
           >
             Preview This View
           </Button>
-        </Group>
-      </div>
-
-      <div className={classes.body}>
-        <WidgetPanel />
-        <main className={classes.main} style={themeVars as React.CSSProperties}>
-          <BackgroundSlideshow view={schemaView} />
-          <TimersProvider>
-            <AlarmsProvider
-              alarms={display.alarms ?? []}
-              onAlarmsChange={(next) => setAlarms(display.id, next)}
-            >
-              <DocumentCanvas
-                view={schemaView}
-                isEditing
-                stickyNotesEnabled={display.stickyNotesEnabled ?? false}
-                onLayoutChange={(layouts) => useDashboardStore.getState().updateAllWidgetLayouts(layouts)}
-                onWidgetConfigChange={(id, config) => useDashboardStore.getState().updateWidgetConfig(id, config)}
-                onRemoveWidget={(id) => useDashboardStore.getState().removeWidget(id)}
-                onAddNote={(note) => useDashboardStore.getState().addNote(view.id, note)}
-                onRemoveNote={(id) => useDashboardStore.getState().removeNote(view.id, id)}
-                onUpdateNote={(id, updates) => useDashboardStore.getState().updateNote(view.id, id, updates)}
-              />
-            </AlarmsProvider>
-          </TimersProvider>
-        </main>
-      </div>
-      <Modal
-        opened={bgSettingsOpen}
-        onClose={() => setBgSettingsOpen(false)}
-        title="View Background"
-        size="md"
-      >
-        <Stack gap="md">
-          <BgSettings view={view} updateBg={updateBg} />
-          <Button onClick={() => setBgSettingsOpen(false)}>Done</Button>
-        </Stack>
-      </Modal>
+        }
+      />
     </div>
   );
 }

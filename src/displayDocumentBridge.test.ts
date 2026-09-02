@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { migrateDisplayDocument } from '@homeslate/schema';
 import {
+  applyDocumentToDisplay,
   displayRecordToDocument,
   readStoredConfig,
   toLegacyConfig,
@@ -44,6 +45,19 @@ describe('displayRecordToDocument', () => {
   it('displayRecordToDocument maps v0 backgroundImage onto view.background.image', () => {
     const document = displayRecordToDocument(v0);
     expect(document.views[0].background?.image).toBe('https://example.com/bg.jpg');
+  });
+});
+
+describe('applyDocumentToDisplay', () => {
+  it('applyDocumentToDisplay copies document fields and preserves host id', () => {
+    const document = displayRecordToDocument(v0);
+    document.name = 'Renamed';
+    const next = applyDocumentToDisplay({ id: 'host-1', displayId: 'pub-1', passcodeEnabled: true }, document);
+    expect(next.id).toBe('host-1');
+    expect(next.displayId).toBe('pub-1');
+    expect(next.passcodeEnabled).toBe(true);
+    expect(next.name).toBe('Renamed');
+    expect(next.layouts[0].backgroundImage).toBe('https://example.com/bg.jpg');
   });
 });
 
