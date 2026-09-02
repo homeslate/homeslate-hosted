@@ -33,4 +33,18 @@ describe('createDebouncedPersist', () => {
     vi.advanceTimersByTime(400);
     expect(put).toHaveBeenCalledTimes(1);
   });
+
+  it('flushes a pending persist on pagehide so reload does not drop the last edit', () => {
+    vi.useFakeTimers();
+    const put = vi.fn();
+    const unloadTarget = new EventTarget();
+    const persist = createDebouncedPersist(put, 400, { unloadTarget });
+
+    persist.schedule({ name: 'Kitchen' });
+    unloadTarget.dispatchEvent(new Event('pagehide'));
+
+    expect(put).toHaveBeenCalledTimes(1);
+    expect(put).toHaveBeenCalledWith({ name: 'Kitchen' });
+    persist.dispose();
+  });
 });

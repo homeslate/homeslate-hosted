@@ -119,6 +119,7 @@ function EditorPage() {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(next),
+          keepalive: true,
         });
       }, EDITOR_PUT_DEBOUNCE_MS),
     [id],
@@ -143,6 +144,7 @@ function EditorPage() {
   useEffect(() => {
     return () => {
       persist.flush();
+      persist.dispose();
     };
   }, [persist]);
 
