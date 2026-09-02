@@ -1,3 +1,5 @@
+export type PersistPutOptions = { keepalive: boolean };
+
 export type DebouncedPersist<T> = {
   schedule: (value: T) => void;
   flush: () => void;
@@ -5,7 +7,7 @@ export type DebouncedPersist<T> = {
 };
 
 export function createDebouncedPersist<T>(
-  put: (value: T) => void,
+  put: (value: T, options: PersistPutOptions) => void,
   delayMs: number,
   options?: { unloadTarget?: EventTarget },
 ): DebouncedPersist<T> {
@@ -14,7 +16,7 @@ export function createDebouncedPersist<T>(
   const unloadTarget =
     options?.unloadTarget ?? (typeof window === 'undefined' ? undefined : window);
 
-  const flush = () => {
+  const commit = (options: PersistPutOptions) => {
     if (timer) {
       clearTimeout(timer);
       timer = null;
@@ -22,11 +24,14 @@ export function createDebouncedPersist<T>(
     if (pending === null) return;
     const value = pending;
     pending = null;
-    put(value);
+    put(value, options);
   };
 
-  unloadTarget?.addEventListener('pagehide', flush);
-  unloadTarget?.addEventListener('beforeunload', flush);
+  const flush = () => commit({ keepalive: false });
+  const flushUnload = () => commit({ keepalive: true });
+
+  unloadTarget?.addEventListener('pagehide', flushUnload);
+  unloadTarget?.addEventListener('beforeunload', flushUnload);
 
   return {
     schedule(value: T) {
@@ -36,8 +41,8 @@ export function createDebouncedPersist<T>(
     },
     flush,
     dispose() {
-      unloadTarget?.removeEventListener('pagehide', flush);
-      unloadTarget?.removeEventListener('beforeunload', flush);
+      unloadTarget?.removeEventListener('pagehide', flushUnload);
+      unloadTarget?.removeEventListener('beforeunload', flushUnload);
     },
   };
 }

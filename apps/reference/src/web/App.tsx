@@ -113,13 +113,13 @@ function EditorPage() {
 
   const persist = useMemo(
     () =>
-      createDebouncedPersist((next: DisplayDocument) => {
+      createDebouncedPersist((next: DisplayDocument, { keepalive }) => {
         if (!id) return;
         void fetch(`/api/displays/${id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(next),
-          keepalive: true,
+          keepalive,
         });
       }, EDITOR_PUT_DEBOUNCE_MS),
     [id],

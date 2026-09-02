@@ -6,7 +6,7 @@ afterEach(() => {
 });
 
 describe('createDebouncedPersist', () => {
-  it('does not persist until the debounce delay elapses', () => {
+  it('does not persist until the debounce delay elapses, without keepalive', () => {
     vi.useFakeTimers();
     const put = vi.fn();
     const persist = createDebouncedPersist(put, 400);
@@ -17,7 +17,7 @@ describe('createDebouncedPersist', () => {
 
     vi.advanceTimersByTime(1);
     expect(put).toHaveBeenCalledTimes(1);
-    expect(put).toHaveBeenCalledWith({ name: 'Kitchen' });
+    expect(put).toHaveBeenCalledWith({ name: 'Kitchen' }, { keepalive: false });
   });
 
   it('flushes a pending persist immediately so unmount does not drop the last edit', () => {
@@ -29,12 +29,12 @@ describe('createDebouncedPersist', () => {
     persist.flush();
 
     expect(put).toHaveBeenCalledTimes(1);
-    expect(put).toHaveBeenCalledWith({ name: 'Kitchen' });
+    expect(put).toHaveBeenCalledWith({ name: 'Kitchen' }, { keepalive: false });
     vi.advanceTimersByTime(400);
     expect(put).toHaveBeenCalledTimes(1);
   });
 
-  it('flushes a pending persist on pagehide so reload does not drop the last edit', () => {
+  it('flushes a pending persist on pagehide with keepalive so reload can deliver the last edit', () => {
     vi.useFakeTimers();
     const put = vi.fn();
     const unloadTarget = new EventTarget();
@@ -44,7 +44,7 @@ describe('createDebouncedPersist', () => {
     unloadTarget.dispatchEvent(new Event('pagehide'));
 
     expect(put).toHaveBeenCalledTimes(1);
-    expect(put).toHaveBeenCalledWith({ name: 'Kitchen' });
+    expect(put).toHaveBeenCalledWith({ name: 'Kitchen' }, { keepalive: true });
     persist.dispose();
   });
 });

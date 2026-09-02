@@ -19,11 +19,14 @@ describe('reference web host', () => {
     expect(source).toMatch(/\.flush\(/);
   });
 
-  it('uses keepalive fetch and flushes on pagehide/unload', () => {
+  it('uses keepalive only for unload flush, not in-session PUTs', () => {
     const app = readFileSync(new URL('./App.tsx', import.meta.url), 'utf8');
     const persist = readFileSync(new URL('./editorPersist.ts', import.meta.url), 'utf8');
-    expect(app).toMatch(/keepalive:\s*true/);
+    expect(app).not.toMatch(/keepalive:\s*true/);
+    expect(app).toMatch(/keepalive/);
     expect(persist).toMatch(/pagehide/);
+    expect(persist).toMatch(/keepalive:\s*true/);
+    expect(persist).toMatch(/keepalive:\s*false/);
   });
 });
 
