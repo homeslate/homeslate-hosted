@@ -1,12 +1,6 @@
-export type HolidayId =
-  | 'new-years-day'
-  | 'valentines-day'
-  | 'st-patricks-day'
-  | 'independence-day'
-  | 'halloween'
-  | 'thanksgiving'
-  | 'christmas'
-  | 'new-years-eve';
+import type { HolidayId } from '@homeslate/schema';
+
+export type { HolidayId };
 
 export type HolidayStyleVariant =
   | 'newYearsDay'

@@ -18,7 +18,7 @@ interface Props {
   onTimerRestart?: (timer: NonNullable<AlertQueueItem['timer']>) => void;
 }
 
-export function AlertRuntime({
+export function AlarmRuntime({
   alarms,
   enabled = true,
   voiceEnabled = false,
@@ -209,5 +209,3 @@ export function AlertRuntime({
     />
   );
 }
-
-export { AlertRuntime as AlarmRuntime };

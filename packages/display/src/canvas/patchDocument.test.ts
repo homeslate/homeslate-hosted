@@ -3,6 +3,7 @@ import type { DisplayDocument, WidgetInstance } from '@homeslate/schema';
 import {
   addWidget,
   applyWidgetLayouts,
+  findAvailablePosition,
   patchView,
   patchViewNotes,
   patchWidgetConfig,
@@ -60,6 +61,16 @@ describe('patchDocument', () => {
     const w2 = widget('w2');
     const next = addWidget(doc(), 'morning', w2);
     expect(next.views[0].widgets.map((w) => w.id)).toEqual(['w1', 'w2']);
+  });
+
+  it('findAvailablePosition skips occupied cells and returns the first fit', () => {
+    const occupied = [widget('w1', { layout: { x: 0, y: 0, w: 2, h: 2 } })];
+    expect(findAvailablePosition(occupied, 12, 2, 2)).toEqual({ x: 2, y: 0 });
+  });
+
+  it('findAvailablePosition falls back to the origin when the grid is full', () => {
+    const occupied = [widget('w1', { layout: { x: 0, y: 0, w: 12, h: 12 } })];
+    expect(findAvailablePosition(occupied, 12, 2, 2)).toEqual({ x: 0, y: 0 });
   });
 
   it('applyWidgetLayouts updates x/y/w/h and preserves minW', () => {

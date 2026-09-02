@@ -1,6 +1,8 @@
 # OSS Hosted Split — Phase 4: Editor And Display Packages Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **Status: complete** (merged to `main` at `902e6c0`, 2026-09-02). Tasks 1–7 shipped: `@homeslate/editor`, `@homeslate/display`, `@homeslate/display/canvas`, host wrappers. Follow-up cleanup (dead shims, `findAvailablePosition`, single `HolidayId`) is in later commits on this extraction.
+
+> **For agentic workers:** This plan is done. Do not re-execute. Phase 5 is next. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Split the view editor and kiosk viewer into `@homeslate/editor` and `@homeslate/display` that both take a `DisplayDocument`, then make the current Vite app a host that imports both (still one deployable).
 
@@ -28,14 +30,14 @@
 
 ## Plan series (this file is Phase 4 only)
 
-Phases 1–3 are done. Do not start Phase 5 until this plan’s tests pass and hosted editor + kiosk still load.
+Phases 1–4 are done. Do not start Phase 5 until a Phase 5 plan is written.
 
 | Phase | Plan file | Delivers |
 |---|---|---|
-| 1 | `docs/superpowers/plans/2026-08-27-oss-hosted-split-schema.md` | `@homeslate/schema`, v0→v1, live API persists v1 |
-| 2 | `docs/superpowers/plans/2026-08-27-oss-hosted-split-google.md` | `@homeslate/google`, thin Netlify wrappers |
-| 3 | `docs/superpowers/plans/2026-08-27-oss-hosted-split-widgets.md` | `@homeslate/widgets` + `registerWidget()` + built-in `configSchema`s |
-| 4 | this file | `@homeslate/editor` + `@homeslate/display` |
+| 1 | `docs/superpowers/plans/2026-08-27-oss-hosted-split-schema.md` (done) | `@homeslate/schema`, v0→v1, live API persists v1 |
+| 2 | `docs/superpowers/plans/2026-08-27-oss-hosted-split-google.md` (done) | `@homeslate/google`, thin Netlify wrappers |
+| 3 | `docs/superpowers/plans/2026-08-27-oss-hosted-split-widgets.md` (done) | `@homeslate/widgets` + `registerWidget()` + built-in `configSchema`s |
+| 4 | this file (done) | `@homeslate/editor` + `@homeslate/display` |
 | 5 | not written yet | `@homeslate/adapters` + `apps/reference` |
 | 6 | not written yet | hosted entitlements + private repo split |
 
@@ -96,7 +98,7 @@ Keep unchanged this plan: `src/contexts/AuthContext.tsx`, `src/pages/DisplayList
 - Consumes: existing `workspaces: ["packages/*"]`
 - Produces: `@homeslate/display`, `@homeslate/display/canvas`, `@homeslate/editor` importable constants
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Create `packages/display/src/index.test.ts`:
 
@@ -137,13 +139,13 @@ describe('@homeslate/editor', () => {
 });
 ```
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 Run: `npx vitest run packages/display/src/index.test.ts packages/display/src/canvas/index.test.ts packages/editor/src/index.test.ts`
 
 Expected: FAIL — cannot resolve `@homeslate/display` / `@homeslate/display/canvas` / `@homeslate/editor`.
 
-- [ ] **Step 3: Create packages and wire resolution**
+- [x] **Step 3: Create packages and wire resolution**
 
 `packages/display/package.json`:
 
@@ -251,13 +253,13 @@ Add `"packages/display/src"` and `"packages/editor/src"` to `include`.
 
 Run `npm install` at the repo root so workspace links exist.
 
-- [ ] **Step 4: Run tests to verify they pass**
+- [x] **Step 4: Run tests to verify they pass**
 
 Run: `npx vitest run packages/display/src/index.test.ts packages/display/src/canvas/index.test.ts packages/editor/src/index.test.ts`
 
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add packages/display packages/editor tsconfig.app.json vite.config.ts vitest.config.ts package-lock.json
@@ -299,7 +301,7 @@ EOF
 
 `packages/display/src/canvas/theme/resolvedTypes.ts` must keep today’s `ResolvedTheme` / `ThemeOverride` shapes from `src/types/theme.ts`, but import `ColorMode` and `ThemeDocument` from `@homeslate/schema` instead of `src/themes/themeDocumentValidation`.
 
-- [ ] **Step 1: Write the failing canvas re-export test**
+- [x] **Step 1: Write the failing canvas re-export test**
 
 Add to `packages/display/src/canvas/index.test.ts`:
 
@@ -312,13 +314,13 @@ it('exports resolveDisplayThemeVars', () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `npx vitest run packages/display/src/canvas/index.test.ts`
 
 Expected: FAIL — `resolveDisplayThemeVars` is not exported.
 
-- [ ] **Step 3: git mv theme apply and retarget imports**
+- [x] **Step 3: git mv theme apply and retarget imports**
 
 ```bash
 mkdir -p packages/display/src/canvas/theme
@@ -391,7 +393,7 @@ export { mantineThemeFromResolved } from '@homeslate/display/canvas';
 
 Fix relative imports inside moved tests so snapshots still resolve (vitest looks next to the test file; the `git mv` of `__snapshots__` handles that).
 
-- [ ] **Step 4: Run tests to verify they pass**
+- [x] **Step 4: Run tests to verify they pass**
 
 Run:
 
@@ -402,7 +404,7 @@ npx tsc -b --pretty false
 
 Expected: PASS. Existing theme snapshots still match.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add packages/display src/themes src/types/theme.ts src/App.tsx
@@ -473,7 +475,7 @@ export function applyWidgetLayouts(
 
 Unknown `viewId` / `widgetId` returns the same document reference (no throw). Patches do not mutate the input.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Create `packages/display/src/canvas/patchDocument.test.ts`:
 
@@ -571,13 +573,13 @@ describe('patchDocument', () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `npx vitest run packages/display/src/canvas/patchDocument.test.ts`
 
 Expected: FAIL — `patchDocument` not found.
 
-- [ ] **Step 3: Write minimal implementation**
+- [x] **Step 3: Write minimal implementation**
 
 `packages/display/src/canvas/patchDocument.ts`:
 
@@ -682,13 +684,13 @@ export function applyWidgetLayouts(
 
 Re-export these from `packages/display/src/canvas/index.ts`.
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `npx vitest run packages/display/src/canvas/patchDocument.test.ts`
 
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add packages/display/src/canvas/patchDocument.ts packages/display/src/canvas/patchDocument.test.ts packages/display/src/canvas/index.ts
@@ -760,7 +762,7 @@ export function displayRecordToDocument(raw: unknown): DisplayDocument {
 
 `raw` is the current store/API object (`layouts`, `activeLayoutId`, `rotationEnabled`, …). Tests: extend `src/displayDocumentBridge.test.ts` with one case that `displayRecordToDocument(v0).views[0].background?.image` equals the v0 `backgroundImage`.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Add to `packages/display/src/canvas/index.test.ts`:
 
@@ -795,13 +797,13 @@ it('displayRecordToDocument maps v0 backgroundImage onto view.background.image',
 });
 ```
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 Run: `npx vitest run packages/display/src/canvas/index.test.ts src/displayDocumentBridge.test.ts`
 
 Expected: FAIL — `DocumentCanvas.tsx` missing; `displayRecordToDocument` missing.
 
-- [ ] **Step 3: git mv, strip store, wire host**
+- [x] **Step 3: git mv, strip store, wire host**
 
 ```bash
 git mv src/components/Dashboard.tsx packages/display/src/canvas/DocumentCanvas.tsx
@@ -888,7 +890,7 @@ Then:
 
 Export `DocumentCanvas`, `WidgetWrapper`, `StickyNote`, `BackgroundSlideshow`, `WidgetRegistryApi` from canvas `index.ts`.
 
-- [ ] **Step 4: Run tests to verify they pass**
+- [x] **Step 4: Run tests to verify they pass**
 
 Run:
 
@@ -899,7 +901,7 @@ npx tsc -b --pretty false
 
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add packages/display src/components src/pages/ViewEditorPage.tsx src/displayDocumentBridge.ts src/displayDocumentBridge.test.ts
@@ -956,7 +958,7 @@ Do **not** move `src/hooks/useWakeLock.ts`. Host `DisplayViewer` and `AppInner` 
 
 Do **not** move `src/hooks/useViewRotation.ts` (editor/store helper, unused by kiosk).
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Create `packages/display/src/index.test.ts` additions (keep the package-name test):
 
@@ -978,13 +980,13 @@ it('Display source does not import hosted persistence or auth', () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `npx vitest run packages/display/src/index.test.ts`
 
 Expected: FAIL — `Display` not exported / `Display.tsx` missing.
 
-- [ ] **Step 3: Move kiosk internals and add Display**
+- [x] **Step 3: Move kiosk internals and add Display**
 
 `git mv` the files listed above. Leave shims:
 
@@ -1015,7 +1017,7 @@ Host `DisplayViewer`:
 
 Delete the inner kiosk JSX from `DisplayViewer` once `Display` owns it. Keep PIN JSX and CSS in `DisplayViewer.module.css`. Move kiosk root/dots/nav CSS into `packages/display/src/Display.module.css` (copy from the current module; leave PIN classes in the host file).
 
-- [ ] **Step 4: Run tests to verify they pass**
+- [x] **Step 4: Run tests to verify they pass**
 
 Run:
 
@@ -1028,7 +1030,7 @@ Expected: PASS. Moved `viewRotationClock`, `schedule`, `alertQueue`, `parseAlarm
 
 If a test file is `.test.ts` under `src/voice/`, after `git mv` it lives under `packages/display/src/voice/` and is picked up.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add packages/display src/components/DisplayViewer.tsx src/components/DisplayViewer.module.css src/alarms src/holidays src/voice src/components/HolidayEffects.tsx src/components/viewRotationClock.ts
@@ -1144,7 +1146,7 @@ Pass `onUploadBackgroundPhoto` that calls today’s `apiClient.post('/api/photo-
 
 Pass `actions={<Button Preview This View .../>}`.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 `packages/editor/src/index.test.ts`:
 
@@ -1197,13 +1199,13 @@ it('applyDocumentToDisplay copies document fields and preserves host id', () => 
 
 (`v0` in the existing test already has `backgroundImage`; `toLegacyConfig` round-trips it.)
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 Run: `npx vitest run packages/editor/src/index.test.ts src/displayDocumentBridge.test.ts`
 
 Expected: FAIL — `Editor` not exported.
 
-- [ ] **Step 3: Implement Editor, retarget WidgetPanel, wrap host page**
+- [x] **Step 3: Implement Editor, retarget WidgetPanel, wrap host page**
 
 `git mv` WidgetPanel. Strip `useDashboardStore` / `useAuth` / `apiClient`. Thread props as specified.
 
@@ -1211,7 +1213,7 @@ Expected: FAIL — `Editor` not exported.
 
 Leave `AddWidgetPanel` in `src/` (unused page; still store-based). Do not move it.
 
-- [ ] **Step 4: Run tests to verify they pass**
+- [x] **Step 4: Run tests to verify they pass**
 
 Run:
 
@@ -1222,7 +1224,7 @@ npx tsc -b --pretty false
 
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add packages/editor src/pages/ViewEditorPage.tsx src/pages/ViewEditorPage.module.css src/components/WidgetPanel.tsx src/displayDocumentBridge.ts src/displayDocumentBridge.test.ts
@@ -1281,7 +1283,7 @@ Change to `ThemeEditor` + `previewViews={displayRecordToDocument({...}).views.fi
 
 ThemeEditor must not import `AuthContext`, `apiClient`, or `dashboardStore`.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Add to `packages/editor/src/index.test.ts`:
 
@@ -1301,19 +1303,19 @@ it('ThemeEditor source does not import hosted auth, api, or store', () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `npx vitest run packages/editor/src/index.test.ts`
 
 Expected: FAIL — `ThemeEditor` not exported.
 
-- [ ] **Step 3: git mv and retarget**
+- [x] **Step 3: git mv and retarget**
 
 Move files, rename component, switch preview prop to `View[]`, import canvas from `@homeslate/display/canvas`, validation from `@homeslate/schema`. Update DisplayDetailPage. Keep a host shim for the old name.
 
 Move `ThemeDocumentManager.test.ts` next to `ThemeEditor.tsx` and update string assertions (`previewViews`, `DocumentCanvas`). CSS class names stay the same.
 
-- [ ] **Step 4: Run tests to verify they pass**
+- [x] **Step 4: Run tests to verify they pass**
 
 Run:
 
@@ -1329,7 +1331,7 @@ Full `npx vitest run` must pass. `npx tsc -b` must pass.
 
 Final source-scan (add `packages/editor/src/hostImports.test.ts` and `packages/display/src/hostImports.test.ts` if not already covered): every `.ts`/`.tsx` under `packages/editor/src` and `packages/display/src` except tests must not match `/AuthContext|apiClient|dashboardStore|from ['"]neon|netlify/`. Implement as a small `readdirSync` walk so a future file cannot sneak hosted imports in.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add packages/editor packages/display src/pages/DisplayDetailPage.tsx src/components/ThemeDocumentManager.tsx src/themes

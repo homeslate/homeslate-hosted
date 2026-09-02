@@ -1,6 +1,8 @@
 # OSS Hosted Split — Phase 1: Schema Package Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **Status: complete** (merged to `main` at `2ff4a2a`, 2026-08-31). `@homeslate/schema`, v0→v1, live API persists v1.
+
+> **For agentic workers:** This plan is done. Do not re-execute. Phase 5 is next after Phases 2–4.
 
 **Goal:** Add `@homeslate/schema` with `DisplayDocument` types, v0→v1 migration, and validation, then persist v1 JSON in Neon while the current Vite UI keeps speaking the legacy `layouts` config shape.
 
@@ -24,14 +26,14 @@
 
 ## Plan series (this file is Phase 1 only)
 
-The spec’s extraction sequence is six independently shippable plans. Execute this file first. Do not start Phase 2 until Phase 1 tests pass and the current app still loads displays.
+Phases 1–4 are done. Do not start Phase 5 until a Phase 5 plan is written.
 
 | Phase | Plan file | Delivers |
 |---|---|---|
-| 1 | this file | `@homeslate/schema`, v0→v1, live API persists v1 |
-| 2 | `docs/superpowers/plans/2026-08-27-oss-hosted-split-google.md` | `@homeslate/google`, thin Netlify wrappers |
+| 1 | this file (done) | `@homeslate/schema`, v0→v1, live API persists v1 |
+| 2 | `docs/superpowers/plans/2026-08-27-oss-hosted-split-google.md` (done) | `@homeslate/google`, thin Netlify wrappers |
 | 3 | `docs/superpowers/plans/2026-08-27-oss-hosted-split-widgets.md` (done) | `@homeslate/widgets` + `registerWidget()` + built-in `configSchema`s |
-| 4 | `docs/superpowers/plans/2026-08-27-oss-hosted-split-editor-display.md` | `@homeslate/editor` + `@homeslate/display` |
+| 4 | `docs/superpowers/plans/2026-08-27-oss-hosted-split-editor-display.md` (done) | `@homeslate/editor` + `@homeslate/display` |
 | 5 | not written yet | `@homeslate/adapters` + `apps/reference` |
 | 6 | not written yet | hosted entitlements + private repo split |
 

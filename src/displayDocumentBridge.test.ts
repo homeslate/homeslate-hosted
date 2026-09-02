@@ -57,6 +57,9 @@ describe('applyDocumentToDisplay', () => {
     expect(next.displayId).toBe('pub-1');
     expect(next.passcodeEnabled).toBe(true);
     expect(next.name).toBe('Renamed');
+    expect(next.activeLayoutId).toBe('view-1');
+    expect(next.rotationEnabled).toBe(true);
+    expect(next.rotationIntervalMs).toBe(12000);
     expect(next.layouts[0].backgroundImage).toBe('https://example.com/bg.jpg');
   });
 });

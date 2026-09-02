@@ -1,5 +1,5 @@
 import { Stack, Text, Select, Divider } from '@mantine/core';
-import { THEME_PRESET_OPTIONS } from '../themes';
+import { THEME_PRESET_OPTIONS } from '@homeslate/display/canvas';
 import { useDashboardStore } from '../store/dashboardStore';
 
 interface ThemePickerProps {

@@ -1,8 +1,5 @@
 import type { StickyNote } from './widget';
-import type { ColorMode } from './theme';
-import type { ThemeDocument } from './theme';
-import type { HolidayId } from '../holidays/registry';
-import type { AlarmDefinition } from '../alarms/types';
+import type { AlarmDefinition, ColorMode, HolidayId, ThemeDocument } from '@homeslate/schema';
 
 export interface ApiOkResponse {
   ok: true;

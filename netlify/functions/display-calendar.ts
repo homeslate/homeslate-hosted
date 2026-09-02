@@ -18,7 +18,7 @@ import {
   summarizeTokenCandidates,
   type TokenCandidate,
 } from '../../src/services/displayCalendarAuth';
-import { DISPLAY_GOOGLE_RECONNECT_MESSAGE } from '../../src/widgets/googleCalendarError';
+import { DISPLAY_GOOGLE_RECONNECT_MESSAGE } from '../../packages/widgets/src/widgets/googleCalendarError';
 import { createHostedGoogleClient } from './_shared/googleClient';
 import { createNeonTokenStore } from './_shared/neonTokenStore';
 

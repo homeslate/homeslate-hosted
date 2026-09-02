@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Group,
@@ -67,10 +67,9 @@ import { useAuth } from '../contexts/AuthContext';
 import { useDashboardStore } from '../store/dashboardStore';
 import { ThemeEditor } from '@homeslate/editor';
 import { displayRecordToDocument } from '../displayDocumentBridge';
-import { HOLIDAY_PREVIEW_OPTIONS } from '../holidays/registry';
-import type { HolidayId } from '../holidays/registry';
+import { HOLIDAY_PREVIEW_OPTIONS } from '@homeslate/display';
+import type { ColorMode, HolidayId } from '@homeslate/schema';
 import { getWidgetByType } from '@homeslate/widgets';
-import type { ColorMode } from '../types/theme';
 import type { DashboardLayout, WidgetDefinition } from '../types/widget';
 import { apiClient, ApiError } from '../services/apiClient';
 import type { ConfigUpsertRequest, DisplayPasscodeRequest, DisplayRenameRequest } from '../types/api';
@@ -376,6 +375,11 @@ export function DisplayDetailPage() {
   );
 
   const alarmsSaveDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const themePreviewViews = useMemo(
+    () => (display ? displayRecordToDocument(display).views.filter((v) => !v.hidden) : []),
+    [display],
+  );
 
   if (!display) return null;
 
@@ -969,7 +973,7 @@ export function DisplayDetailPage() {
               <ThemeEditor
                 documents={display.themes}
                 activeThemeDocumentId={display.activeThemeId}
-                previewViews={displayRecordToDocument(display).views.filter((v) => !v.hidden)}
+                previewViews={themePreviewViews}
                 initialPreviewViewId={display.activeLayoutId}
                 onChange={(themes, activeThemeId) => {
                   upsertDisplay({

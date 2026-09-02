@@ -6,14 +6,11 @@ import { DisplayProvider } from '../contexts/DisplayContext';
 import { HostGoogleRuntime } from '../host/HostGoogleRuntime';
 import type { DashboardLayout, StickyNote } from '../types/widget';
 import type { TodoItem } from '@homeslate/widgets';
-import type { ColorMode, ThemeDocument } from '../types/theme';
-import type { HolidayId } from '../holidays/registry';
+import type { AlarmDefinition, ColorMode, DisplayDocument, HolidayId, ThemeDocument } from '@homeslate/schema';
 import { apiClient } from '../services/apiClient';
 import type { NotesPatchRequest, TodosPatchRequest } from '../types/api';
-import type { AlarmDefinition } from '../alarms/types';
 import { Display } from '@homeslate/display';
 import { displayRecordToDocument } from '../displayDocumentBridge';
-import type { DisplayDocument } from '@homeslate/schema';
 import classes from './DisplayViewer.module.css';
 
 interface DisplayConfig {

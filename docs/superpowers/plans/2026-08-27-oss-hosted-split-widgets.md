@@ -2,7 +2,7 @@
 
 > **Status: complete** (merged to `main` at `e222c35`, 2026-09-01). Tasks 1–7 shipped: `@homeslate/widgets`, `registerWidget()`, `GoogleRuntime`, built-in `configSchema`s, `UnknownWidget`.
 
-> **For agentic workers:** This plan is done. Do not re-execute. Phase 4 is next. Steps use checkbox (`- [x]`) syntax for tracking.
+> **For agentic workers:** This plan is done. Do not re-execute. Phase 5 is next. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Add `@homeslate/widgets` with a formal `registerWidget()` API, move built-in widgets into that package, attach Zod `configSchema`s next to each type, and stop widgets from importing hosted auth.
 
@@ -29,14 +29,14 @@
 
 ## Plan series (this file is Phase 3 only)
 
-Phase 1 (`docs/superpowers/plans/2026-08-27-oss-hosted-split-schema.md`), Phase 2 (`docs/superpowers/plans/2026-08-27-oss-hosted-split-google.md`), and this file are done.
+Phases 1–4 are done. Do not start Phase 5 until a Phase 5 plan is written.
 
 | Phase | Plan file | Delivers |
 |---|---|---|
-| 1 | `docs/superpowers/plans/2026-08-27-oss-hosted-split-schema.md` | `@homeslate/schema`, v0→v1, live API persists v1 |
-| 2 | `docs/superpowers/plans/2026-08-27-oss-hosted-split-google.md` | `@homeslate/google`, thin Netlify wrappers |
+| 1 | `docs/superpowers/plans/2026-08-27-oss-hosted-split-schema.md` (done) | `@homeslate/schema`, v0→v1, live API persists v1 |
+| 2 | `docs/superpowers/plans/2026-08-27-oss-hosted-split-google.md` (done) | `@homeslate/google`, thin Netlify wrappers |
 | 3 | this file (done) | `@homeslate/widgets` + `registerWidget()` + built-in `configSchema`s |
-| 4 | `docs/superpowers/plans/2026-08-27-oss-hosted-split-editor-display.md` | `@homeslate/editor` + `@homeslate/display` |
+| 4 | `docs/superpowers/plans/2026-08-27-oss-hosted-split-editor-display.md` (done) | `@homeslate/editor` + `@homeslate/display` |
 | 5 | not written yet | `@homeslate/adapters` + `apps/reference` |
 | 6 | not written yet | hosted entitlements + private repo split |
 

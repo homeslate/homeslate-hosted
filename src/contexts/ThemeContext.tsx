@@ -1,9 +1,16 @@
 import { createContext, useCallback, useContext, useMemo } from 'react';
-import type { ColorMode, ResolvedTheme, ThemeDocument } from '../types/theme';
-import { defaultThemeDocument, resolveTheme, themeToVars } from '../themes';
-import { pickActiveDocument } from '../themes/defaults';
+import type { ColorMode, ThemeDocument } from '@homeslate/schema';
+import {
+  DEFAULT_THEME_DOCUMENTS,
+  getBackgroundStyle,
+  pickActiveDocument,
+  resolveTheme,
+  themeToVars,
+  type ResolvedTheme,
+} from '@homeslate/display/canvas';
 import { useDashboardStore } from '../store/dashboardStore';
-import { getBackgroundStyle } from '../themes/utils';
+
+const defaultThemeDocument = DEFAULT_THEME_DOCUMENTS[0];
 
 interface ThemeContextValue {
   document: ThemeDocument;

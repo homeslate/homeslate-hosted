@@ -34,6 +34,12 @@ describe('@homeslate/editor', () => {
     );
   });
 
+  it('WidgetPanel places new widgets with findAvailablePosition', () => {
+    const source = readFileSync(new URL('./WidgetPanel.tsx', import.meta.url), 'utf8');
+    expect(source).toMatch(/findAvailablePosition/);
+    expect(source).not.toMatch(/x:\s*0,\s*\n\s*y:\s*0,/);
+  });
+
   it('exports ThemeEditor', async () => {
     const { ThemeEditor } = await import('@homeslate/editor');
     expect(typeof ThemeEditor).toBe('function');

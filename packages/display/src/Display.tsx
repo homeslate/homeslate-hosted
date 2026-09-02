@@ -342,7 +342,7 @@ export function Display(props: {
             </Tooltip>
           </div>
           {!isPreview && (
-            <AlertRuntimeBridge
+            <AlarmRuntimeBridge
               alarms={alarms}
               enabled
               voiceEnabled={document.settings.voiceEnabled ?? false}
@@ -354,7 +354,7 @@ export function Display(props: {
   );
 }
 
-function AlertRuntimeBridge(props: {
+function AlarmRuntimeBridge(props: {
   alarms: AlarmDefinition[];
   enabled: boolean;
   voiceEnabled: boolean;

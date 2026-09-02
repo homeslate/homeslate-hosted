@@ -22,6 +22,7 @@ export type { ColorMode } from '@homeslate/schema';
 export {
   addWidget,
   applyWidgetLayouts,
+  findAvailablePosition,
   patchView,
   patchViewNotes,
   patchWidgetConfig,

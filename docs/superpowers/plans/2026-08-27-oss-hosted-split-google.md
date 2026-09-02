@@ -1,6 +1,8 @@
 # OSS Hosted Split — Phase 2: Google Package Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **Status: complete** (merged to `main` at `611c0d0`, 2026-09-01). `@homeslate/google`, thin Netlify wrappers.
+
+> **For agentic workers:** This plan is done. Do not re-execute. Phase 5 is next after Phases 3–4.
 
 **Goal:** Add `@homeslate/google` with `TokenStore`, `createGoogleClient`, calendar list/events, and photo fetch, then make Netlify functions thin wrappers around those helpers while hosted identity and collaborator pooling stay in the app.
 
@@ -27,14 +29,14 @@
 
 ## Plan series (this file is Phase 2 only)
 
-Phase 1 (`docs/superpowers/plans/2026-08-27-oss-hosted-split-schema.md`) is done. Do not start Phase 3 until this plan’s tests pass and hosted calendar/photos functions still behave.
+Phases 1–4 are done. Do not start Phase 5 until a Phase 5 plan is written.
 
 | Phase | Plan file | Delivers |
 |---|---|---|
-| 1 | `docs/superpowers/plans/2026-08-27-oss-hosted-split-schema.md` | `@homeslate/schema`, v0→v1, live API persists v1 |
-| 2 | this file | `@homeslate/google`, thin Netlify wrappers |
+| 1 | `docs/superpowers/plans/2026-08-27-oss-hosted-split-schema.md` (done) | `@homeslate/schema`, v0→v1, live API persists v1 |
+| 2 | this file (done) | `@homeslate/google`, thin Netlify wrappers |
 | 3 | `docs/superpowers/plans/2026-08-27-oss-hosted-split-widgets.md` (done) | `@homeslate/widgets` + `registerWidget()` + built-in `configSchema`s |
-| 4 | `docs/superpowers/plans/2026-08-27-oss-hosted-split-editor-display.md` | `@homeslate/editor` + `@homeslate/display` |
+| 4 | `docs/superpowers/plans/2026-08-27-oss-hosted-split-editor-display.md` (done) | `@homeslate/editor` + `@homeslate/display` |
 | 5 | not written yet | `@homeslate/adapters` + `apps/reference` |
 | 6 | not written yet | hosted entitlements + private repo split |
 

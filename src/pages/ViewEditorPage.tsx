@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Group,
@@ -15,11 +15,10 @@ import { IconArrowLeft, IconDeviceTv, IconLogout, IconCloudCheck, IconSun, IconM
 import { useAuth } from '../contexts/AuthContext';
 import { useDashboardStore } from '../store/dashboardStore';
 import { useTheme } from '../contexts/ThemeContext';
-import type { ColorMode } from '../types/theme';
+import type { ColorMode, DisplayDocument } from '@homeslate/schema';
 import { apiClient } from '../services/apiClient';
 import type { ConfigUpsertRequest } from '../types/api';
 import { applyDocumentToDisplay, displayRecordToDocument } from '../displayDocumentBridge';
-import type { DisplayDocument } from '@homeslate/schema';
 import { Editor } from '@homeslate/editor';
 import classes from './ViewEditorPage.module.css';
 
@@ -107,23 +106,29 @@ export function ViewEditorPage() {
     };
   }, [accessToken, selectedDisplayId]);
 
-  if (!display || !view) return null;
+  const document = useMemo(
+    () =>
+      display
+        ? displayRecordToDocument({
+            name: display.name,
+            layouts: display.layouts,
+            activeLayoutId: display.activeLayoutId,
+            rotationEnabled: display.rotationEnabled,
+            rotationIntervalMs: display.rotationIntervalMs,
+            themes: display.themes,
+            activeThemeId: display.activeThemeId,
+            colorMode: display.colorMode,
+            stickyNotesEnabled: display.stickyNotesEnabled,
+            voiceEnabled: display.voiceEnabled,
+            holidayEffectsEnabled: display.holidayEffectsEnabled,
+            holidayPreviewId: display.holidayPreviewId,
+            alarms: display.alarms,
+          })
+        : null,
+    [display],
+  );
 
-  const document = displayRecordToDocument({
-    name: display.name,
-    layouts: display.layouts,
-    activeLayoutId: display.activeLayoutId,
-    rotationEnabled: display.rotationEnabled,
-    rotationIntervalMs: display.rotationIntervalMs,
-    themes: display.themes,
-    activeThemeId: display.activeThemeId,
-    colorMode: display.colorMode,
-    stickyNotesEnabled: display.stickyNotesEnabled,
-    voiceEnabled: display.voiceEnabled,
-    holidayEffectsEnabled: display.holidayEffectsEnabled,
-    holidayPreviewId: display.holidayPreviewId,
-    alarms: display.alarms,
-  });
+  if (!display || !view || !document) return null;
 
   const breadcrumbs = [
     <Anchor key="display" size="sm" onClick={() => navigate(`/displays/${display.id}`)} style={{ cursor: 'pointer' }}>

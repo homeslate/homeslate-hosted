@@ -7,7 +7,7 @@ import { AuthProvider } from './contexts/AuthContext';
 import { useAuth } from './contexts/AuthContext';
 import { ThemeProvider, useTheme } from './contexts/ThemeContext';
 import { useDashboardStore } from './store/dashboardStore';
-import { mantineThemeFromResolved } from './themes/mantineBridge';
+import { mantineThemeFromResolved } from '@homeslate/display/canvas';
 import { ManagementLayout } from './components/ManagementLayout';
 import { HostGoogleRuntime } from './host/HostGoogleRuntime';
 import '@mantine/core/styles.css';

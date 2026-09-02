@@ -32,7 +32,7 @@ import {
 } from '@homeslate/widgets';
 import type { Photo, StoredPhoto } from '@homeslate/widgets';
 import type { DisplayDocument, View, ViewBackground, WidgetInstance } from '@homeslate/schema';
-import { addWidget, type WidgetRegistryApi } from '@homeslate/display/canvas';
+import { addWidget, findAvailablePosition, type WidgetRegistryApi } from '@homeslate/display/canvas';
 import classes from './WidgetPanel.module.css';
 
 type UploadBackgroundPhoto = (payload: {
@@ -492,14 +492,21 @@ export function WidgetPanel(props: {
   const handleAddWidget = (type: string) => {
     const widgetDef = widgetTypes.find((w) => w.type === type);
     if (!widgetDef) return;
+    const view = documentRef.current.views.find((item) => item.id === viewId);
+    const pos = findAvailablePosition(
+      view?.widgets ?? [],
+      view?.columns ?? 12,
+      widgetDef.defaultLayout.w,
+      widgetDef.defaultLayout.h,
+    );
     const widget: WidgetInstance = {
       id: uuidv4(),
       type,
       title: widgetDef.name,
       config: { ...widgetDef.defaultConfig },
       layout: {
-        x: 0,
-        y: 0,
+        x: pos.x,
+        y: pos.y,
         w: widgetDef.defaultLayout.w,
         h: widgetDef.defaultLayout.h,
         minW: widgetDef.defaultLayout.minW,

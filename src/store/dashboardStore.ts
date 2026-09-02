@@ -2,11 +2,9 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { v4 as uuidv4 } from 'uuid';
 import type { DashboardLayout, WidgetDefinition, WidgetConfig, StickyNote } from '../types/widget';
-import type { ColorMode } from '../types/theme';
-import type { ThemeDocument } from '../types/theme';
-import type { HolidayId } from '../holidays/registry';
-import type { AlarmDefinition } from '../alarms/types';
-import { coerceAlarms } from '../alarms/schedule';
+import type { ColorMode, HolidayId, ThemeDocument, AlarmDefinition } from '@homeslate/schema';
+import { coerceAlarms } from '@homeslate/display';
+import { findAvailablePosition } from '@homeslate/display/canvas';
 
 export interface Display {
   id: string;        // displays.id (server UUID, primary key)
@@ -128,59 +126,6 @@ const createDefaultLayout = (): DashboardLayout => ({
   columns: 12,
   rowHeight: 80,
 });
-
-const GRID_MAX_ROWS = 12;
-
-function findAvailablePosition(
-  widgets: WidgetDefinition[],
-  cols: number,
-  width: number,
-  height: number
-): { x: number; y: number } {
-  const grid: boolean[][] = [];
-  
-  for (let y = 0; y < GRID_MAX_ROWS; y++) {
-    grid[y] = [];
-    for (let x = 0; x < cols; x++) {
-      grid[y][x] = false;
-    }
-  }
-  
-  for (const widget of widgets) {
-    const w = widget.layout.w;
-    const h = widget.layout.h;
-    const x = widget.layout.x;
-    const y = widget.layout.y;
-    
-    for (let dy = 0; dy < h; dy++) {
-      for (let dx = 0; dx < w; dx++) {
-        if (y + dy < GRID_MAX_ROWS && x + dx < cols) {
-          grid[y + dy][x + dx] = true;
-        }
-      }
-    }
-  }
-  
-  for (let y = 0; y <= GRID_MAX_ROWS - height; y++) {
-    for (let x = 0; x <= cols - width; x++) {
-      let fits = true;
-      for (let dy = 0; dy < height; dy++) {
-        for (let dx = 0; dx < width; dx++) {
-          if (grid[y + dy]?.[x + dx]) {
-            fits = false;
-            break;
-          }
-        }
-        if (!fits) break;
-      }
-      if (fits) {
-        return { x, y };
-      }
-    }
-  }
-  
-  return { x: 0, y: 0 };
-}
 
 const createDefaultDisplay = (name = 'Homeslate'): Display => {
   const layout = createDefaultLayout();

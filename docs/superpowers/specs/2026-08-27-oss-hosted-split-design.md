@@ -1,5 +1,9 @@
 # OSS / Hosted Split Design
 
+## Status
+
+Phases 1–4 of the extraction sequence are done in this repo (`@homeslate/schema`, `@homeslate/google`, `@homeslate/widgets`, `@homeslate/editor`, `@homeslate/display`). The Vite app is still the hosted consumer. Phase 5 (`@homeslate/adapters` + `apps/reference`) and Phase 6 (private hosted repo) are not started.
+
 ## Goal
 
 Split Homeslate so a public MIT core can be self-hosted (or embedded) on any storage and Google Cloud project, while a private hosted product consumes that core and adds accounts, billing, and free-tier limits. The public contract is a versioned display/theme JSON document; editor UI, display UI, built-in widgets, and Google Calendar/Photos helpers are packages driven by that document.
@@ -44,7 +48,7 @@ homeslate/                          # public MIT monorepo
   packages/schema                   # JSON Schema, types, validate, migrate
   packages/widgets                  # built-ins + registerWidget()
   packages/editor                   # admin/editor UI
-  packages/display                  # kiosk viewer
+  packages/display                  # kiosk viewer + ./canvas (shared grid / theme apply)
   packages/google                   # token + calendar + photos helpers
   packages/adapters                 # FileDisplayStore, SqliteDisplayStore, FileTokenStore
   apps/reference                    # thin wiring example
@@ -60,11 +64,11 @@ homeslate-hosted/                   # private
 | `@homeslate/schema` | Document types, JSON Schema, `validateDisplayDocument`, `migrateDisplayDocument`, theme schema | Persistence, auth, React |
 | `@homeslate/widgets` | Built-in components, settings, `registerWidget`, default registry | App shell, routing, stores |
 | `@homeslate/editor` | View editor, widget add/settings, theme editor chrome driven by the document | Accounts, display list as a SaaS concept, billing |
-| `@homeslate/display` | Kiosk viewer (rotation, alarms runtime, holiday effects) | Pairing-as-onboarding, passcodes as a product |
+| `@homeslate/display` | Kiosk viewer (rotation, alarms runtime, holiday effects). Shared document renderer at `@homeslate/display/canvas` | Pairing-as-onboarding, passcodes as a product |
 | `@homeslate/google` | Code exchange, refresh, calendar list/events, photo fetch helpers | User identity, HTTP framework, Postgres |
 | `@homeslate/adapters` | Reference `DisplayStore`, `TokenStore`, and `GoogleBindingStore` implementations | Hosted quota, encryption-at-rest policy |
 
-Editor and display take `{ document, onChange?, widgetRegistry }`. The host wraps them in a `GoogleRuntime` React context (access token for the editor session, kiosk fetch base URL for the display). Neither package imports a database.
+Editor and display take `{ document, onChange?, widgetRegistry }`. The host wraps them in a `GoogleRuntime` React context from `@homeslate/widgets` (access token for the editor session, kiosk fetch base URL for the display). Neither package imports a database. The shared grid, sticky notes, slideshow, and theme apply live at `@homeslate/display/canvas` so editor can render a document without importing kiosk rotation, holidays, or alarm runtime. There is no seventh `@homeslate/canvas` package.
 
 Someone building their own UI can depend on `@homeslate/schema` + `@homeslate/widgets` only.
 
@@ -326,10 +330,10 @@ Local-only without a server remains valid: `FileDisplayStore` + editor + display
 
 Do this in the current repo. Do not greenfield-rewrite the app.
 
-1. Lift types + JSON Schema into `packages/schema`. Add `schemaVersion` and `v0 → v1` migrate. Current Vite app imports the package and keeps running.
-2. Move token exchange, refresh, and calendar/photos helpers into `packages/google`. Netlify functions become thin wrappers around `createGoogleClient`.
-3. Formalize `registerWidget()`. Move built-ins to `packages/widgets`.
-4. Split UI into `packages/editor` and `packages/display`. The existing Vite app becomes a host that imports both (still one deployable while hosted lives here).
+1. **Done.** Lift types + JSON Schema into `packages/schema`. Add `schemaVersion` and `v0 → v1` migrate. Current Vite app imports the package and keeps running. Plan: `docs/superpowers/plans/2026-08-27-oss-hosted-split-schema.md` (merged `2ff4a2a`).
+2. **Done.** Move token exchange, refresh, and calendar/photos helpers into `packages/google`. Netlify functions become thin wrappers around `createGoogleClient`. Plan: `docs/superpowers/plans/2026-08-27-oss-hosted-split-google.md` (merged `611c0d0`).
+3. **Done.** Formalize `registerWidget()`. Move built-ins to `packages/widgets`. Plan: `docs/superpowers/plans/2026-08-27-oss-hosted-split-widgets.md` (merged `e222c35`).
+4. **Done.** Split UI into `packages/editor` and `packages/display`. The existing Vite app becomes a host that imports both (still one deployable while hosted lives here). Canvas is `@homeslate/display/canvas`. Host `dashboardStore` still uses `layouts` and converts at the package boundary. DisplayDetailPage setting toggles stay host chrome. Plan: `docs/superpowers/plans/2026-08-27-oss-hosted-split-editor-display.md` (merged `902e6c0`).
 5. Add `packages/adapters` and `apps/reference`.
 6. Move auth, billing, Neon-specific functions, and entitlement checks into `apps/hosted`, then into `homeslate-hosted` (private) **before** this repository is made public.
 
@@ -344,6 +348,8 @@ Until step 6, one private monorepo is the working tree. Public npm (or GitHub Pa
 - AGPL, BSL, or dual-license
 - Changing Google Calendar widget UX except as required by the client interface
 - Role-aware collaboration redesign (roadmap item; hosted-only if built)
+- Renaming host `dashboardStore` `layouts` to `views` (packages already use `views`; convert at the host boundary)
+- jsdom coverage of carved editor/display JSX
 
 ## Success Criteria
 

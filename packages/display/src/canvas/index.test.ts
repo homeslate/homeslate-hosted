@@ -24,9 +24,9 @@ describe('@homeslate/display/canvas', () => {
     expect(source).not.toMatch(/dashboardStore/);
   });
 
-  it('BackgroundSlideshow reads View.background', () => {
+  it('BackgroundSlideshow reads View.background, not legacy layout fields', () => {
     const source = readFileSync(new URL('./BackgroundSlideshow.tsx', import.meta.url), 'utf8');
     expect(source).toMatch(/view\.background/);
-    expect(source).not.toMatch(/backgroundImage/);
+    expect(source).not.toMatch(/backgroundImageSize|backgroundPhotos|backgroundOverlayOpacity|backgroundInterval/);
   });
 });

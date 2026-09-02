@@ -19,4 +19,17 @@ describe('@homeslate/display', () => {
     expect(source).not.toMatch(/passcode/);
     expect(source).not.toMatch(/PinInput/);
   });
+
+  it('re-exports HolidayId from schema instead of duplicating the union', () => {
+    const source = readFileSync(new URL('./holidays.ts', import.meta.url), 'utf8');
+    expect(source).toMatch(/from '@homeslate\/schema'/);
+    expect(source).toMatch(/export type \{ HolidayId \}/);
+    expect(source).not.toMatch(/export type HolidayId =/);
+  });
+
+  it('exports AlarmRuntime as a named function', () => {
+    const source = readFileSync(new URL('./alarms/AlarmRuntime.tsx', import.meta.url), 'utf8');
+    expect(source).toMatch(/export function AlarmRuntime\(/);
+    expect(source).not.toMatch(/AlertRuntime/);
+  });
 });

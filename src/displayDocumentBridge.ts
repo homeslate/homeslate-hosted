@@ -100,10 +100,26 @@ export function displayRecordToDocument(raw: unknown): DisplayDocument {
   return migrateDisplayDocument(raw);
 }
 
+export type LegacyDisplayFields = {
+  name: string;
+  layouts: Array<Record<string, unknown>>;
+  activeLayoutId: unknown;
+  rotationEnabled: unknown;
+  rotationIntervalMs: unknown;
+  themes: unknown;
+  activeThemeId: unknown;
+  colorMode?: unknown;
+  stickyNotesEnabled?: unknown;
+  voiceEnabled?: unknown;
+  holidayEffectsEnabled?: unknown;
+  holidayPreviewId?: unknown;
+  alarms?: unknown;
+};
+
 export function applyDocumentToDisplay<T extends { id: string }>(
   display: T,
   document: DisplayDocument,
-): T & { name: string; layouts: Array<Record<string, unknown>> } {
+): T & LegacyDisplayFields {
   const legacy = toLegacyConfig(document);
   return {
     ...display,
