@@ -16,6 +16,9 @@ export { loadStoredImage } from './services/googlePhotos';
 export { useGooglePhotos } from './hooks/useGooglePhotos';
 export type { PickerStatus, CurrentPhoto } from './hooks/useGooglePhotos';
 export type { WidgetHealthStatus } from './chrome/WidgetDataStatus';
-export { DISPLAY_GOOGLE_RECONNECT_MESSAGE } from './widgets/googleCalendarError';
+export {
+  DISPLAY_GOOGLE_RECONNECT_MESSAGE,
+  DISPLAY_OWNER_SIGN_IN_MESSAGE,
+} from './widgets/googleCalendarError';
 export { displayCalendarUrl } from './hooks/useDisplayCalendar';
 export { UnknownWidget } from './UnknownWidget';

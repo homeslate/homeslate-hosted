@@ -44,6 +44,7 @@ export default defineConfig({
       "packages/display/src/**/*.test.ts",
       "packages/editor/src/**/*.test.ts",
       "packages/adapters/src/**/*.test.ts",
+      "apps/reference/src/**/*.test.ts",
     ],
     globals: false,
     css: false,

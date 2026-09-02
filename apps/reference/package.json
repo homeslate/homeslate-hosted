@@ -1,0 +1,26 @@
+{
+  "name": "homeslate-reference",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node --import tsx src/server/listen.ts",
+    "start": "node --import tsx src/server/listen.ts"
+  },
+  "dependencies": {
+    "@homeslate/adapters": "*",
+    "@homeslate/display": "*",
+    "@homeslate/editor": "*",
+    "@homeslate/google": "*",
+    "@homeslate/schema": "*",
+    "@homeslate/widgets": "*",
+    "@hono/node-server": "1.19.17",
+    "@mantine/core": "^8.3.10",
+    "@tabler/icons-react": "^3.35.0",
+    "hono": "4.13.5",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
+  },
+  "devDependencies": {
+    "tsx": "4.23.13"
+  }
+}

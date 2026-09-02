@@ -36,5 +36,5 @@
       "@homeslate/adapters": ["packages/adapters/src/index.ts"]
     }
   },
-  "include": ["src", "packages/schema/src", "packages/google/src", "packages/widgets/src", "packages/display/src", "packages/editor/src", "packages/adapters/src"]
+  "include": ["src", "packages/schema/src", "packages/google/src", "packages/widgets/src", "packages/display/src", "packages/editor/src", "packages/adapters/src", "apps/reference/src"]
 }
