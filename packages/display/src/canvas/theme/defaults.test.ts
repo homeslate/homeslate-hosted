@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { DEFAULT_THEME_DOCUMENTS } from "./defaults";
-import { validateThemeDocument } from "./themeDocumentValidation";
+import { validateThemeDocument } from "@homeslate/schema";
 import { resolveTheme } from "./resolver";
 
 describe("DEFAULT_THEME_DOCUMENTS — validation", () => {

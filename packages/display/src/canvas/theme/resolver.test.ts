@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { resolveTheme, ThemeResolutionError } from "./resolver";
-import type { ThemeDocument } from "./themeDocumentValidation";
+import type { ThemeDocument } from "@homeslate/schema";
 
 function makeDoc(mutate: (doc: ThemeDocument) => void): ThemeDocument {
   const doc = JSON.parse(JSON.stringify(BASE_DOC)) as ThemeDocument;

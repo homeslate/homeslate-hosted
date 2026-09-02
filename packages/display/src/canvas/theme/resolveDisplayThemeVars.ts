@@ -1,5 +1,5 @@
-import type { ColorMode } from "../types/theme";
-import type { ThemeDocument } from "./themeDocumentValidation";
+import type { ColorMode } from "./resolvedTypes";
+import type { ThemeDocument } from "@homeslate/schema";
 import { pickActiveDocument } from "./defaults";
 import { resolveTheme } from "./resolver";
 import { themeToVars } from "./utils";

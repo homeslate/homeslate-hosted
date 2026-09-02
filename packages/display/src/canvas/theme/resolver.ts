@@ -1,5 +1,5 @@
-import type { ColorMode, ResolvedTheme, ThemeOverride } from "../types/theme";
-import type { ThemeDocument } from "./themeDocumentValidation";
+import type { ColorMode, ResolvedTheme, ThemeOverride } from "./resolvedTypes";
+import type { ThemeDocument } from "@homeslate/schema";
 
 const ALIAS_RE = /^\{([\w.]+)\}$/;
 const MAX_DEPTH = 8;

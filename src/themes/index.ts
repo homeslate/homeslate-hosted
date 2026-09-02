@@ -3,16 +3,19 @@ export {
   THEME_PRESET_OPTIONS,
   getPresetById,
   pickActiveDocument,
-} from "./defaults";
-export { themeToVars, hexToRgb, getBackgroundStyle } from "./utils";
-export { resolveDisplayThemeVars } from "./resolveDisplayThemeVars";
-export { resolveTheme, ThemeResolutionError } from "./resolver";
-export { mantineThemeFromResolved } from "./mantineBridge";
+  themeToVars,
+  hexToRgb,
+  getBackgroundStyle,
+  resolveDisplayThemeVars,
+  resolveTheme,
+  ThemeResolutionError,
+  mantineThemeFromResolved,
+} from "@homeslate/display/canvas";
 export {
   validateThemeDocument,
   isThemeDocumentCandidate,
 } from "./themeDocumentValidation";
 export type { ThemeDocument } from "./themeDocumentValidation";
 
-import { DEFAULT_THEME_DOCUMENTS } from "./defaults";
+import { DEFAULT_THEME_DOCUMENTS } from "@homeslate/display/canvas";
 export const defaultThemeDocument = DEFAULT_THEME_DOCUMENTS[0];
