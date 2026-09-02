@@ -1,5 +1,7 @@
 # OSS Hosted Split — Phase 5: Adapters And Reference App Implementation Plan
 
+> **Status: implemented on branch `oss-hosted-split-adapters-reference`, not yet merged.** Tasks 1–7 shipped: `@homeslate/adapters` (file + sqlite `DisplayStore`, `FileTokenStore`, sqlite `GoogleBindingStore`) and `apps/reference` (Hono API + Vite editor/kiosk host). The reference app typechecks on its own tsconfig solution (`npm run typecheck:reference`) and is outside the hosted `tsc -b`.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Add `@homeslate/adapters` (file + sqlite `DisplayStore`, file `TokenStore`, sqlite `GoogleBindingStore`) and a clone-and-run `apps/reference` that serves editor + display + optional calendar-on-a-wall.
@@ -133,7 +135,7 @@ export function createEmptyDisplayDocument(name?: string): DisplayDocument;
 export function assertValidDisplayDocument(raw: unknown): DisplayDocument;
 ```
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Create `packages/adapters/src/index.test.ts`:
 
@@ -235,13 +237,13 @@ describe('@homeslate/adapters host imports', () => {
 });
 ```
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 Run: `npx vitest run packages/adapters/src/index.test.ts`
 
 Expected: FAIL — cannot resolve `@homeslate/adapters`.
 
-- [ ] **Step 3: Create the package and wire resolution**
+- [x] **Step 3: Create the package and wire resolution**
 
 `packages/adapters/package.json`:
 
@@ -364,7 +366,7 @@ Add path aliases in `tsconfig.app.json`, `vite.config.ts`, and `vitest.config.ts
 
 Run `npm install` at the repo root so the workspace package links.
 
-- [ ] **Step 4: Run tests to verify they pass**
+- [x] **Step 4: Run tests to verify they pass**
 
 Run:
 
@@ -375,7 +377,7 @@ npx tsc -b --pretty false
 
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add package.json package-lock.json tsconfig.app.json vite.config.ts vitest.config.ts packages/adapters
@@ -407,7 +409,7 @@ export class FileDisplayStore implements DisplayStore {
 
 On-disk layout: `{dir}/{id}.json` containing a `DisplayRecord`. `getByPublicId` reads all JSON files. Writes are atomic (`writeFile` to `{id}.json.tmp` then `rename`). `put` on a missing id throws `DisplayNotFoundError`. `create` assigns `randomUUID()` for `id` and `publicId`. `remove` is a no-op if the file is missing. `list` returns `{ id, name: record.document.name }` sorted by name then id.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `packages/adapters/src/fileDisplayStore.test.ts`:
 
@@ -467,19 +469,19 @@ describe('FileDisplayStore', () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `npx vitest run packages/adapters/src/fileDisplayStore.test.ts`
 
 Expected: FAIL — `FileDisplayStore` not exported.
 
-- [ ] **Step 3: Implement FileDisplayStore**
+- [x] **Step 3: Implement FileDisplayStore**
 
 Use `node:fs/promises` (`readdir`, `readFile`, `writeFile`, `rename`, `mkdir`, `unlink`). Parse JSON as `DisplayRecord`. On read, run `assertValidDisplayDocument(record.document)` and replace `document` with the returned value (migrate-on-read). Skip files that are not `*.json`.
 
 Export `FileDisplayStore` from `index.ts`.
 
-- [ ] **Step 4: Run tests to verify they pass**
+- [x] **Step 4: Run tests to verify they pass**
 
 Run:
 
@@ -490,7 +492,7 @@ npx tsc -b --pretty false
 
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add packages/adapters
@@ -523,7 +525,7 @@ export class FileTokenStore implements TokenStore {
 
 On-disk: `{dir}/{accountId}.json` storing `GoogleTokens`. `getRefreshToken` returns `getTokens(accountId)?.refreshToken ?? null`. `deleteTokens` unlinks if present. Sanitize `accountId` so it cannot escape `dir` (reject `/`, `\\`, `..`).
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```ts
 import { mkdtemp, rm } from 'node:fs/promises';
@@ -564,23 +566,23 @@ describe('FileTokenStore', () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `npx vitest run packages/adapters/src/fileTokenStore.test.ts`
 
 Expected: FAIL — `FileTokenStore` not exported.
 
-- [ ] **Step 3: Implement FileTokenStore**
+- [x] **Step 3: Implement FileTokenStore**
 
 Export from `index.ts`.
 
-- [ ] **Step 4: Run tests to verify they pass**
+- [x] **Step 4: Run tests to verify they pass**
 
 Run: `npx vitest run packages/adapters && npx tsc -b --pretty false`
 
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add packages/adapters
@@ -640,7 +642,7 @@ Use `database.prepare(...).get / .all / .run`. JSON-serialize `document`. On rea
 
 Do not auto-bind `"local"` inside `SqliteDisplayStore.create` — that wiring belongs to the reference app (Task 5).
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Create `packages/adapters/src/sqliteDisplayStore.test.ts`:
 
@@ -731,23 +733,23 @@ describe('SqliteGoogleBindingStore', () => {
 });
 ```
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 Run: `npx vitest run packages/adapters/src/sqliteDisplayStore.test.ts packages/adapters/src/sqliteGoogleBindingStore.test.ts`
 
 Expected: FAIL — modules not found.
 
-- [ ] **Step 3: Implement sqlite helpers and stores**
+- [x] **Step 3: Implement sqlite helpers and stores**
 
 Export `openSqlite`, `SqliteDisplayStore`, `SqliteGoogleBindingStore` from `index.ts`.
 
-- [ ] **Step 4: Run tests to verify they pass**
+- [x] **Step 4: Run tests to verify they pass**
 
 Run: `npx vitest run packages/adapters && npx tsc -b --pretty false`
 
 Expected: PASS. If `node:sqlite` is missing, stop and report — do not silently switch to `better-sqlite3` without updating this plan.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add packages/adapters
@@ -824,7 +826,7 @@ OAuth: `scope=https://www.googleapis.com/auth/calendar&access_type=offline&promp
 
 Do not import Netlify, Neon, or `src/contexts/AuthContext`.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 `apps/reference/src/server/app.test.ts`:
 
@@ -897,13 +899,13 @@ describe('createReferenceApp', () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `npx vitest run apps/reference/src/server/app.test.ts`
 
 Expected: FAIL — `createReferenceApp` not found.
 
-- [ ] **Step 3: Implement the Hono app**
+- [x] **Step 3: Implement the Hono app**
 
 `apps/reference/package.json`:
 
@@ -942,13 +944,13 @@ Pin `hono` / `@hono/node-server` / `tsx` to whatever `npm install` resolves in t
 
 Add `@homeslate/adapters` to vitest aliases. Run `npm install` at root.
 
-- [ ] **Step 4: Run tests to verify they pass**
+- [x] **Step 4: Run tests to verify they pass**
 
 Run: `npx vitest run packages/adapters apps/reference && npx tsc -b --pretty false`
 
 Expected: PASS. If `tsc -b` does not include `apps/reference`, add `apps/reference/tsconfig.json` referenced from root `tsconfig.json`, or keep the app typechecked via `npx tsc -p apps/reference --pretty false` and record that command in this step.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add package.json package-lock.json vitest.config.ts tsconfig.app.json apps/reference packages/adapters
@@ -997,7 +999,7 @@ Source-scan test: `App.tsx` matches `from '@homeslate/editor'` and `from '@homes
 
 Do not require jsdom. Do not implement photo-upload blobs or pairing.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```ts
 import { readFileSync } from 'node:fs';
@@ -1017,17 +1019,17 @@ describe('reference web host', () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `npx vitest run apps/reference/src/web/App.test.ts`
 
 Expected: FAIL — `App.tsx` missing.
 
-- [ ] **Step 3: Implement the UI and listen entry**
+- [x] **Step 3: Implement the UI and listen entry**
 
 Keep chrome minimal: Mantine `AppShell` or a header with display name + “Open kiosk”. Debounce editor `PUT` at 400ms so typing does not hammer disk.
 
-- [ ] **Step 4: Run tests to verify they pass**
+- [x] **Step 4: Run tests to verify they pass**
 
 Run:
 
@@ -1040,7 +1042,7 @@ Expected: full suite green (previous 325 plus new adapter/reference tests).
 
 Manual smoke (human, not a merge blocker for this task’s automated tests): start API + Vite, open `/`, create/open editor, add a clock widget, reload, open `/d/:publicId` and see the clock.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add apps/reference package.json
@@ -1063,11 +1065,11 @@ EOF
 - Consumes: this plan’s path
 - Produces: docs that match shipped Phases 1–4 and in-progress Phase 5
 
-- [ ] **Step 1: Write the failing assertion**
+- [x] **Step 1: Write the failing assertion**
 
 Add `docs/superpowers/plans/phaseSeries.test.ts` only if you would otherwise have no test — **do not**. This task is docs-only; skip a fake test.
 
-- [ ] **Step 2: Update the documents**
+- [x] **Step 2: Update the documents**
 
 Spec extraction item 5: `Add packages/adapters and apps/reference.` → append `Plan: docs/superpowers/plans/2026-08-27-oss-hosted-split-adapters-reference.md`.
 
@@ -1075,17 +1077,17 @@ In all four prior plans plus this file’s series table, Phase 5 `Plan file` is 
 
 Spec Status blurb: Phase 5 plan written; implementation in progress until this plan’s tasks are checked off.
 
-- [ ] **Step 3: Confirm no leftover “Phase 5 | not written yet” in `docs/superpowers`**
+- [x] **Step 3: Confirm no leftover “Phase 5 | not written yet” in `docs/superpowers`**
 
 Run: `rg "not written yet" docs/superpowers`
 
 Expected: only Phase 6 rows.
 
-- [ ] **Step 4: Typecheck/tests still pass**
+- [x] **Step 4: Typecheck/tests still pass**
 
 Run: `npx vitest run && npx tsc -b --pretty false`
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add docs

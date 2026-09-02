@@ -2,7 +2,7 @@
 
 ## Status
 
-Phases 1–4 of the extraction sequence are done in this repo (`@homeslate/schema`, `@homeslate/google`, `@homeslate/widgets`, `@homeslate/editor`, `@homeslate/display`). The Vite app is still the hosted consumer. Phase 5 plan written; implementation in progress until this plan's tasks are checked off. Phase 6 (private hosted repo) is not started.
+Phases 1–5 of the extraction sequence are done in this repo (`@homeslate/schema`, `@homeslate/google`, `@homeslate/widgets`, `@homeslate/editor`, `@homeslate/display`, `@homeslate/adapters`, and `apps/reference`). The Vite app is still the hosted consumer. Phase 6 (private hosted repo) is not started and has no plan yet.
 
 ## Goal
 
@@ -334,7 +334,7 @@ Do this in the current repo. Do not greenfield-rewrite the app.
 2. **Done.** Move token exchange, refresh, and calendar/photos helpers into `packages/google`. Netlify functions become thin wrappers around `createGoogleClient`. Plan: `docs/superpowers/plans/2026-08-27-oss-hosted-split-google.md` (merged `611c0d0`).
 3. **Done.** Formalize `registerWidget()`. Move built-ins to `packages/widgets`. Plan: `docs/superpowers/plans/2026-08-27-oss-hosted-split-widgets.md` (merged `e222c35`).
 4. **Done.** Split UI into `packages/editor` and `packages/display`. The existing Vite app becomes a host that imports both (still one deployable while hosted lives here). Canvas is `@homeslate/display/canvas`. Host `dashboardStore` still uses `layouts` and converts at the package boundary. DisplayDetailPage setting toggles stay host chrome. Plan: `docs/superpowers/plans/2026-08-27-oss-hosted-split-editor-display.md` (merged `902e6c0`).
-5. Add `packages/adapters` and `apps/reference`. Plan: `docs/superpowers/plans/2026-08-27-oss-hosted-split-adapters-reference.md`.
+5. **Done** (on `oss-hosted-split-adapters-reference`, not yet merged). Add `packages/adapters` and `apps/reference`. Plan: `docs/superpowers/plans/2026-08-27-oss-hosted-split-adapters-reference.md`.
 6. Move auth, billing, Neon-specific functions, and entitlement checks into `apps/hosted`, then into `homeslate-hosted` (private) **before** this repository is made public.
 
 Until step 6, one private monorepo is the working tree. Public npm (or GitHub Packages) publish of `@homeslate/*` starts when hosted is a separate consumer; until then, workspace `workspace:*` dependencies are enough.
