@@ -1,10 +1,14 @@
+import { execFile } from 'node:child_process';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { promisify } from 'node:util';
 import { afterEach, describe, expect, it } from 'vitest';
 import { createEmptyDisplayDocument } from '@homeslate/adapters';
 import { DISPLAY_OWNER_SIGN_IN_MESSAGE } from '@homeslate/widgets';
 import { createReferenceApp } from './app';
+
+const execFileAsync = promisify(execFile);
 
 describe('createReferenceApp', () => {
   let dataDir = '';
@@ -63,5 +67,19 @@ describe('createReferenceApp', () => {
     expect(body.events).toEqual([]);
     expect(body.calendars).toEqual([]);
     expect(body.error).toBe(DISPLAY_OWNER_SIGN_IN_MESSAGE);
+  });
+
+  it('loads in the Node tsx runtime used by the reference server', async () => {
+    await expect(execFileAsync(
+      process.execPath,
+      [
+        '--import',
+        'tsx',
+        '--input-type=module',
+        '--eval',
+        "await import('./apps/reference/src/server/app.ts')",
+      ],
+      { cwd: process.cwd() },
+    )).resolves.toBeDefined();
   });
 });
