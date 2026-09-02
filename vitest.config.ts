@@ -27,6 +27,9 @@ export default defineConfig({
       "@homeslate/editor": fileURLToPath(
         new URL("./packages/editor/src/index.ts", import.meta.url)
       ),
+      "@homeslate/adapters": fileURLToPath(
+        new URL("./packages/adapters/src/index.ts", import.meta.url)
+      ),
     },
   },
   plugins: [react()],
@@ -40,6 +43,7 @@ export default defineConfig({
       "packages/widgets/src/**/*.test.ts",
       "packages/display/src/**/*.test.ts",
       "packages/editor/src/**/*.test.ts",
+      "packages/adapters/src/**/*.test.ts",
     ],
     globals: false,
     css: false,

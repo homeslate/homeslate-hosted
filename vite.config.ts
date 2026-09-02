@@ -28,6 +28,9 @@ export default defineConfig(() => ({
       '@homeslate/editor': fileURLToPath(
         new URL('./packages/editor/src/index.ts', import.meta.url)
       ),
+      '@homeslate/adapters': fileURLToPath(
+        new URL('./packages/adapters/src/index.ts', import.meta.url)
+      ),
     },
   },
   build: {
