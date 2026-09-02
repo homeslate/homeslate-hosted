@@ -106,10 +106,11 @@ export function HomePage() {
             <dt>Google Calendar</dt>
             <dd>
               Reads the calendars you choose so Calendar widgets can show upcoming
-              events on your wall displays. We store a refresh token on our
-              servers so a registered display can keep fetching events after you
-              close the browser you signed in on. We do not sell calendar data
-              or use it for advertising.
+              events on your wall displays, and lets you create, edit, or delete
+              events from the display. We store a refresh token on our servers so
+              a registered display can keep fetching events after you close the
+              browser you signed in on. We do not sell calendar data or use it for
+              advertising.
             </dd>
           </div>
           <div>

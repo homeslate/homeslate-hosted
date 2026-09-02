@@ -7,10 +7,7 @@ import {
   useRef,
   type ReactNode,
 } from 'react';
-
-// Scopes: identity info + Google Calendar + Google Photos Picker access
-const SCOPES =
-  'openid email profile https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/photospicker.mediaitems.readonly';
+import { GOOGLE_OAUTH_SCOPES } from '../googleOAuthScopes';
 
 // Reuse the same storage keys as the legacy calendar service so the
 // Calendar widget picks up the shared token without any changes.
@@ -259,7 +256,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       const client = oauth2.initCodeClient({
         client_id: clientId,
-        scope: SCOPES,
+        scope: GOOGLE_OAUTH_SCOPES,
         ux_mode: 'popup',
         callback: async (response) => {
           if (response.error) {
