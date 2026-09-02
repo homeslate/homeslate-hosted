@@ -31,3 +31,6 @@ dist-ssr
 
 # Git worktrees
 .worktrees/
+
+# Reference app local sqlite and tokens
+apps/reference/data
