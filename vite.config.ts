@@ -19,6 +19,15 @@ export default defineConfig(() => ({
       '@homeslate/widgets': fileURLToPath(
         new URL('./packages/widgets/src/index.ts', import.meta.url)
       ),
+      '@homeslate/display/canvas': fileURLToPath(
+        new URL('./packages/display/src/canvas/index.ts', import.meta.url)
+      ),
+      '@homeslate/display': fileURLToPath(
+        new URL('./packages/display/src/index.ts', import.meta.url)
+      ),
+      '@homeslate/editor': fileURLToPath(
+        new URL('./packages/editor/src/index.ts', import.meta.url)
+      ),
     },
   },
   build: {

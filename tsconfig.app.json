@@ -29,8 +29,11 @@
       "@homeslate/schema": ["packages/schema/src/index.ts"],
       "@homeslate/google": ["packages/google/src/index.ts"],
       "@homeslate/widgets": ["packages/widgets/src/index.ts"],
-      "@homeslate/widgets/schemas": ["packages/widgets/src/schemas.ts"]
+      "@homeslate/widgets/schemas": ["packages/widgets/src/schemas.ts"],
+      "@homeslate/display/canvas": ["packages/display/src/canvas/index.ts"],
+      "@homeslate/display": ["packages/display/src/index.ts"],
+      "@homeslate/editor": ["packages/editor/src/index.ts"]
     }
   },
-  "include": ["src", "packages/schema/src", "packages/google/src", "packages/widgets/src"]
+  "include": ["src", "packages/schema/src", "packages/google/src", "packages/widgets/src", "packages/display/src", "packages/editor/src"]
 }
