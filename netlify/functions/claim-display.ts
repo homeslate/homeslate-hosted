@@ -5,7 +5,7 @@ import {
   users,
   displays,
   displayPairing,
-} from '../../src/db';
+} from '../../apps/hosted/src/db';
 import { AUTH_JSON_HEADERS, errorResponse, optionsResponse } from './_shared/http';
 import { requireGoogleId } from './_shared/googleAuth';
 

@@ -1,8 +1,8 @@
 import type { Handler } from '@netlify/functions';
 import { createHash } from 'crypto';
 import { eq } from 'drizzle-orm';
-import { getDb, displayConfigs, displays } from '../../src/db';
-import { readStoredConfig } from '../../src/displayDocumentBridge';
+import { getDb, displayConfigs, displays } from '../../apps/hosted/src/db';
+import { readStoredConfig } from '../../apps/hosted/src/displayDocumentBridge';
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',

@@ -1,6 +1,6 @@
 import type { Handler } from '@netlify/functions';
 import { and, eq, sql } from 'drizzle-orm';
-import { getDb, users, displays, displayCollaborators, displayInvites } from '../../src/db';
+import { getDb, users, displays, displayCollaborators, displayInvites } from '../../apps/hosted/src/db';
 import { AUTH_JSON_HEADERS, errorResponse, jsonResponse, optionsResponse } from './_shared/http';
 import { verifyGoogleToken } from './_shared/googleAuth';
 

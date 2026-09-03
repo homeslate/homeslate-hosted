@@ -7,8 +7,8 @@ import {
   displays,
   displayConfigs,
   displayCollaborators,
-} from '../../src/db';
-import { readStoredConfig } from '../../src/displayDocumentBridge';
+} from '../../apps/hosted/src/db';
+import { readStoredConfig } from '../../apps/hosted/src/displayDocumentBridge';
 import { AUTH_JSON_HEADERS, errorResponse, jsonResponse, optionsResponse } from './_shared/http';
 import { requireGoogleId } from './_shared/googleAuth';
 

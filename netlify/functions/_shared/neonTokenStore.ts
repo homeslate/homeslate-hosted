@@ -1,6 +1,6 @@
 import { eq } from 'drizzle-orm';
 import type { TokenStore } from '@homeslate/google';
-import { getDb, users } from '../../../src/db';
+import { getDb, users } from '../../../apps/hosted/src/db';
 
 type Db = ReturnType<typeof getDb>;
 

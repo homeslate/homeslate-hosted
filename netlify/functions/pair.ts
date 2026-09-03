@@ -1,6 +1,6 @@
 import type { Handler } from '@netlify/functions';
 import { eq } from 'drizzle-orm';
-import { getDb, displayPairing } from '../../src/db';
+import { getDb, displayPairing } from '../../apps/hosted/src/db';
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',

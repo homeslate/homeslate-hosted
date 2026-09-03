@@ -7,7 +7,7 @@ import {
   type CalendarEvent,
   type CalendarListItem,
 } from '@homeslate/google';
-import { getDb, displays, users, displayCollaborators } from '../../src/db';
+import { getDb, displays, users, displayCollaborators } from '../../apps/hosted/src/db';
 import {
   classifyRefreshFailure,
   describeTokenRow,
@@ -17,7 +17,7 @@ import {
   normalizeTokenRow,
   summarizeTokenCandidates,
   type TokenCandidate,
-} from '../../src/services/displayCalendarAuth';
+} from '../../apps/hosted/src/services/displayCalendarAuth';
 import { DISPLAY_GOOGLE_RECONNECT_MESSAGE } from '../../packages/widgets/src/widgets/googleCalendarError';
 import { createHostedGoogleClient } from './_shared/googleClient';
 import { createNeonTokenStore } from './_shared/neonTokenStore';
