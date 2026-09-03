@@ -4,8 +4,10 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
-    "typecheck": "tsc -p tsconfig.json --pretty false",
-    "test": "vitest run"
+    "build": "npm run typecheck && vite build",
+    "typecheck": "cd ../.. && tsc -b --pretty false",
+    "preview": "vite preview",
+    "test": "cd ../.. && vitest",
+    "test:run": "cd ../.. && vitest run"
   }
 }
