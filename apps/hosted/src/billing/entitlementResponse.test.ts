@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { EntitlementError } from '../../src/billing/entitlementError';
-import { AUTH_JSON_HEADERS, entitlementResponse } from './_shared/http';
+import { EntitlementError } from './entitlementError';
+import { AUTH_JSON_HEADERS, entitlementResponse } from '../../netlify/functions/_shared/http';
 
 describe('entitlementResponse', () => {
   it('returns 403 with error and code', () => {
