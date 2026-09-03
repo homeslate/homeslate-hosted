@@ -1,7 +1,7 @@
 # OSS / Hosted Split — Phase 6: `apps/hosted` carve & repo split order
 
 ## Status
-Proposed. Awaiting human review before implementation.
+Phase 6a complete (merged `602983d`). Phases 6b–6c proposed — see `2026-09-03-oss-hosted-split-phase-6b-6c-design.md`.
 
 ## Goal
 Move the remaining **hosted app** (management UI + auth/billing glue + Netlify/Neon server code + entitlement checks) behind a new `apps/hosted` boundary inside this repository, without changing hosted behavior.
@@ -40,13 +40,16 @@ Introduce a hosted-only entitlement error type and enforcement hook at the hoste
 ### Step 3: UI upgrade handling
 Update the hosted management chrome to catch entitlement failures and show the upgrade UI state.
 
-## Repo split order decision
-This spec deviates from the original Phase 6 wording that emphasized “split hosted into `homeslate-hosted` (private repo)”.
+## Repo split order decision (updated after 6a)
+Approved sequence:
 
-Instead:
-- Keep hosted code in this repo for now (Netlify remains configured here).
-- Move **OSS packages** into a separate public repo after `apps/hosted` carve + merge.
-- The private hosted repo split (`homeslate-hosted`) can be done later once the OSS repo is separated.
+1. **6a (done):** carve `apps/hosted` in this repo.
+2. **6b:** extract OSS to temporary `homeslate-oss`, publish `@homeslate/*` to npm, switch hosted to npm deps, delete local `packages/`.
+3. **6c:** rename this repo `homeslate` → `homeslate-hosted`, then `homeslate-oss` → `homeslate`.
+
+Netlify stays on the hosted repo through 6b; renames in 6c are cosmetic once npm boundary is proven.
+
+See: `docs/superpowers/plans/2026-09-03-oss-hosted-split-phase-6b-oss-extract-npm.md` and `docs/superpowers/plans/2026-09-03-oss-hosted-split-phase-6c-repo-renames.md`.
 
 ## Success criteria (Phase 6 carve merge)
 - `main` still builds/tests successfully after `apps/hosted` is merged.
