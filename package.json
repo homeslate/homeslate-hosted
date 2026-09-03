@@ -1,16 +1,16 @@
 {
   "name": "homeslate",
   "private": true,
-  "workspaces": ["packages/*", "apps/*"],
+  "workspaces": [
+    "apps/hosted"
+  ],
   "version": "0.0.0",
   "type": "module",
   "scripts": {
     "dev": "npm run dev -w homeslate-hosted",
-    "dev:reference": "npm run dev -w homeslate-reference",
     "dev:netlify": "netlify dev",
     "build": "npm run build -w homeslate-hosted",
     "typecheck": "npm run typecheck -w homeslate-hosted",
-    "typecheck:reference": "tsc -b apps/reference --pretty false",
     "postbuild": "node scripts/write-redirects.mjs",
     "lint": "eslint .",
     "preview": "npm run preview -w homeslate-hosted",
@@ -28,6 +28,12 @@
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
     "@emotion/react": "^11.14.0",
+    "@homeslate/adapters": "^0.1.0",
+    "@homeslate/display": "^0.1.0",
+    "@homeslate/editor": "^0.1.0",
+    "@homeslate/google": "^0.1.0",
+    "@homeslate/schema": "^0.1.0",
+    "@homeslate/widgets": "^0.1.0",
     "@mantine/core": "^8.3.10",
     "@mantine/dates": "^8.3.10",
     "@mantine/hooks": "^8.3.10",
@@ -64,9 +70,9 @@
     "postcss": "^8.5.6",
     "postcss-preset-mantine": "^1.18.0",
     "postcss-simple-vars": "^7.0.1",
+    "tsup": "^8.5.0",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.46.4",
-    "tsup": "^8.5.0",
     "vite": "^7.2.4",
     "vite-plugin-pwa": "^1.2.0",
     "vitest": "^3.2.4"
