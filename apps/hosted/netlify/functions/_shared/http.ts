@@ -1,3 +1,5 @@
+import { EntitlementError } from '../../../src/billing/entitlementError';
+
 type JsonRecord = Record<string, unknown>;
 
 export type HttpHeaders = Record<string, string>;
@@ -37,4 +39,15 @@ export function errorResponse(
   details?: JsonRecord
 ): { statusCode: number; headers: HttpHeaders; body: string } {
   return jsonResponse(statusCode, { error: message, ...(details ?? {}) }, headers);
+}
+
+export function entitlementResponse(
+  err: EntitlementError,
+  headers: HttpHeaders
+): { statusCode: number; headers: HttpHeaders; body: string } {
+  return {
+    statusCode: 403,
+    headers,
+    body: JSON.stringify({ error: err.message, code: err.code }),
+  };
 }
