@@ -59,7 +59,7 @@ npm run db:migrate:prod
 
 Requires `DATABASE_URL_PROD` in `.env.local`. Without migration `0003`, sign-in fails with 401 because `exchange-code` reads billing columns on `users`.
 
-## 7. Deploy after env changes
+## 6. Deploy after env changes
 
 Netlify applies function env vars on the next deploy. **`VITE_*` variables are build-time only** — trigger **Deploy site** after setting them so the Upgrade modal enables Checkout.
 
@@ -72,7 +72,7 @@ curl -sS -o /dev/null -w "%{http_code}\n" -X POST https://homeslate.dev/api/bill
 
 Expect `400` (missing signature) or `500` (secret not loaded yet) — **not** `404`.
 
-## 6. Smoke test
+## 7. Smoke test
 
 1. Sign in as free user → hit display/view limit → Upgrade → Stripe Checkout (test card `4242…`)
 2. After redirect, confirm `users.plan = 'pro'` in Neon
