@@ -1,11 +1,11 @@
 import type { Handler } from '@netlify/functions';
 import type Stripe from 'stripe';
-import { getDb } from '../../../src/db';
-import { getStripe, rawWebhookBody } from '../../../src/billing/stripe';
+import { getDb } from '../../src/db';
+import { getStripe, rawWebhookBody } from '../../src/billing/stripe';
 import {
   applySubscriptionToUser,
   resolveSubscriptionUserId,
-} from '../../../src/billing/syncSubscription';
+} from '../../src/billing/syncSubscription';
 
 function subscriptionDataFromStripe(subscription: Stripe.Subscription, customerId: string) {
   const priceId = subscription.items.data[0]?.price?.id ?? null;

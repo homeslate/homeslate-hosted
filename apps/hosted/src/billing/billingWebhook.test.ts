@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { handler } from './webhook';
+import { handler } from '../../netlify/functions/billing-webhook';
 
 describe('POST /api/billing/webhook', () => {
   const env = process.env;

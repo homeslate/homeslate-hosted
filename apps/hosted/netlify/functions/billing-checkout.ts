@@ -1,16 +1,16 @@
 import { eq } from 'drizzle-orm';
 import type { Handler } from '@netlify/functions';
-import { getDb, users } from '../../../src/db';
+import { getDb, users } from '../../src/db';
 import {
   isAllowedPriceId,
   getStripe,
   billingCancelUrl,
   billingSuccessUrl,
   buildCheckoutSessionParams,
-} from '../../../src/billing/stripe';
-import { shouldOpenPortalInsteadOfCheckout } from '../../../src/billing/syncSubscription';
-import { AUTH_JSON_HEADERS, errorResponse, jsonResponse, optionsResponse } from '../_shared/http';
-import { requireGoogleId } from '../_shared/googleAuth';
+} from '../../src/billing/stripe';
+import { shouldOpenPortalInsteadOfCheckout } from '../../src/billing/syncSubscription';
+import { AUTH_JSON_HEADERS, errorResponse, jsonResponse, optionsResponse } from './_shared/http';
+import { requireGoogleId } from './_shared/googleAuth';
 
 export const handler: Handler = async (event) => {
   if (event.httpMethod === 'OPTIONS') {
@@ -56,8 +56,12 @@ export const handler: Handler = async (event) => {
         user.stripeCustomerId
       )
     ) {
+      const customerId = user.stripeCustomerId;
+      if (!customerId) {
+        return errorResponse(500, 'Missing Stripe customer', AUTH_JSON_HEADERS);
+      }
       const portal = await stripe.billingPortal.sessions.create({
-        customer: user.stripeCustomerId,
+        customer: customerId,
         return_url: billingSuccessUrl(origin),
       });
       if (!portal.url) {

@@ -300,6 +300,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             });
 
             if (!res.ok) {
+              const body = await res.text().catch(() => '');
+              console.error('Failed to exchange authorization code:', res.status, body);
               throw new Error('Failed to exchange authorization code');
             }
 

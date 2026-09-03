@@ -1,9 +1,9 @@
 import { eq } from 'drizzle-orm';
 import type { Handler } from '@netlify/functions';
-import { getDb, users } from '../../../src/db';
-import { getStripe, billingSuccessUrl } from '../../../src/billing/stripe';
-import { AUTH_JSON_HEADERS, errorResponse, jsonResponse, optionsResponse } from '../_shared/http';
-import { requireGoogleId } from '../_shared/googleAuth';
+import { getDb, users } from '../../src/db';
+import { getStripe, billingSuccessUrl } from '../../src/billing/stripe';
+import { AUTH_JSON_HEADERS, errorResponse, jsonResponse, optionsResponse } from './_shared/http';
+import { requireGoogleId } from './_shared/googleAuth';
 
 export const handler: Handler = async (event) => {
   if (event.httpMethod === 'OPTIONS') {

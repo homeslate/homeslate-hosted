@@ -28,7 +28,7 @@ Operator checklist for Homeslate hosted billing in **test mode** before producti
 ## 3. Webhook endpoint
 
 1. Stripe Dashboard → Developers → Webhooks → Add endpoint
-2. URL: `https://<your-site>/.netlify/functions/billing/webhook`
+2. URL: `https://<your-site>/api/billing/webhook` (or `https://<your-site>/.netlify/functions/billing-webhook`)
 3. Events:
    - `checkout.session.completed`
    - `customer.subscription.updated`
@@ -38,18 +38,39 @@ Operator checklist for Homeslate hosted billing in **test mode** before producti
 ## 4. Local webhook testing
 
 ```bash
-stripe listen --forward-to localhost:8888/.netlify/functions/billing/webhook
+stripe listen --forward-to localhost:8888/.netlify/functions/billing-webhook
 ```
 
 Use the CLI webhook secret in `.env.local` as `STRIPE_WEBHOOK_SECRET`.
 
 ## 5. Database
 
-Apply the Stripe unique indexes if they are not on the branch yet:
+Apply migrations locally:
 
 ```bash
 npm run db:migrate
 ```
+
+**Production:** run before or immediately after deploying billing code:
+
+```bash
+npm run db:migrate:prod
+```
+
+Requires `DATABASE_URL_PROD` in `.env.local`. Without migration `0003`, sign-in fails with 401 because `exchange-code` reads billing columns on `users`.
+
+## 7. Deploy after env changes
+
+Netlify applies function env vars on the next deploy. **`VITE_*` variables are build-time only** — trigger **Deploy site** after setting them so the Upgrade modal enables Checkout.
+
+Verify billing functions respond (not 404):
+
+```bash
+curl -sS -o /dev/null -w "%{http_code}\n" -X POST https://homeslate.dev/api/billing/webhook \
+  -H "Content-Type: application/json" -d '{}'
+```
+
+Expect `400` (missing signature) or `500` (secret not loaded yet) — **not** `404`.
 
 ## 6. Smoke test
 
