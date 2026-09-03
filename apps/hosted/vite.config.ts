@@ -85,6 +85,8 @@ export default defineConfig(() => ({
         maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
         // Pre-cache all built assets
         globPatterns: ['**/*.{js,css,html,ico,png,svg,webp,woff,woff2}'],
+        // API routes are proxied to Netlify functions — never cache or intercept them.
+        navigateFallbackDenylist: [/^\/api\//],
         runtimeCaching: [
           {
             // Weather API — short cache, fall back to stale data if offline
