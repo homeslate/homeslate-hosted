@@ -5,7 +5,14 @@ import { mkdir, writeFile } from 'node:fs/promises'
 await mkdir('dist', { recursive: true })
 await writeFile(
   'dist/_redirects',
-  ['/api/*  /.netlify/functions/:splat  200', '/*    /index.html  200', ''].join('\n'),
+  [
+    '/api/billing/checkout  /.netlify/functions/billing-checkout  200',
+    '/api/billing/portal    /.netlify/functions/billing-portal    200',
+    '/api/billing/webhook   /.netlify/functions/billing-webhook   200',
+    '/api/*  /.netlify/functions/:splat  200',
+    '/*    /index.html  200',
+    '',
+  ].join('\n'),
 )
 // GIS popup OAuth needs same-origin-allow-popups on static HTML (belt-and-suspenders
 // alongside netlify.toml [[headers]] — ensures COOP even if toml headers are skipped).

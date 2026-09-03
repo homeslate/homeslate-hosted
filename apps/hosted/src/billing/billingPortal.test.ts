@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { handler } from './checkout';
+import { handler } from '../../netlify/functions/billing-portal';
 
-describe('POST /api/billing/checkout', () => {
+describe('POST /api/billing/portal', () => {
   it('returns 401 without a bearer token', async () => {
     const response = await handler(
-      { httpMethod: 'POST', headers: {}, body: JSON.stringify({ priceId: 'price_m' }) } as never,
+      { httpMethod: 'POST', headers: {}, body: '{}' } as never,
       {} as never
     );
 
