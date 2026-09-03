@@ -1,10 +1,25 @@
 {
   "name": "@homeslate/adapters",
-  "version": "0.0.0",
-  "private": true,
+  "version": "0.1.0",
+  "license": "MIT",
   "type": "module",
   "engines": { "node": ">=22.13" },
-  "exports": { ".": "./src/index.ts" },
+  "publishConfig": { "access": "public" },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/homeslate/homeslate-oss.git"
+  },
+  "files": ["dist"],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsup src/index.ts --format esm --dts --clean --tsconfig tsconfig.json",
+    "prepublishOnly": "npm run build"
+  },
   "dependencies": {
     "@homeslate/google": "*",
     "@homeslate/schema": "*",
