@@ -17,13 +17,13 @@
     }
   },
   "scripts": {
-    "build": "tsup src/index.ts --format esm --dts --clean --tsconfig tsconfig.json",
+    "build": "tsup src/index.ts --format esm --dts --clean --tsconfig tsconfig.json && node -e \"import fs from 'node:fs'; const p='dist/index.js'; fs.writeFileSync(p, fs.readFileSync(p,'utf8').replaceAll('from \\\"sqlite\\\"','from \\\"node:sqlite\\\"'));\"",
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
-    "@homeslate/google": "*",
-    "@homeslate/schema": "*",
-    "@homeslate/widgets": "*",
+    "@homeslate/google": "0.1.0",
+    "@homeslate/schema": "0.1.0",
+    "@homeslate/widgets": "0.1.0",
     "uuid": "^13.0.0"
   }
 }

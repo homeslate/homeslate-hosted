@@ -20,9 +20,9 @@
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
-    "@homeslate/display": "*",
-    "@homeslate/schema": "*",
-    "@homeslate/widgets": "*",
+    "@homeslate/display": "0.1.0",
+    "@homeslate/schema": "0.1.0",
+    "@homeslate/widgets": "0.1.0",
     "@mantine/core": "^8.3.10",
     "@tabler/icons-react": "^3.35.0",
     "uuid": "^13.0.0"

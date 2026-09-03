@@ -17,8 +17,17 @@ describe('@homeslate/widgets', () => {
       readFileSync(new URL('../package.json', import.meta.url), 'utf8'),
     ) as { exports: Record<string, unknown> };
 
-    expect(manifest.exports['.']).toBe('./src/index.ts');
-    expect(manifest.exports['./server']).toBe('./src/server.ts');
-    expect(manifest.exports['./schemas']).toBe('./src/schemas.ts');
+    expect(manifest.exports['.']).toEqual({
+      types: './dist/index.d.ts',
+      import: './dist/index.js',
+    });
+    expect(manifest.exports['./server']).toEqual({
+      types: './dist/server.d.ts',
+      import: './dist/server.js',
+    });
+    expect(manifest.exports['./schemas']).toEqual({
+      types: './dist/schemas.d.ts',
+      import: './dist/schemas.js',
+    });
   });
 });
