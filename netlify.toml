@@ -1,21 +1,13 @@
 [build]
-  command = "npm run build -w homeslate-hosted"
+  command = "npm run build -w homeslate-hosted && node scripts/write-redirects.mjs"
   publish = "dist"
 
 [functions]
   directory = "apps/hosted/netlify/functions"
   node_bundler = "esbuild"
-  # Bundle-time: esbuild can't resolve workspace-hoisted @homeslate/* from its serve cwd.
-  # Runtime: postinstall adds require/default exports so Lambda's require() can load them.
-  external_node_modules = [
-    "@homeslate/adapters",
-    "@homeslate/display",
-    "@homeslate/editor",
-    "@homeslate/google",
-    "@homeslate/schema",
-    "@homeslate/widgets",
-    "stripe",
-  ]
+  # @homeslate/* are ESM-only; bundling inlines them into CJS function output.
+  # Stripe stays external — it ships dual CJS/ESM and is large.
+  external_node_modules = ["stripe"]
 
 [dev]
   command = "npm run dev"

@@ -7,3 +7,9 @@ await writeFile(
   'dist/_redirects',
   ['/api/*  /.netlify/functions/:splat  200', '/*    /index.html  200', ''].join('\n'),
 )
+// GIS popup OAuth needs same-origin-allow-popups on static HTML (belt-and-suspenders
+// alongside netlify.toml [[headers]] — ensures COOP even if toml headers are skipped).
+await writeFile(
+  'dist/_headers',
+  ['/*', '  Cross-Origin-Opener-Policy: same-origin-allow-popups', ''].join('\n'),
+)
