@@ -56,8 +56,12 @@ export const handler: Handler = async (event) => {
         user.stripeCustomerId
       )
     ) {
+      const customerId = user.stripeCustomerId;
+      if (!customerId) {
+        return errorResponse(500, 'Missing Stripe customer', AUTH_JSON_HEADERS);
+      }
       const portal = await stripe.billingPortal.sessions.create({
-        customer: user.stripeCustomerId,
+        customer: customerId,
         return_url: billingSuccessUrl(origin),
       });
       if (!portal.url) {
