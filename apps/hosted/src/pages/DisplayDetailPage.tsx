@@ -63,6 +63,7 @@ import { CSS } from '@dnd-kit/utilities';
 import { v4 as uuidv4 } from 'uuid';
 import { ShareDisplayModal } from '../components/ShareDisplayModal';
 import { InviteModal } from '../components/InviteModal';
+import { UpgradeModal } from '../components/UpgradeModal';
 import { useAuth } from '../contexts/AuthContext';
 import { useDashboardStore } from '../store/dashboardStore';
 import { ThemeEditor } from '@homeslate/editor';
@@ -368,6 +369,7 @@ export function DisplayDetailPage() {
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [newViewOpen, setNewViewOpen] = useState(false);
   const [newViewName, setNewViewName] = useState('New View');
+  const [upgradeOpen, setUpgradeOpen] = useState(false);
   const [activePage, setActivePage] = useState<ManagementPage>('views');
 
   const sensors = useSensors(
@@ -382,6 +384,14 @@ export function DisplayDetailPage() {
   );
 
   if (!display) return null;
+
+  const handleConfigError = (err: unknown) => {
+    if (err instanceof ApiError && err.code === 'view_limit') {
+      setUpgradeOpen(true);
+      return;
+    }
+    console.error(err);
+  };
 
   const saveConfig = (overrides: Partial<typeof display> = {}) => {
     if (!accessToken) return;
@@ -422,7 +432,16 @@ export function DisplayDetailPage() {
         query: { displayId: display.id },
         body: payload,
       })
-      .catch(console.error);
+      .catch(handleConfigError);
+  };
+
+  const commitNewView = () => {
+    const trimmed = newViewName.trim();
+    if (!trimmed) return;
+    createLayout(trimmed);
+    const updated = useDashboardStore.getState().displays.find((d) => d.id === display.id);
+    if (updated) saveConfig({ layouts: updated.layouts });
+    setNewViewOpen(false);
   };
 
   const handleRename = async () => {
@@ -545,6 +564,7 @@ export function DisplayDetailPage() {
         accessToken={accessToken}
       />
     )}
+    <UpgradeModal opened={upgradeOpen} onClose={() => setUpgradeOpen(false)} />
 
     {/* Alert: cannot delete last view */}
     <Modal
@@ -597,8 +617,7 @@ export function DisplayDetailPage() {
         onChange={(e) => setNewViewName(e.currentTarget.value)}
         onKeyDown={(e) => {
           if (e.key === 'Enter' && newViewName.trim()) {
-            createLayout(newViewName.trim());
-            setNewViewOpen(false);
+            commitNewView();
           }
           if (e.key === 'Escape') setNewViewOpen(false);
         }}
@@ -609,12 +628,7 @@ export function DisplayDetailPage() {
         <Button variant="default" onClick={() => setNewViewOpen(false)}>Cancel</Button>
         <Button
           disabled={!newViewName.trim()}
-          onClick={() => {
-            if (newViewName.trim()) {
-              createLayout(newViewName.trim());
-              setNewViewOpen(false);
-            }
-          }}
+          onClick={commitNewView}
         >
           Create
         </Button>

@@ -30,7 +30,8 @@ import { useAuth } from '../contexts/AuthContext';
 import { useDashboardStore } from '../store/dashboardStore';
 import { ShareDisplayModal } from '../components/ShareDisplayModal';
 import { RegisterDeviceModal } from '../components/RegisterDeviceModal';
-import { apiClient } from '../services/apiClient';
+import { UpgradeModal } from '../components/UpgradeModal';
+import { apiClient, ApiError } from '../services/apiClient';
 import type { DisplayDto, DisplayRenameRequest } from '../types/api';
 import classes from './DisplayListPage.module.css';
 
@@ -45,6 +46,7 @@ export function DisplayListPage() {
   const [renameDisplayId, setRenameDisplayId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState('');
   const [renaming, setRenaming] = useState(false);
+  const [upgradeOpen, setUpgradeOpen] = useState(false);
 
   const handleNewDisplay = async () => {
     const name = prompt('Display name:', 'Homeslate');
@@ -60,7 +62,11 @@ export function DisplayListPage() {
       );
       addDisplay(row.id, row.display_id, row.name);
     } catch (err) {
-      console.error('Failed to create display:', err);
+      if (err instanceof ApiError && err.code === 'display_limit') {
+        setUpgradeOpen(true);
+      } else {
+        console.error('Failed to create display:', err);
+      }
     } finally {
       setCreating(false);
     }
@@ -123,6 +129,7 @@ export function DisplayListPage() {
       accessToken={accessToken ?? ''}
       addDisplay={addDisplay}
     />
+    <UpgradeModal opened={upgradeOpen} onClose={() => setUpgradeOpen(false)} />
     <Modal
       opened={renameDisplayId !== null}
       onClose={closeRenameModal}

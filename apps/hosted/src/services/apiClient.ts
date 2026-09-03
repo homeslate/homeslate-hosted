@@ -6,6 +6,7 @@ export class ApiError extends Error {
   readonly status: number;
   readonly url: string;
   readonly details?: unknown;
+  readonly code?: string;
 
   constructor(message: string, status: number, url: string, details?: unknown) {
     super(message);
@@ -13,6 +14,12 @@ export class ApiError extends Error {
     this.status = status;
     this.url = url;
     this.details = details;
+    if (details && typeof details === 'object') {
+      const record = details as Record<string, unknown>;
+      if (typeof record.code === 'string') {
+        this.code = record.code;
+      }
+    }
   }
 }
 
