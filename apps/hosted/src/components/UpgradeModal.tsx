@@ -11,7 +11,7 @@ interface Props {
 
 export function UpgradeModal({ opened, onClose }: Props) {
   const { accessToken } = useAuth();
-  const { startCheckout, loading } = useBillingActions(accessToken);
+  const { startCheckout, loading, error } = useBillingActions(accessToken);
   const prices = getCheckoutPriceIds();
   const defaultPrice = prices.monthly ?? prices.annual ?? '';
   const [priceId, setPriceId] = useState(defaultPrice);
@@ -55,6 +55,11 @@ export function UpgradeModal({ opened, onClose }: Props) {
               )}
             </Stack>
           </Radio.Group>
+        )}
+        {error && (
+          <Text size="sm" c="red">
+            {error}
+          </Text>
         )}
         <Group justify="flex-end" gap="sm" mt="xs">
           <Button variant="default" onClick={onClose} disabled={loading}>

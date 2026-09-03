@@ -1,11 +1,10 @@
 import type { Handler } from '@netlify/functions';
 import type Stripe from 'stripe';
 import { getDb } from '../../../src/db';
-import { getStripe } from '../../../src/billing/stripe';
+import { getStripe, rawWebhookBody } from '../../../src/billing/stripe';
 import {
   applySubscriptionToUser,
-  findUserIdByStripeCustomerId,
-  findUserIdByStripeSubscriptionId,
+  resolveSubscriptionUserId,
 } from '../../../src/billing/syncSubscription';
 
 function subscriptionDataFromStripe(subscription: Stripe.Subscription, customerId: string) {
@@ -28,12 +27,7 @@ async function syncCheckoutSession(session: Stripe.Checkout.Session): Promise<vo
       : session.subscription?.id;
 
   if (!userId || !customerId || !subscriptionId) {
-    console.warn('[billing/webhook] checkout.session.completed missing linkage fields', {
-      userId,
-      customerId,
-      subscriptionId,
-    });
-    return;
+    throw new Error('checkout.session.completed missing linkage fields');
   }
 
   const stripe = getStripe();
@@ -42,22 +36,27 @@ async function syncCheckoutSession(session: Stripe.Checkout.Session): Promise<vo
   await applySubscriptionToUser(db, userId, subscriptionDataFromStripe(subscription, customerId));
 }
 
-async function syncSubscriptionEvent(subscription: Stripe.Subscription): Promise<void> {
+async function syncSubscriptionEvent(
+  subscription: Stripe.Subscription,
+  options?: { clearSubscription?: boolean }
+): Promise<void> {
   const customerId =
     typeof subscription.customer === 'string' ? subscription.customer : subscription.customer.id;
 
   const db = getDb();
-  let userId = await findUserIdByStripeSubscriptionId(db, subscription.id);
-  if (!userId) {
-    userId = await findUserIdByStripeCustomerId(db, customerId);
-  }
+  const userId = await resolveSubscriptionUserId(db, subscription);
 
   if (!userId) {
     console.warn('[billing/webhook] no user for subscription', subscription.id);
     return;
   }
 
-  await applySubscriptionToUser(db, userId, subscriptionDataFromStripe(subscription, customerId));
+  await applySubscriptionToUser(
+    db,
+    userId,
+    subscriptionDataFromStripe(subscription, customerId),
+    options
+  );
 }
 
 export const handler: Handler = async (event) => {
@@ -72,14 +71,15 @@ export const handler: Handler = async (event) => {
   }
 
   const signature = event.headers['stripe-signature'] ?? event.headers['Stripe-Signature'];
-  if (!signature || !event.body) {
+  const body = rawWebhookBody({ body: event.body ?? null, isBase64Encoded: event.isBase64Encoded });
+  if (!signature || !body) {
     return { statusCode: 400, body: 'Missing signature or body' };
   }
 
   let stripeEvent: Stripe.Event;
   try {
     const stripe = getStripe();
-    stripeEvent = stripe.webhooks.constructEvent(event.body, signature, webhookSecret);
+    stripeEvent = stripe.webhooks.constructEvent(body, signature, webhookSecret);
   } catch (err) {
     console.error('[billing/webhook] signature verification failed:', err);
     return { statusCode: 400, body: 'Invalid signature' };
@@ -91,8 +91,12 @@ export const handler: Handler = async (event) => {
         await syncCheckoutSession(stripeEvent.data.object as Stripe.Checkout.Session);
         break;
       case 'customer.subscription.updated':
-      case 'customer.subscription.deleted':
         await syncSubscriptionEvent(stripeEvent.data.object as Stripe.Subscription);
+        break;
+      case 'customer.subscription.deleted':
+        await syncSubscriptionEvent(stripeEvent.data.object as Stripe.Subscription, {
+          clearSubscription: true,
+        });
         break;
       default:
         break;

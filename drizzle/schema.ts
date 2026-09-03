@@ -1,4 +1,5 @@
-import { pgTable, unique, uuid, varchar, timestamp, foreignKey, text, jsonb } from "drizzle-orm/pg-core"
+import { sql } from "drizzle-orm"
+import { pgTable, unique, uniqueIndex, uuid, varchar, timestamp, foreignKey, text, jsonb } from "drizzle-orm/pg-core"
 
 
 
@@ -19,6 +20,8 @@ export const users = pgTable("users", {
 	createdAt: timestamp("created_at", { withTimezone: true, mode: 'string' }).defaultNow(),
 }, (table) => [
 	unique("users_google_id_key").on(table.googleId),
+	uniqueIndex("users_stripe_customer_id_key").on(table.stripeCustomerId).where(sql`${table.stripeCustomerId} is not null`),
+	uniqueIndex("users_stripe_subscription_id_key").on(table.stripeSubscriptionId).where(sql`${table.stripeSubscriptionId} is not null`),
 ]);
 
 export const displays = pgTable("displays", {

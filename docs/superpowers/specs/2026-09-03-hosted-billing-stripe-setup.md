@@ -43,7 +43,15 @@ stripe listen --forward-to localhost:8888/.netlify/functions/billing/webhook
 
 Use the CLI webhook secret in `.env.local` as `STRIPE_WEBHOOK_SECRET`.
 
-## 5. Smoke test
+## 5. Database
+
+Apply the Stripe unique indexes if they are not on the branch yet:
+
+```bash
+npm run db:migrate
+```
+
+## 6. Smoke test
 
 1. Sign in as free user → hit display/view limit → Upgrade → Stripe Checkout (test card `4242…`)
 2. After redirect, confirm `users.plan = 'pro'` in Neon

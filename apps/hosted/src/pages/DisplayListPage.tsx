@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Group,
   Text,
@@ -31,13 +31,18 @@ import { UpgradeModal } from '../components/UpgradeModal';
 import { AccountMenu } from '../components/AccountMenu';
 import { wouldExceedDisplayLimit } from '../billing/entitlements';
 import { entitlementsForPlan } from '../billing/plans';
+import { shouldContinueUpgradePoll } from '../billing/upgradeReturn';
 import { apiClient, ApiError } from '../services/apiClient';
 import type { DisplayDto, DisplayRenameRequest } from '../types/api';
 import classes from './DisplayListPage.module.css';
 
+const UPGRADE_POLL_ATTEMPTS = 8;
+const UPGRADE_POLL_MS = 1500;
+
 export function DisplayListPage() {
-  const { user, accessToken } = useAuth();
+  const { user, accessToken, refreshUser } = useAuth();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { displays, addDisplay, renameDisplay } = useDashboardStore();
   const [creating, setCreating] = useState(false);
   const [registerModalOpen, setRegisterModalOpen] = useState(false);
@@ -47,6 +52,37 @@ export function DisplayListPage() {
   const [renameValue, setRenameValue] = useState('');
   const [renaming, setRenaming] = useState(false);
   const [upgradeOpen, setUpgradeOpen] = useState(false);
+  const upgradedParam = searchParams.get('upgraded');
+  const [confirmingUpgrade, setConfirmingUpgrade] = useState(() => upgradedParam === '1');
+
+  useEffect(() => {
+    if (upgradedParam !== '1' || !accessToken) return;
+
+    let cancelled = false;
+    let attempts = 0;
+
+    const run = async () => {
+      setConfirmingUpgrade(true);
+      while (!cancelled) {
+        const next = await refreshUser();
+        if (cancelled) return;
+        attempts += 1;
+        if (!shouldContinueUpgradePoll(next?.plan, attempts, UPGRADE_POLL_ATTEMPTS)) break;
+        await new Promise((resolve) => setTimeout(resolve, UPGRADE_POLL_MS));
+      }
+      if (!cancelled) {
+        setConfirmingUpgrade(false);
+        const nextParams = new URLSearchParams(searchParams);
+        nextParams.delete('upgraded');
+        setSearchParams(nextParams, { replace: true });
+      }
+    };
+
+    void run();
+    return () => {
+      cancelled = true;
+    };
+  }, [accessToken, refreshUser, upgradedParam, searchParams, setSearchParams]);
 
   const ownedDisplayCount = displays.filter((d) => d.isOwner !== false).length;
 
@@ -172,6 +208,9 @@ export function DisplayListPage() {
         <Group gap="sm">
           <IconLayoutDashboard size={24} className={classes.logo} />
           <Title order={4} className={classes.title}>Your Displays</Title>
+          {confirmingUpgrade && user?.plan !== 'pro' && (
+            <Text size="sm" c="dimmed">Confirming your upgrade…</Text>
+          )}
         </Group>
         <Group gap="sm">
           <Button

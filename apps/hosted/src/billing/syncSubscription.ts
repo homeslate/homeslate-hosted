@@ -8,6 +8,32 @@ export function planFromSubscriptionStatus(status: string | null | undefined): P
   return 'free';
 }
 
+export function hasActiveSubscription(
+  status: string | null | undefined,
+  subscriptionId: string | null | undefined
+): boolean {
+  return Boolean(subscriptionId) && (status === 'active' || status === 'trialing');
+}
+
+const PORTAL_SUBSCRIPTION_STATUSES = new Set([
+  'active',
+  'trialing',
+  'past_due',
+  'unpaid',
+  'incomplete',
+  'paused',
+]);
+
+export function shouldOpenPortalInsteadOfCheckout(
+  status: string | null | undefined,
+  subscriptionId: string | null | undefined,
+  customerId: string | null | undefined
+): boolean {
+  return Boolean(
+    customerId && subscriptionId && status && PORTAL_SUBSCRIPTION_STATUSES.has(status)
+  );
+}
+
 export type SubscriptionSyncData = {
   stripeCustomerId: string;
   stripeSubscriptionId: string | null;
@@ -15,9 +41,14 @@ export type SubscriptionSyncData = {
   subscriptionStatus: string | null;
 };
 
+export type SubscriptionSyncOptions = {
+  clearSubscription?: boolean;
+};
+
 export function subscriptionFieldsForPlan(
   plan: PlanId,
-  data: SubscriptionSyncData
+  data: SubscriptionSyncData,
+  options?: SubscriptionSyncOptions
 ): {
   plan: PlanId;
   stripeCustomerId: string;
@@ -25,9 +56,9 @@ export function subscriptionFieldsForPlan(
   stripePriceId: string | null;
   subscriptionStatus: string | null;
 } {
-  if (plan === 'free') {
+  if (options?.clearSubscription) {
     return {
-      plan: 'free',
+      plan,
       stripeCustomerId: data.stripeCustomerId,
       stripeSubscriptionId: null,
       stripePriceId: null,
@@ -36,7 +67,7 @@ export function subscriptionFieldsForPlan(
   }
 
   return {
-    plan: 'pro',
+    plan,
     stripeCustomerId: data.stripeCustomerId,
     stripeSubscriptionId: data.stripeSubscriptionId,
     stripePriceId: data.stripePriceId,
@@ -47,11 +78,36 @@ export function subscriptionFieldsForPlan(
 export async function applySubscriptionToUser(
   db: Db,
   userId: string,
-  data: SubscriptionSyncData
+  data: SubscriptionSyncData,
+  options?: SubscriptionSyncOptions
 ): Promise<void> {
-  const plan = planFromSubscriptionStatus(data.subscriptionStatus);
-  const fields = subscriptionFieldsForPlan(plan, data);
-  await db.update(users).set(fields).where(eq(users.id, userId));
+  const plan = options?.clearSubscription
+    ? 'free'
+    : planFromSubscriptionStatus(data.subscriptionStatus);
+  const fields = subscriptionFieldsForPlan(plan, data, options);
+  const updated = await db.update(users).set(fields).where(eq(users.id, userId)).returning({
+    id: users.id,
+  });
+  if (updated.length === 0) {
+    throw new Error('No user row for subscription sync');
+  }
+}
+
+export async function resolveSubscriptionUserId(
+  db: Db,
+  subscription: {
+    id: string;
+    metadata?: { userId?: string } | null;
+    customer: string | { id: string };
+  }
+): Promise<string | null> {
+  if (subscription.metadata?.userId) return subscription.metadata.userId;
+  const customerId =
+    typeof subscription.customer === 'string' ? subscription.customer : subscription.customer.id;
+  return (
+    (await findUserIdByStripeSubscriptionId(db, subscription.id)) ??
+    (await findUserIdByStripeCustomerId(db, customerId))
+  );
 }
 
 export async function findUserIdByStripeCustomerId(

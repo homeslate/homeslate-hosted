@@ -14,8 +14,14 @@ export const handler: Handler = async (event) => {
     return errorResponse(405, 'Method not allowed', AUTH_JSON_HEADERS);
   }
 
+  let googleId: string;
   try {
-    const googleId = await requireGoogleId(event.headers['authorization']);
+    googleId = await requireGoogleId(event.headers['authorization']);
+  } catch {
+    return errorResponse(401, 'Unauthorized', AUTH_JSON_HEADERS);
+  }
+
+  try {
     const db = getDb();
 
     const [user] = await db
@@ -25,7 +31,11 @@ export const handler: Handler = async (event) => {
       .from(users)
       .where(eq(users.googleId, googleId));
 
-    if (!user?.stripeCustomerId) {
+    if (!user) {
+      return errorResponse(404, 'User not found', AUTH_JSON_HEADERS);
+    }
+
+    if (!user.stripeCustomerId) {
       return errorResponse(400, 'No subscription', AUTH_JSON_HEADERS);
     }
 

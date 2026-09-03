@@ -12,7 +12,7 @@ export function AccountMenu() {
   const { user, accessToken, signOut } = useAuth();
   const navigate = useNavigate();
   const [deleteOpen, setDeleteOpen] = useState(false);
-  const { openPortal, loading: billingLoading } = useBillingActions(accessToken);
+  const { openPortal, loading: billingLoading, error: billingError } = useBillingActions(accessToken);
 
   const handleDeleteAccount = async () => {
     if (!accessToken) throw new Error('Not signed in');
@@ -58,6 +58,9 @@ export function AccountMenu() {
             >
               Manage subscription
             </Menu.Item>
+          )}
+          {billingError && (
+            <Menu.Label c="red">{billingError}</Menu.Label>
           )}
           <Menu.Item
             leftSection={<IconTrash size={14} />}

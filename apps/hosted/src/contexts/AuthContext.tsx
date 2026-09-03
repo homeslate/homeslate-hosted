@@ -35,6 +35,8 @@ interface AuthContextValue {
   signOut: () => void;
   /** Refresh the access token using the stored refresh token. Returns new token or null. */
   refreshAccessToken: () => Promise<string | null>;
+  /** Re-fetch /api/me so billing fields update after Checkout. */
+  refreshUser: () => Promise<AuthUser | null>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -204,6 +206,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     []
   );
 
+  const refreshUser = useCallback(async () => {
+    const token = accessToken ?? readStoredToken();
+    if (!token) return null;
+    return fetchAndStoreUser(token);
+  }, [accessToken, fetchAndStoreUser]);
+
   // On mount: restore session from stored tokens, refreshing if the access token expired.
   useEffect(() => {
     const token = readStoredToken();
@@ -367,6 +375,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         signIn,
         signOut,
         refreshAccessToken,
+        refreshUser,
       }}
     >
       {children}
