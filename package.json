@@ -21,7 +21,8 @@
     "db:migrate:dev": "drizzle-kit migrate",
     "db:migrate:prod": "node scripts/db-migrate-prod.mjs",
     "db:push": "drizzle-kit push",
-    "db:studio": "drizzle-kit studio"
+    "db:studio": "drizzle-kit studio",
+    "postinstall": "node scripts/patch-homeslate-cjs-exports.mjs"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

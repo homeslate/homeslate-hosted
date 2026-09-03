@@ -69,6 +69,7 @@ export const handler: Handler = async (event) => {
           config: displayConfigs.config,
           configUpdatedAt: displayConfigs.updatedAt,
           isOwner: sql<boolean>`true`.as('is_owner'),
+          ownerPlan: users.plan,
         })
         .from(displays)
         .innerJoin(users, eq(users.id, displays.userId))
@@ -85,6 +86,7 @@ export const handler: Handler = async (event) => {
           config: displayConfigs.config,
           configUpdatedAt: displayConfigs.updatedAt,
           isOwner: sql<boolean>`false`.as('is_owner'),
+          ownerPlan: sql<string | null>`(SELECT plan FROM users WHERE id = ${displays.userId})`.as('owner_plan'),
         })
         .from(displayCollaborators)
         .innerJoin(users, eq(users.id, displayCollaborators.userId))
@@ -107,6 +109,7 @@ export const handler: Handler = async (event) => {
         config: r.config == null ? null : readStoredConfig(stripLegacyThemeFields(r.config)).legacy,
         config_updated_at: r.configUpdatedAt,
         is_owner: r.isOwner,
+        owner_plan: r.ownerPlan,
       }));
 
       if (debug) {

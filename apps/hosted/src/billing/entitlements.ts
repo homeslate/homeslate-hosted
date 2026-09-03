@@ -8,9 +8,28 @@ export function assertCanCreateDisplay(ownedDisplayCount: number, entitlements: 
   }
 }
 
+/** Returns true when the user already has the maximum displays allowed on their plan. */
+export function wouldExceedDisplayLimit(
+  ownedDisplayCount: number,
+  entitlements: Entitlements
+): boolean {
+  if (entitlements.maxDisplays === null) return false;
+  return ownedDisplayCount >= entitlements.maxDisplays;
+}
+
 export function assertViewCount(viewCount: number, entitlements: Entitlements): void {
   if (entitlements.maxViewsPerDisplay === null) return;
   if (viewCount > entitlements.maxViewsPerDisplay) {
     throw new EntitlementError('view_limit', 'View limit reached');
   }
+}
+
+/** Returns true when adding `additionalCount` views would exceed the plan limit. */
+export function wouldExceedViewLimit(
+  currentCount: number,
+  additionalCount: number,
+  entitlements: Entitlements
+): boolean {
+  if (entitlements.maxViewsPerDisplay === null) return false;
+  return currentCount + additionalCount > entitlements.maxViewsPerDisplay;
 }

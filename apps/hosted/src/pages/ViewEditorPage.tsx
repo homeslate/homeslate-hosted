@@ -6,12 +6,11 @@ import {
   ActionIcon,
   Tooltip,
   Button,
-  Avatar,
-  Menu,
   Breadcrumbs,
   Anchor,
 } from '@mantine/core';
-import { IconArrowLeft, IconDeviceTv, IconLogout, IconCloudCheck, IconSun, IconMoon } from '@tabler/icons-react';
+import { IconArrowLeft, IconDeviceTv, IconCloudCheck, IconSun, IconMoon } from '@tabler/icons-react';
+import { AccountMenu } from '../components/AccountMenu';
 import { useAuth } from '../contexts/AuthContext';
 import { useDashboardStore } from '../store/dashboardStore';
 import { useTheme } from '../contexts/ThemeContext';
@@ -32,7 +31,7 @@ function writeEditorDocument(displayId: string, document: DisplayDocument) {
 }
 
 export function ViewEditorPage() {
-  const { user, accessToken, signOut } = useAuth();
+  const { accessToken } = useAuth();
   const navigate = useNavigate();
   const {
     displays,
@@ -173,25 +172,7 @@ export function ViewEditorPage() {
               {colorMode === 'dark' ? <IconSun size={18} /> : <IconMoon size={18} />}
             </ActionIcon>
           </Tooltip>
-          <Menu position="bottom-end" withArrow shadow="md">
-            <Menu.Target>
-              <Tooltip label={user?.name ?? ''}>
-                <Avatar
-                  src={user?.picture}
-                  alt={user?.name}
-                  size="sm"
-                  radius="xl"
-                  style={{ cursor: 'pointer' }}
-                />
-              </Tooltip>
-            </Menu.Target>
-            <Menu.Dropdown>
-              <Menu.Label>{user?.email}</Menu.Label>
-              <Menu.Item leftSection={<IconLogout size={14} />} color="red" onClick={signOut}>
-                Sign out
-              </Menu.Item>
-            </Menu.Dropdown>
-          </Menu>
+          <AccountMenu />
         </Group>
       </header>
 

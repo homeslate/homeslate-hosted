@@ -19,6 +19,28 @@ export const handler: Handler = async (event) => {
   try {
     const tokenInfo = await verifyGoogleToken(accessToken);
     const googleId = tokenInfo.sub;
+
+    const db = getDb();
+
+    if (event.httpMethod === 'DELETE') {
+      const [user] = await db
+        .select({ id: users.id })
+        .from(users)
+        .where(eq(users.googleId, googleId));
+
+      if (!user) {
+        return errorResponse(404, 'User not found', AUTH_JSON_HEADERS);
+      }
+
+      await db.delete(users).where(eq(users.id, user.id));
+
+      return { statusCode: 204, headers: AUTH_JSON_HEADERS, body: '' };
+    }
+
+    if (event.httpMethod !== 'GET') {
+      return errorResponse(405, 'Method not allowed', AUTH_JSON_HEADERS);
+    }
+
     const email = tokenInfo.email;
     const exp = tokenInfo.exp ? parseInt(tokenInfo.exp, 10) : null;
     if (!email) {
@@ -29,8 +51,6 @@ export const handler: Handler = async (event) => {
       headers: { Authorization: `Bearer ${accessToken}` },
     });
     const { name, picture } = await userInfoRes.json() as { name: string; picture: string };
-
-    const db = getDb();
 
     const refreshToken = event.headers['x-refresh-token'];
 
@@ -56,7 +76,7 @@ export const handler: Handler = async (event) => {
               picture: sql`excluded.picture`,
             },
       })
-      .returning({ id: users.id, email: users.email, name: users.name, picture: users.picture });
+      .returning({ id: users.id, email: users.email, name: users.name, picture: users.picture, plan: users.plan });
 
     if (!user) {
       throw new Error('Failed to upsert user');

@@ -10,8 +10,6 @@ import {
   Stack,
   Paper,
   UnstyledButton,
-  Avatar,
-  Menu,
   Switch,
   Select,
   Badge,
@@ -25,7 +23,6 @@ import {
   IconPlus,
   IconTrash,
   IconDeviceTv,
-  IconLogout,
   IconEdit,
   IconCheck,
   IconX,
@@ -64,6 +61,9 @@ import { v4 as uuidv4 } from 'uuid';
 import { ShareDisplayModal } from '../components/ShareDisplayModal';
 import { InviteModal } from '../components/InviteModal';
 import { UpgradeModal } from '../components/UpgradeModal';
+import { wouldExceedViewLimit } from '../billing/entitlements';
+import { entitlementsForPlan } from '../billing/plans';
+import { AccountMenu } from '../components/AccountMenu';
 import { useAuth } from '../contexts/AuthContext';
 import { useDashboardStore } from '../store/dashboardStore';
 import { ThemeEditor } from '@homeslate/editor';
@@ -330,7 +330,7 @@ function SortableViewCard({ layout, onSelect, onDelete, onRename, onToggleHidden
 // ─── Main page ─────────────────────────────────────────────────────────────────
 
 export function DisplayDetailPage() {
-  const { user, accessToken, signOut } = useAuth();
+  const { accessToken } = useAuth();
   const navigate = useNavigate();
   const {
     displays,
@@ -393,6 +393,15 @@ export function DisplayDetailPage() {
     console.error(err);
   };
 
+  const wouldBlockNewViews = (additionalCount: number): boolean => {
+    const entitlements = entitlementsForPlan(display.ownerPlan);
+    if (wouldExceedViewLimit(display.layouts.length, additionalCount, entitlements)) {
+      setUpgradeOpen(true);
+      return true;
+    }
+    return false;
+  };
+
   const saveConfig = (overrides: Partial<typeof display> = {}) => {
     if (!accessToken) return;
     const {
@@ -438,6 +447,10 @@ export function DisplayDetailPage() {
   const commitNewView = () => {
     const trimmed = newViewName.trim();
     if (!trimmed) return;
+    if (wouldBlockNewViews(1)) {
+      setNewViewOpen(false);
+      return;
+    }
     createLayout(trimmed);
     const updated = useDashboardStore.getState().displays.find((d) => d.id === display.id);
     if (updated) saveConfig({ layouts: updated.layouts });
@@ -487,6 +500,7 @@ export function DisplayDetailPage() {
   };
 
   const handleNewView = () => {
+    if (wouldBlockNewViews(1)) return;
     setNewViewName('New View');
     setNewViewOpen(true);
   };
@@ -495,6 +509,7 @@ export function DisplayDetailPage() {
     const existing = new Set(display.layouts.map((layout) => layout.name.trim().toLowerCase()));
     const missing = PRESET_VIEW_NAMES.filter((name) => !existing.has(name.toLowerCase()));
     if (missing.length === 0) return;
+    if (wouldBlockNewViews(missing.length)) return;
 
     const presetLayouts = missing.map((name) => createPresetLayout(name));
     const updatedLayouts = [...display.layouts, ...presetLayouts];
@@ -713,25 +728,7 @@ export function DisplayDetailPage() {
               {colorMode === 'dark' ? <IconSun size={18} /> : <IconMoon size={18} />}
             </ActionIcon>
           </Tooltip>
-          <Menu position="bottom-end" withArrow shadow="md">
-            <Menu.Target>
-              <Tooltip label={user?.name ?? ''}>
-                <Avatar
-                  src={user?.picture}
-                  alt={user?.name}
-                  size="sm"
-                  radius="xl"
-                  style={{ cursor: 'pointer' }}
-                />
-              </Tooltip>
-            </Menu.Target>
-            <Menu.Dropdown>
-              <Menu.Label>{user?.email}</Menu.Label>
-              <Menu.Item leftSection={<IconLogout size={14} />} color="red" onClick={signOut}>
-                Sign out
-              </Menu.Item>
-            </Menu.Dropdown>
-          </Menu>
+          <AccountMenu />
         </Group>
       </header>
 
