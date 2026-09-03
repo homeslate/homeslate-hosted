@@ -22,6 +22,10 @@ function hashPin(pin: string): string {
   return createHash('sha256').update(pin).digest('hex');
 }
 
+function timestamp(value: unknown): number {
+  return value instanceof Date ? value.getTime() : Date.parse(String(value));
+}
+
 function stripLegacyThemeFields(config: unknown): unknown {
   if (!config || typeof config !== 'object') return config;
   const {
@@ -88,8 +92,8 @@ export const handler: Handler = async (event) => {
 
       const rows = [...ownerRows, ...collabRows].sort(
         (a, b) =>
-          (a.createdAt instanceof Date ? a.createdAt.getTime() : 0) -
-          (b.createdAt instanceof Date ? b.createdAt.getTime() : 0)
+          timestamp(a.createdAt) -
+          timestamp(b.createdAt)
       );
 
       const formatted = rows.map((r) => ({
