@@ -1,8 +1,8 @@
 import type { Handler } from '@netlify/functions';
 import { refreshAccessToken } from '@homeslate/google';
 import { sql } from 'drizzle-orm';
-import { getDb } from '../../apps/hosted/src/db';
-import { userTokenPersistFields } from '../../apps/hosted/src/services/displayCalendarAuth';
+import { getDb } from '../../src/db';
+import { userTokenPersistFields } from '../../src/services/displayCalendarAuth';
 import { AUTH_JSON_HEADERS, errorResponse, jsonResponse, optionsResponse } from './_shared/http';
 import { googleOAuthCredentials } from './_shared/googleClient';
 

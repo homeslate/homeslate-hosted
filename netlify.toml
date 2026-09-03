@@ -1,9 +1,9 @@
 [build]
-  command = "npm run build"
+  command = "npm run build -w homeslate-hosted"
   publish = "dist"
 
 [functions]
-  directory = "netlify/functions"
+  directory = "apps/hosted/netlify/functions"
   node_bundler = "esbuild"
 
 [dev]

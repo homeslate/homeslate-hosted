@@ -1,7 +1,7 @@
 import type { Handler } from '@netlify/functions';
 import { eq, sql } from 'drizzle-orm';
-import { getDb, displays, displayConfigs, displayCollaborators, users } from '../../apps/hosted/src/db';
-import { writeStoredConfig } from '../../apps/hosted/src/displayDocumentBridge';
+import { getDb, displays, displayConfigs, displayCollaborators, users } from '../../src/db';
+import { writeStoredConfig } from '../../src/displayDocumentBridge';
 import { AUTH_JSON_HEADERS, errorResponse, jsonResponse, optionsResponse } from './_shared/http';
 import { requireGoogleId } from './_shared/googleAuth';
 

@@ -1,7 +1,7 @@
 import type { Handler } from '@netlify/functions';
 import { exchangeAuthorizationCode } from '@homeslate/google';
 import { eq, sql } from 'drizzle-orm';
-import { getDb, users, displays } from '../../apps/hosted/src/db';
+import { getDb, users, displays } from '../../src/db';
 import { verifyGoogleToken } from './_shared/googleAuth';
 import { googleOAuthCredentials } from './_shared/googleClient';
 import { errorResponse, jsonResponse, optionsResponse } from './_shared/http';

@@ -7,8 +7,8 @@ import {
   displays,
   displayCollaborators,
   displayInvites,
-} from '../../apps/hosted/src/db';
-import type { InviteCreateRequest } from '../../apps/hosted/src/types/api';
+} from '../../src/db';
+import type { InviteCreateRequest } from '../../src/types/api';
 import { AUTH_JSON_HEADERS, errorResponse, jsonResponse, optionsResponse } from './_shared/http';
 import { requireGoogleId } from './_shared/googleAuth';
 

@@ -1,9 +1,9 @@
 import type { Handler } from '@netlify/functions';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
-import { getDb, displayConfigs, displays } from '../../apps/hosted/src/db';
-import { readStoredConfig, writeKioskConfig } from '../../apps/hosted/src/displayDocumentBridge';
-import type { NotesPatchRequest } from '../../apps/hosted/src/types/api';
+import { getDb, displayConfigs, displays } from '../../src/db';
+import { readStoredConfig, writeKioskConfig } from '../../src/displayDocumentBridge';
+import type { NotesPatchRequest } from '../../src/types/api';
 import { PUBLIC_JSON_HEADERS, errorResponse, jsonResponse, optionsResponse } from './_shared/http';
 
 const StickyNoteSchema = z.object({
