@@ -96,7 +96,15 @@ export const handler: Handler = async (event) => {
           accessTokenExpiresAt: sql`excluded.access_token_expires_at`,
         },
       })
-      .returning({ id: users.id, email: users.email, name: users.name, picture: users.picture, plan: users.plan });
+      .returning({
+        id: users.id,
+        email: users.email,
+        name: users.name,
+        picture: users.picture,
+        plan: users.plan,
+        subscriptionStatus: users.subscriptionStatus,
+        stripeCustomerId: users.stripeCustomerId,
+      });
 
     if (!user) {
       throw new Error('Failed to upsert user');
@@ -127,7 +135,15 @@ export const handler: Handler = async (event) => {
         access_token: accessToken,
         expires_in: expiresIn,
         refresh_token: refreshToken,
-        user: user,
+        user: {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          picture: user.picture,
+          plan: user.plan,
+          subscriptionStatus: user.subscriptionStatus,
+          canManageSubscription: Boolean(user.stripeCustomerId),
+        },
       },
       EXCHANGE_CODE_HEADERS
     );

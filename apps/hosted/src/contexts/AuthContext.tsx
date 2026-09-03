@@ -22,6 +22,8 @@ export interface AuthUser {
   name: string;
   picture: string;
   plan?: string | null;
+  subscriptionStatus?: string | null;
+  canManageSubscription?: boolean;
 }
 
 interface AuthContextValue {
@@ -33,6 +35,8 @@ interface AuthContextValue {
   signOut: () => void;
   /** Refresh the access token using the stored refresh token. Returns new token or null. */
   refreshAccessToken: () => Promise<string | null>;
+  /** Re-fetch /api/me so billing fields update after Checkout. */
+  refreshUser: () => Promise<AuthUser | null>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -54,8 +58,8 @@ function readStoredUser(): AuthUser | null {
     if (!stored) return null;
     const parsed = JSON.parse(stored) as AuthUser & { displayId?: string };
     // Strip legacy displayId if present
-    const { id, email, name, picture, plan } = parsed;
-    return { id, email, name, picture, plan };
+    const { id, email, name, picture, plan, subscriptionStatus, canManageSubscription } = parsed;
+    return { id, email, name, picture, plan, subscriptionStatus, canManageSubscription };
   } catch {
     return null;
   }
@@ -183,6 +187,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         name: string;
         picture: string;
         plan?: string | null;
+        subscriptionStatus?: string | null;
+        canManageSubscription?: boolean;
       };
       const authUser: AuthUser = {
         id: data.id,
@@ -190,6 +196,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         name: data.name,
         picture: data.picture,
         plan: data.plan,
+        subscriptionStatus: data.subscriptionStatus,
+        canManageSubscription: data.canManageSubscription,
       };
       setUser(authUser);
       localStorage.setItem(USER_KEY, JSON.stringify(authUser));
@@ -197,6 +205,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
     []
   );
+
+  const refreshUser = useCallback(async () => {
+    const token = accessToken ?? readStoredToken();
+    if (!token) return null;
+    return fetchAndStoreUser(token);
+  }, [accessToken, fetchAndStoreUser]);
 
   // On mount: restore session from stored tokens, refreshing if the access token expired.
   useEffect(() => {
@@ -361,6 +375,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         signIn,
         signOut,
         refreshAccessToken,
+        refreshUser,
       }}
     >
       {children}

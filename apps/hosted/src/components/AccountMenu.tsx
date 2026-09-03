@@ -1,16 +1,18 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Avatar, Menu, Tooltip } from '@mantine/core';
-import { IconLogout, IconTrash } from '@tabler/icons-react';
+import { IconLogout, IconTrash, IconCreditCard } from '@tabler/icons-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useDashboardStore } from '../store/dashboardStore';
 import { apiClient } from '../services/apiClient';
+import { billingEnabled, useBillingActions } from '../billing/useBillingActions';
 import { DeleteAccountModal } from './DeleteAccountModal';
 
 export function AccountMenu() {
   const { user, accessToken, signOut } = useAuth();
   const navigate = useNavigate();
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const { openPortal, loading: billingLoading, error: billingError } = useBillingActions(accessToken);
 
   const handleDeleteAccount = async () => {
     if (!accessToken) throw new Error('Not signed in');
@@ -45,6 +47,21 @@ export function AccountMenu() {
         </Menu.Target>
         <Menu.Dropdown>
           <Menu.Label>{user.email}</Menu.Label>
+          {user.plan === 'pro' && (
+            <Menu.Label c="indigo">Pro plan</Menu.Label>
+          )}
+          {billingEnabled && user.canManageSubscription && (
+            <Menu.Item
+              leftSection={<IconCreditCard size={14} />}
+              disabled={billingLoading}
+              onClick={() => void openPortal()}
+            >
+              Manage subscription
+            </Menu.Item>
+          )}
+          {billingError && (
+            <Menu.Label c="red">{billingError}</Menu.Label>
+          )}
           <Menu.Item
             leftSection={<IconTrash size={14} />}
             color="red"

@@ -1,14 +1,29 @@
-import { Modal, Stack, Text, Group, Button, List } from '@mantine/core';
+import { Modal, Stack, Text, Group, Button, List, Radio } from '@mantine/core';
 import { IconSparkles } from '@tabler/icons-react';
+import { useState } from 'react';
+import { useAuth } from '../contexts/AuthContext';
+import { billingEnabled, getCheckoutPriceIds, useBillingActions } from '../billing/useBillingActions';
 
 interface Props {
   opened: boolean;
   onClose: () => void;
 }
 
-const billingEnabled = import.meta.env.VITE_BILLING_ENABLED === 'true';
-
 export function UpgradeModal({ opened, onClose }: Props) {
+  const { accessToken } = useAuth();
+  const { startCheckout, loading, error } = useBillingActions(accessToken);
+  const prices = getCheckoutPriceIds();
+  const defaultPrice = prices.monthly ?? prices.annual ?? '';
+  const [priceId, setPriceId] = useState(defaultPrice);
+
+  const canUpgrade =
+    billingEnabled && Boolean(prices.monthly || prices.annual) && Boolean(accessToken);
+
+  const handleUpgrade = () => {
+    if (!priceId) return;
+    void startCheckout(priceId);
+  };
+
   return (
     <Modal
       opened={opened}
@@ -29,15 +44,33 @@ export function UpgradeModal({ opened, onClose }: Props) {
           <List.Item>Unlimited displays</List.Item>
           <List.Item>Unlimited views per display</List.Item>
         </List>
+        {canUpgrade && (prices.monthly || prices.annual) && (
+          <Radio.Group value={priceId} onChange={setPriceId} label="Billing interval">
+            <Stack gap="xs" mt="xs">
+              {prices.monthly && (
+                <Radio value={prices.monthly} label="Monthly" />
+              )}
+              {prices.annual && (
+                <Radio value={prices.annual} label="Annual" />
+              )}
+            </Stack>
+          </Radio.Group>
+        )}
+        {error && (
+          <Text size="sm" c="red">
+            {error}
+          </Text>
+        )}
         <Group justify="flex-end" gap="sm" mt="xs">
-          <Button variant="default" onClick={onClose}>
+          <Button variant="default" onClick={onClose} disabled={loading}>
             Not now
           </Button>
           <Button
-            disabled={!billingEnabled}
-            onClick={billingEnabled ? onClose : undefined}
+            disabled={!canUpgrade || !priceId}
+            loading={loading}
+            onClick={canUpgrade ? handleUpgrade : undefined}
           >
-            Upgrade
+            {canUpgrade ? 'Upgrade' : 'Coming soon'}
           </Button>
         </Group>
       </Stack>
