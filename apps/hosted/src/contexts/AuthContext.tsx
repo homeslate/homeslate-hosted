@@ -22,6 +22,8 @@ export interface AuthUser {
   name: string;
   picture: string;
   plan?: string | null;
+  subscriptionStatus?: string | null;
+  canManageSubscription?: boolean;
 }
 
 interface AuthContextValue {
@@ -54,8 +56,8 @@ function readStoredUser(): AuthUser | null {
     if (!stored) return null;
     const parsed = JSON.parse(stored) as AuthUser & { displayId?: string };
     // Strip legacy displayId if present
-    const { id, email, name, picture, plan } = parsed;
-    return { id, email, name, picture, plan };
+    const { id, email, name, picture, plan, subscriptionStatus, canManageSubscription } = parsed;
+    return { id, email, name, picture, plan, subscriptionStatus, canManageSubscription };
   } catch {
     return null;
   }
@@ -183,6 +185,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         name: string;
         picture: string;
         plan?: string | null;
+        subscriptionStatus?: string | null;
+        canManageSubscription?: boolean;
       };
       const authUser: AuthUser = {
         id: data.id,
@@ -190,6 +194,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         name: data.name,
         picture: data.picture,
         plan: data.plan,
+        subscriptionStatus: data.subscriptionStatus,
+        canManageSubscription: data.canManageSubscription,
       };
       setUser(authUser);
       localStorage.setItem(USER_KEY, JSON.stringify(authUser));

@@ -76,7 +76,15 @@ export const handler: Handler = async (event) => {
               picture: sql`excluded.picture`,
             },
       })
-      .returning({ id: users.id, email: users.email, name: users.name, picture: users.picture, plan: users.plan });
+      .returning({
+        id: users.id,
+        email: users.email,
+        name: users.name,
+        picture: users.picture,
+        plan: users.plan,
+        subscriptionStatus: users.subscriptionStatus,
+        stripeCustomerId: users.stripeCustomerId,
+      });
 
     if (!user) {
       throw new Error('Failed to upsert user');
@@ -130,7 +138,19 @@ export const handler: Handler = async (event) => {
       // If invite tables don't exist yet, skip gracefully
     }
 
-    return jsonResponse(200, user, AUTH_JSON_HEADERS);
+    return jsonResponse(
+      200,
+      {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        picture: user.picture,
+        plan: user.plan,
+        subscriptionStatus: user.subscriptionStatus,
+        canManageSubscription: Boolean(user.stripeCustomerId),
+      },
+      AUTH_JSON_HEADERS
+    );
   } catch (err) {
     console.error('Auth error:', err);
     return errorResponse(401, 'Authentication failed', AUTH_JSON_HEADERS);

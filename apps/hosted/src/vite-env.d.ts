@@ -3,6 +3,8 @@
 interface ImportMetaEnv {
   readonly VITE_GOOGLE_CLIENT_ID: string;
   readonly VITE_BILLING_ENABLED?: string;
+  readonly VITE_STRIPE_PRICE_MONTHLY?: string;
+  readonly VITE_STRIPE_PRICE_ANNUAL?: string;
 }
 
 interface ImportMeta {
