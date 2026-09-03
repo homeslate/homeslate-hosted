@@ -1,7 +1,7 @@
 # OSS / Hosted Split — Phase 6: `apps/hosted` carve & repo split order
 
 ## Status
-Phase 6a complete (merged `602983d`). Phases 6b–6c proposed — see `2026-09-03-oss-hosted-split-phase-6b-6c-design.md`.
+Phase 6 complete (6a carve, 6b npm split, 6c repo renames). Hosted repo: `homeslate-hosted`. OSS repo: `homeslate`.
 
 ## Goal
 Move the remaining **hosted app** (management UI + auth/billing glue + Netlify/Neon server code + entitlement checks) behind a new `apps/hosted` boundary inside this repository, without changing hosted behavior.

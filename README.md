@@ -1,4 +1,8 @@
-# Homeslate
+# Homeslate (Hosted)
+
+Private hosted product — Netlify app, Neon database, and billing/auth glue.
+
+> **Repos:** OSS packages and the self-host reference app are at [github.com/homeslate/homeslate](https://github.com/homeslate/homeslate) (npm: `@homeslate/*`). This repo is [homeslate-hosted](https://github.com/homeslate/homeslate-hosted).
 
 A customizable home display platform built with React, Vite, and Mantine. Create beautiful dashboard layouts with drag-and-drop widgets for any screen around your home.
 
