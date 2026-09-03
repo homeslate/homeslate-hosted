@@ -23,6 +23,7 @@ export interface Display {
   holidayEffectsEnabled?: boolean;
   holidayPreviewId?: HolidayId;
   isOwner?: boolean;
+  ownerPlan?: string | null;
   alarms?: AlarmDefinition[];
 }
 
@@ -32,6 +33,7 @@ export interface RemoteDisplay {
   name: string;
   passcode_enabled?: boolean;
   is_owner?: boolean;
+  owner_plan?: string | null;
   config: {
     layouts: DashboardLayout[];
     activeLayoutId: string | null;
@@ -208,6 +210,7 @@ export const useDashboardStore = create<DashboardState>()(
             holidayEffectsEnabled: config.holidayEffectsEnabled ?? existing?.holidayEffectsEnabled ?? false,
             holidayPreviewId: config.holidayPreviewId ?? existing?.holidayPreviewId,
             isOwner: remote.is_owner ?? existing?.isOwner ?? true,
+            ownerPlan: remote.owner_plan ?? existing?.ownerPlan ?? null,
             alarms: coerceAlarms(config.alarms ?? existing?.alarms ?? []),
           };
         });

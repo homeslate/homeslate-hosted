@@ -21,6 +21,7 @@ export interface AuthUser {
   email: string;
   name: string;
   picture: string;
+  plan?: string | null;
 }
 
 interface AuthContextValue {
@@ -53,8 +54,8 @@ function readStoredUser(): AuthUser | null {
     if (!stored) return null;
     const parsed = JSON.parse(stored) as AuthUser & { displayId?: string };
     // Strip legacy displayId if present
-    const { id, email, name, picture } = parsed;
-    return { id, email, name, picture };
+    const { id, email, name, picture, plan } = parsed;
+    return { id, email, name, picture, plan };
   } catch {
     return null;
   }
@@ -181,12 +182,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         email: string;
         name: string;
         picture: string;
+        plan?: string | null;
       };
       const authUser: AuthUser = {
         id: data.id,
         email: data.email,
         name: data.name,
         picture: data.picture,
+        plan: data.plan,
       };
       setUser(authUser);
       localStorage.setItem(USER_KEY, JSON.stringify(authUser));

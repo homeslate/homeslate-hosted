@@ -8,8 +8,6 @@ import {
   SimpleGrid,
   Paper,
   UnstyledButton,
-  Avatar,
-  Menu,
   ActionIcon,
   Tooltip,
   Stack,
@@ -19,7 +17,6 @@ import {
 } from '@mantine/core';
 import {
   IconLayoutDashboard,
-  IconLogout,
   IconPlus,
   IconShare,
   IconUsers,
@@ -30,12 +27,16 @@ import { useAuth } from '../contexts/AuthContext';
 import { useDashboardStore } from '../store/dashboardStore';
 import { ShareDisplayModal } from '../components/ShareDisplayModal';
 import { RegisterDeviceModal } from '../components/RegisterDeviceModal';
-import { apiClient } from '../services/apiClient';
+import { UpgradeModal } from '../components/UpgradeModal';
+import { AccountMenu } from '../components/AccountMenu';
+import { wouldExceedDisplayLimit } from '../billing/entitlements';
+import { entitlementsForPlan } from '../billing/plans';
+import { apiClient, ApiError } from '../services/apiClient';
 import type { DisplayDto, DisplayRenameRequest } from '../types/api';
 import classes from './DisplayListPage.module.css';
 
 export function DisplayListPage() {
-  const { user, accessToken, signOut } = useAuth();
+  const { user, accessToken } = useAuth();
   const navigate = useNavigate();
   const { displays, addDisplay, renameDisplay } = useDashboardStore();
   const [creating, setCreating] = useState(false);
@@ -45,10 +46,18 @@ export function DisplayListPage() {
   const [renameDisplayId, setRenameDisplayId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState('');
   const [renaming, setRenaming] = useState(false);
+  const [upgradeOpen, setUpgradeOpen] = useState(false);
+
+  const ownedDisplayCount = displays.filter((d) => d.isOwner !== false).length;
 
   const handleNewDisplay = async () => {
+    if (!accessToken) return;
+    if (wouldExceedDisplayLimit(ownedDisplayCount, entitlementsForPlan(user?.plan))) {
+      setUpgradeOpen(true);
+      return;
+    }
     const name = prompt('Display name:', 'Homeslate');
-    if (!name?.trim() || !accessToken) return;
+    if (!name?.trim()) return;
     setCreating(true);
     try {
       const row = await apiClient.post<DisplayDto, DisplayRenameRequest>(
@@ -60,7 +69,11 @@ export function DisplayListPage() {
       );
       addDisplay(row.id, row.display_id, row.name);
     } catch (err) {
-      console.error('Failed to create display:', err);
+      if (err instanceof ApiError && err.code === 'display_limit') {
+        setUpgradeOpen(true);
+      } else {
+        console.error('Failed to create display:', err);
+      }
     } finally {
       setCreating(false);
     }
@@ -123,6 +136,7 @@ export function DisplayListPage() {
       accessToken={accessToken ?? ''}
       addDisplay={addDisplay}
     />
+    <UpgradeModal opened={upgradeOpen} onClose={() => setUpgradeOpen(false)} />
     <Modal
       opened={renameDisplayId !== null}
       onClose={closeRenameModal}
@@ -176,29 +190,7 @@ export function DisplayListPage() {
           >
             New Display
           </Button>
-          <Menu position="bottom-end" withArrow shadow="md">
-            <Menu.Target>
-              <Tooltip label={user?.name ?? ''}>
-                <Avatar
-                  src={user?.picture}
-                  alt={user?.name}
-                  size="sm"
-                  radius="xl"
-                  style={{ cursor: 'pointer' }}
-                />
-              </Tooltip>
-            </Menu.Target>
-            <Menu.Dropdown>
-              <Menu.Label>{user?.email}</Menu.Label>
-              <Menu.Item
-                leftSection={<IconLogout size={14} />}
-                color="red"
-                onClick={signOut}
-              >
-                Sign out
-              </Menu.Item>
-            </Menu.Dropdown>
-          </Menu>
+          <AccountMenu />
         </Group>
       </header>
 

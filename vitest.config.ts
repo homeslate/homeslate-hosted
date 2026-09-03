@@ -9,6 +9,7 @@ export default defineConfig({
     include: [
       "apps/hosted/src/**/*.test.ts",
       "apps/hosted/src/**/*.test.tsx",
+      "apps/hosted/netlify/functions/**/*.test.ts",
     ],
     globals: false,
     css: false,

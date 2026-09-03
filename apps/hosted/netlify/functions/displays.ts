@@ -9,7 +9,9 @@ import {
   displayCollaborators,
 } from '../../src/db';
 import { readStoredConfig } from '../../src/displayDocumentBridge';
-import { AUTH_JSON_HEADERS, errorResponse, jsonResponse, optionsResponse } from './_shared/http';
+import { checkCreateDisplayEntitlement } from '../../src/billing/checkCreateDisplayEntitlement';
+import { EntitlementError } from '../../src/billing/entitlementError';
+import { AUTH_JSON_HEADERS, entitlementResponse, errorResponse, jsonResponse, optionsResponse } from './_shared/http';
 import { requireGoogleId } from './_shared/googleAuth';
 
 function isDebugEnabled(event: Parameters<Handler>[0]): boolean {
@@ -67,6 +69,7 @@ export const handler: Handler = async (event) => {
           config: displayConfigs.config,
           configUpdatedAt: displayConfigs.updatedAt,
           isOwner: sql<boolean>`true`.as('is_owner'),
+          ownerPlan: users.plan,
         })
         .from(displays)
         .innerJoin(users, eq(users.id, displays.userId))
@@ -83,6 +86,7 @@ export const handler: Handler = async (event) => {
           config: displayConfigs.config,
           configUpdatedAt: displayConfigs.updatedAt,
           isOwner: sql<boolean>`false`.as('is_owner'),
+          ownerPlan: sql<string | null>`(SELECT plan FROM users WHERE id = ${displays.userId})`.as('owner_plan'),
         })
         .from(displayCollaborators)
         .innerJoin(users, eq(users.id, displayCollaborators.userId))
@@ -105,6 +109,7 @@ export const handler: Handler = async (event) => {
         config: r.config == null ? null : readStoredConfig(stripLegacyThemeFields(r.config)).legacy,
         config_updated_at: r.configUpdatedAt,
         is_owner: r.isOwner,
+        owner_plan: r.ownerPlan,
       }));
 
       if (debug) {
@@ -131,7 +136,7 @@ export const handler: Handler = async (event) => {
       const displayName = name?.trim() || 'Homeslate';
 
       const [user] = await db
-        .select({ id: users.id })
+        .select({ id: users.id, plan: users.plan })
         .from(users)
         .where(eq(users.googleId, googleId));
 
@@ -144,6 +149,15 @@ export const handler: Handler = async (event) => {
             ...(debug ? { debug: { googleIdFound: !!googleId } } : {}),
           }),
         };
+      }
+
+      try {
+        await checkCreateDisplayEntitlement(db, user.id, user.plan);
+      } catch (err) {
+        if (err instanceof EntitlementError) {
+          return entitlementResponse(err, AUTH_JSON_HEADERS);
+        }
+        throw err;
       }
 
       const [created] = await db

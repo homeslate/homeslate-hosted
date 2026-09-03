@@ -96,7 +96,7 @@ export const handler: Handler = async (event) => {
           accessTokenExpiresAt: sql`excluded.access_token_expires_at`,
         },
       })
-      .returning({ id: users.id, email: users.email, name: users.name, picture: users.picture });
+      .returning({ id: users.id, email: users.email, name: users.name, picture: users.picture, plan: users.plan });
 
     if (!user) {
       throw new Error('Failed to upsert user');

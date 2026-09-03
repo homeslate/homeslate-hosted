@@ -2,7 +2,11 @@ import type { Handler } from '@netlify/functions';
 import { eq, sql } from 'drizzle-orm';
 import { getDb, displays, displayConfigs, displayCollaborators, users } from '../../src/db';
 import { writeStoredConfig } from '../../src/displayDocumentBridge';
-import { AUTH_JSON_HEADERS, errorResponse, jsonResponse, optionsResponse } from './_shared/http';
+import { getOwnerPlanForDisplay } from '../../src/billing/getOwnerPlanForDisplay';
+import { assertViewCount } from '../../src/billing/entitlements';
+import { EntitlementError } from '../../src/billing/entitlementError';
+import { entitlementsForPlan } from '../../src/billing/plans';
+import { AUTH_JSON_HEADERS, entitlementResponse, errorResponse, jsonResponse, optionsResponse } from './_shared/http';
 import { requireGoogleId } from './_shared/googleAuth';
 
 function isDebugEnabled(event: Parameters<Handler>[0]): boolean {
@@ -82,6 +86,17 @@ export const handler: Handler = async (event) => {
         displayName && displayName.length > 0
           ? { ...written.document, name: displayName }
           : written.document;
+
+      const viewCount = written.document.views.length;
+      try {
+        const ownerPlan = await getOwnerPlanForDisplay(db, displayId);
+        assertViewCount(viewCount, entitlementsForPlan(ownerPlan));
+      } catch (err) {
+        if (err instanceof EntitlementError) {
+          return entitlementResponse(err, AUTH_JSON_HEADERS);
+        }
+        throw err;
+      }
 
       await db
         .insert(displayConfigs)

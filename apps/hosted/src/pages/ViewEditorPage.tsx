@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Group,
@@ -6,20 +6,20 @@ import {
   ActionIcon,
   Tooltip,
   Button,
-  Avatar,
-  Menu,
   Breadcrumbs,
   Anchor,
 } from '@mantine/core';
-import { IconArrowLeft, IconDeviceTv, IconLogout, IconCloudCheck, IconSun, IconMoon } from '@tabler/icons-react';
+import { IconArrowLeft, IconDeviceTv, IconCloudCheck, IconSun, IconMoon } from '@tabler/icons-react';
+import { AccountMenu } from '../components/AccountMenu';
 import { useAuth } from '../contexts/AuthContext';
 import { useDashboardStore } from '../store/dashboardStore';
 import { useTheme } from '../contexts/ThemeContext';
 import type { ColorMode, DisplayDocument } from '@homeslate/schema';
-import { apiClient } from '../services/apiClient';
+import { apiClient, ApiError } from '../services/apiClient';
 import type { ConfigUpsertRequest } from '../types/api';
 import { applyDocumentToDisplay, displayRecordToDocument } from '../displayDocumentBridge';
 import { Editor } from '@homeslate/editor';
+import { UpgradeModal } from '../components/UpgradeModal';
 import classes from './ViewEditorPage.module.css';
 
 function writeEditorDocument(displayId: string, document: DisplayDocument) {
@@ -31,7 +31,7 @@ function writeEditorDocument(displayId: string, document: DisplayDocument) {
 }
 
 export function ViewEditorPage() {
-  const { user, accessToken, signOut } = useAuth();
+  const { accessToken } = useAuth();
   const navigate = useNavigate();
   const {
     displays,
@@ -41,6 +41,7 @@ export function ViewEditorPage() {
     setColorMode,
   } = useDashboardStore();
   const { vars: themeVars, colorMode } = useTheme();
+  const [upgradeOpen, setUpgradeOpen] = useState(false);
   const display = displays.find((d) => d.id === selectedDisplayId);
   const view = display?.layouts.find((l) => l.id === selectedViewId);
 
@@ -98,7 +99,13 @@ export function ViewEditorPage() {
             query: { displayId: selectedDisplayId },
             body: payload,
           })
-          .catch(console.error);
+          .catch((err) => {
+            if (err instanceof ApiError && err.code === 'view_limit') {
+              setUpgradeOpen(true);
+              return;
+            }
+            console.error(err);
+          });
       }
     });
     return () => {
@@ -138,6 +145,8 @@ export function ViewEditorPage() {
   ];
 
   return (
+    <>
+    <UpgradeModal opened={upgradeOpen} onClose={() => setUpgradeOpen(false)} />
     <div className={classes.root} style={themeVars as React.CSSProperties}>
       <header className={classes.header}>
         <Group gap="sm">
@@ -163,25 +172,7 @@ export function ViewEditorPage() {
               {colorMode === 'dark' ? <IconSun size={18} /> : <IconMoon size={18} />}
             </ActionIcon>
           </Tooltip>
-          <Menu position="bottom-end" withArrow shadow="md">
-            <Menu.Target>
-              <Tooltip label={user?.name ?? ''}>
-                <Avatar
-                  src={user?.picture}
-                  alt={user?.name}
-                  size="sm"
-                  radius="xl"
-                  style={{ cursor: 'pointer' }}
-                />
-              </Tooltip>
-            </Menu.Target>
-            <Menu.Dropdown>
-              <Menu.Label>{user?.email}</Menu.Label>
-              <Menu.Item leftSection={<IconLogout size={14} />} color="red" onClick={signOut}>
-                Sign out
-              </Menu.Item>
-            </Menu.Dropdown>
-          </Menu>
+          <AccountMenu />
         </Group>
       </header>
 
@@ -205,5 +196,6 @@ export function ViewEditorPage() {
         }
       />
     </div>
+    </>
   );
 }

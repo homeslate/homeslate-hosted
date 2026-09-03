@@ -161,12 +161,17 @@ export function PrivacyPage() {
 
         <h2>Retention and your choices</h2>
         <p>
-          We keep account and display data while your account is active. There
-          is not yet a self-serve delete-account control. Email{' '}
-          <a href="mailto:support@homeslate.dev">support@homeslate.dev</a> to
-          request deletion of your Homeslate account and stored Google tokens.
-          You can also revoke Homeslate in Google Account permissions, which
-          stops new Google API access.
+          We keep account and display data while your account is active. You can
+          delete your account anytime from the profile menu in the app (avatar in
+          the top bar). That removes your account, owned displays, saved layouts,
+          and stored Google tokens. Displays shared with you by others are not
+          affected. You can also email{' '}
+          <a href="mailto:support@homeslate.dev">support@homeslate.dev</a> or
+          revoke Homeslate in{' '}
+          <a href="https://myaccount.google.com/permissions">
+            Google Account permissions
+          </a>
+          , which stops new Google API access.
         </p>
 
         <h2>Children</h2>
