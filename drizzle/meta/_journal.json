@@ -22,6 +22,13 @@
       "when": 1773388800000,
       "tag": "0002_user_access_tokens",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1788457062362,
+      "tag": "0003_low_speedball",
+      "breakpoints": true
     }
   ]
 }

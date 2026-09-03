@@ -11,6 +11,11 @@ export const users = pgTable("users", {
 	refreshToken: text("refresh_token"),
 	accessToken: text("access_token"),
 	accessTokenExpiresAt: timestamp("access_token_expires_at", { withTimezone: true, mode: 'string' }),
+	plan: varchar('plan').default('free').notNull(),
+	stripeCustomerId: text('stripe_customer_id'),
+	stripeSubscriptionId: text('stripe_subscription_id'),
+	stripePriceId: text('stripe_price_id'),
+	subscriptionStatus: varchar('subscription_status'),
 	createdAt: timestamp("created_at", { withTimezone: true, mode: 'string' }).defaultNow(),
 }, (table) => [
 	unique("users_google_id_key").on(table.googleId),
