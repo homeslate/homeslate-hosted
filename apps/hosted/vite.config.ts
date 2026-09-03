@@ -5,35 +5,39 @@ import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 
 export default defineConfig(() => ({
+  root: fileURLToPath(new URL('.', import.meta.url)),
+  publicDir: fileURLToPath(new URL('../../public', import.meta.url)),
   resolve: {
     alias: {
       '@homeslate/schema': fileURLToPath(
-        new URL('./packages/schema/src/index.ts', import.meta.url)
+        new URL('../../packages/schema/src/index.ts', import.meta.url)
       ),
       '@homeslate/google': fileURLToPath(
-        new URL('./packages/google/src/index.ts', import.meta.url)
+        new URL('../../packages/google/src/index.ts', import.meta.url)
       ),
       '@homeslate/widgets/schemas': fileURLToPath(
-        new URL('./packages/widgets/src/schemas.ts', import.meta.url)
+        new URL('../../packages/widgets/src/schemas.ts', import.meta.url)
       ),
       '@homeslate/widgets': fileURLToPath(
-        new URL('./packages/widgets/src/index.ts', import.meta.url)
+        new URL('../../packages/widgets/src/index.ts', import.meta.url)
       ),
       '@homeslate/display/canvas': fileURLToPath(
-        new URL('./packages/display/src/canvas/index.ts', import.meta.url)
+        new URL('../../packages/display/src/canvas/index.ts', import.meta.url)
       ),
       '@homeslate/display': fileURLToPath(
-        new URL('./packages/display/src/index.ts', import.meta.url)
+        new URL('../../packages/display/src/index.ts', import.meta.url)
       ),
       '@homeslate/editor': fileURLToPath(
-        new URL('./packages/editor/src/index.ts', import.meta.url)
+        new URL('../../packages/editor/src/index.ts', import.meta.url)
       ),
       '@homeslate/adapters': fileURLToPath(
-        new URL('./packages/adapters/src/index.ts', import.meta.url)
+        new URL('../../packages/adapters/src/index.ts', import.meta.url)
       ),
     },
   },
   build: {
+    outDir: fileURLToPath(new URL('../../dist', import.meta.url)),
+    emptyOutDir: true,
     rollupOptions: {
       output: {
         manualChunks: {

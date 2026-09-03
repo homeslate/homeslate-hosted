@@ -1,6 +1,6 @@
 import { neon } from '@neondatabase/serverless';
 import { drizzle } from 'drizzle-orm/neon-http';
-import * as schema from '../../drizzle/schema';
+import * as schema from '../../../../drizzle/schema';
 
 function getDb() {
   const connectionString = process.env.DATABASE_URL;
@@ -11,4 +11,4 @@ function getDb() {
 
 export { getDb };
 export type Db = ReturnType<typeof getDb>;
-export * from '../../drizzle/schema';
+export * from '../../../../drizzle/schema';

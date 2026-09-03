@@ -16,10 +16,10 @@ describe('reference app build boundary', () => {
     const solution = readJson<{ references: Array<{ path: string }> }>('../../../tsconfig.json');
 
     for (const entry of [...hostedApp.include, ...hostedNode.include]) {
-      expect(entry).not.toMatch(/apps\//);
+      expect(entry).not.toContain('apps/reference');
     }
     for (const reference of solution.references) {
-      expect(reference.path).not.toMatch(/apps\//);
+      expect(reference.path).not.toContain('apps/reference');
     }
   });
 
