@@ -104,6 +104,7 @@ After changing **`VITE_*`** vars, trigger a new deploy (they are build-time only
 
 | Doc | When |
 |---|---|
+| [Operator runbook](docs/OPERATOR_RUNBOOK.md) | Support lookups, comp Pro, Stripe/DB sync |
 | [Google Calendar OAuth](docs/GOOGLE_CALENDAR_SETUP.md) | First-time Google Cloud setup |
 | [Stripe billing setup](docs/superpowers/specs/2026-09-03-hosted-billing-stripe-setup.md) | Enable Pro subscriptions (sandbox or live) |
 | [DEVELOPMENT.md](DEVELOPMENT.md) | Widget config persistence patterns |

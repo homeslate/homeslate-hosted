@@ -80,3 +80,7 @@ Expect `400` (missing signature) or `500` (secret not loaded yet) — **not** `4
 4. Confirm webhook sets `plan = 'free'` (at period end if canceled via Portal, or immediately if canceled in Stripe Dashboard)
 
 Validated on **homeslate.dev** in Stripe test mode (Mar 2026).
+
+## 8. Operator runbook
+
+For day-to-day support (user lookup, Stripe sync, comp Pro), see [Operator runbook](../../OPERATOR_RUNBOOK.md).
