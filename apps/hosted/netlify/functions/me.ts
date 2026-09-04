@@ -1,8 +1,10 @@
 import type { Handler } from '@netlify/functions';
 import { and, eq, sql } from 'drizzle-orm';
+import { cancelBillingOnAccountDelete, getStripe } from '../../src/billing/stripe';
 import { getDb, users, displays, displayCollaborators, displayInvites } from '../../src/db';
 import { AUTH_JSON_HEADERS, errorResponse, jsonResponse, optionsResponse } from './_shared/http';
 import { verifyGoogleToken } from './_shared/googleAuth';
+import { captureServerException, flushSentry } from './_shared/sentry';
 
 export const handler: Handler = async (event) => {
   if (event.httpMethod === 'OPTIONS') {
@@ -24,7 +26,11 @@ export const handler: Handler = async (event) => {
 
     if (event.httpMethod === 'DELETE') {
       const [user] = await db
-        .select({ id: users.id })
+        .select({
+          id: users.id,
+          stripeSubscriptionId: users.stripeSubscriptionId,
+          stripeCustomerId: users.stripeCustomerId,
+        })
         .from(users)
         .where(eq(users.googleId, googleId));
 
@@ -32,8 +38,24 @@ export const handler: Handler = async (event) => {
         return errorResponse(404, 'User not found', AUTH_JSON_HEADERS);
       }
 
+      if (
+        process.env.STRIPE_SECRET_KEY &&
+        (user.stripeSubscriptionId || user.stripeCustomerId)
+      ) {
+        try {
+          await cancelBillingOnAccountDelete(getStripe(), user);
+        } catch (stripeErr) {
+          console.error('Stripe cleanup on account delete failed:', stripeErr);
+          captureServerException(stripeErr, {
+            operation: 'account_delete_stripe',
+            userId: user.id,
+          });
+        }
+      }
+
       await db.delete(users).where(eq(users.id, user.id));
 
+      await flushSentry();
       return { statusCode: 204, headers: AUTH_JSON_HEADERS, body: '' };
     }
 
@@ -153,6 +175,8 @@ export const handler: Handler = async (event) => {
     );
   } catch (err) {
     console.error('Auth error:', err);
+    captureServerException(err, { handler: 'me' });
+    await flushSentry();
     return errorResponse(401, 'Authentication failed', AUTH_JSON_HEADERS);
   }
 };

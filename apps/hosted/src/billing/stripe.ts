@@ -81,3 +81,36 @@ export function rawWebhookBody(event: { body: string | null; isBase64Encoded?: b
   if (!event.body) return '';
   return event.isBase64Encoded ? Buffer.from(event.body, 'base64').toString('utf8') : event.body;
 }
+
+function isStripeMissingResource(error: unknown): boolean {
+  return (
+    error instanceof Stripe.errors.StripeInvalidRequestError && error.code === 'resource_missing'
+  );
+}
+
+export type AccountDeleteBilling = {
+  stripeSubscriptionId: string | null;
+  stripeCustomerId: string | null;
+};
+
+/** Cancel subscription and remove Stripe customer when a user deletes their account. */
+export async function cancelBillingOnAccountDelete(
+  stripe: Stripe,
+  billing: AccountDeleteBilling
+): Promise<void> {
+  if (billing.stripeSubscriptionId) {
+    try {
+      await stripe.subscriptions.cancel(billing.stripeSubscriptionId);
+    } catch (error) {
+      if (!isStripeMissingResource(error)) throw error;
+    }
+  }
+
+  if (billing.stripeCustomerId) {
+    try {
+      await stripe.customers.del(billing.stripeCustomerId);
+    } catch (error) {
+      if (!isStripeMissingResource(error)) throw error;
+    }
+  }
+}

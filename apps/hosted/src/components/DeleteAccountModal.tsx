@@ -44,8 +44,9 @@ export function DeleteAccountModal({ opened, onClose, email, onConfirm }: Props)
       <Stack gap="md">
         <Text size="sm">
           This permanently deletes your Homeslate account, owned displays, saved
-          layouts, and stored Google tokens. Displays shared with you by others
-          are not affected. This cannot be undone.
+          layouts, and stored Google tokens. If you have a paid subscription, it
+          will be canceled and your Stripe customer record removed. Displays
+          shared with you by others are not affected. This cannot be undone.
         </Text>
         <TextInput
           label={`Type your email to confirm`}

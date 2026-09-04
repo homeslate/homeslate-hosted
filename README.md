@@ -89,6 +89,8 @@ Netlify reads `netlify.toml`:
 | `GOOGLE_CLIENT_SECRET` | Functions | OAuth + refresh |
 | `VITE_GOOGLE_CLIENT_ID` | Build | Sign-in button |
 | Stripe / billing vars | Functions + build | See billing setup doc below |
+| `SENTRY_DSN` | Functions | Optional error monitoring |
+| `VITE_SENTRY_DSN` | Build | Same DSN for client errors (optional) |
 
 After changing **`VITE_*`** vars, trigger a new deploy (they are build-time only).
 

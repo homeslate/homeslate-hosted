@@ -1,8 +1,10 @@
-import { describe, expect, it, beforeEach, afterEach } from 'vitest';
+import { describe, expect, it, beforeEach, afterEach, vi } from 'vitest';
+import Stripe from 'stripe';
 import {
   billingCancelUrl,
   billingSuccessUrl,
   buildCheckoutSessionParams,
+  cancelBillingOnAccountDelete,
   getAllowedPriceIds,
   isAllowedPriceId,
   rawWebhookBody,
@@ -117,5 +119,80 @@ describe('rawWebhookBody', () => {
         isBase64Encoded: true,
       })
     ).toBe(raw);
+  });
+});
+
+describe('cancelBillingOnAccountDelete', () => {
+  it('cancels subscription then deletes customer', async () => {
+    const cancel = vi.fn().mockResolvedValue({});
+    const del = vi.fn().mockResolvedValue({});
+    const stripe = {
+      subscriptions: { cancel },
+      customers: { del },
+    } as unknown as Stripe;
+
+    await cancelBillingOnAccountDelete(stripe, {
+      stripeSubscriptionId: 'sub_1',
+      stripeCustomerId: 'cus_1',
+    });
+
+    expect(cancel).toHaveBeenCalledWith('sub_1');
+    expect(del).toHaveBeenCalledWith('cus_1');
+  });
+
+  it('deletes customer when there is no subscription', async () => {
+    const cancel = vi.fn();
+    const del = vi.fn().mockResolvedValue({});
+    const stripe = {
+      subscriptions: { cancel },
+      customers: { del },
+    } as unknown as Stripe;
+
+    await cancelBillingOnAccountDelete(stripe, {
+      stripeSubscriptionId: null,
+      stripeCustomerId: 'cus_1',
+    });
+
+    expect(cancel).not.toHaveBeenCalled();
+    expect(del).toHaveBeenCalledWith('cus_1');
+  });
+
+  it('ignores missing subscription and still deletes customer', async () => {
+    const cancel = vi.fn().mockRejectedValue(
+      new Stripe.errors.StripeInvalidRequestError({
+        type: 'invalid_request_error',
+        code: 'resource_missing',
+        message: 'No such subscription',
+      })
+    );
+    const del = vi.fn().mockResolvedValue({});
+    const stripe = {
+      subscriptions: { cancel },
+      customers: { del },
+    } as unknown as Stripe;
+
+    await cancelBillingOnAccountDelete(stripe, {
+      stripeSubscriptionId: 'sub_gone',
+      stripeCustomerId: 'cus_1',
+    });
+
+    expect(del).toHaveBeenCalledWith('cus_1');
+  });
+
+  it('no-ops when no Stripe ids are stored', async () => {
+    const cancel = vi.fn();
+    const del = vi.fn();
+    const stripe = {
+      subscriptions: { cancel },
+      customers: { del },
+    } as unknown as Stripe;
+
+    await cancelBillingOnAccountDelete(stripe, {
+      stripeSubscriptionId: null,
+      stripeCustomerId: null,
+    });
+
+    expect(cancel).not.toHaveBeenCalled();
+    expect(del).not.toHaveBeenCalled();
   });
 });
