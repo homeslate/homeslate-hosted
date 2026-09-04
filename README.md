@@ -8,7 +8,7 @@ Homeslate is a household display platform: create **displays**, build **views** 
 
 ## Prerequisites
 
-- **Node.js 22+** (see `.nvmrc`; CI and Netlify use Node 22)
+- **Node.js 24+** (see `.nvmrc`; CI and Netlify use Node 24)
 - npm
 - Copy `.env.example` → `.env.local` and fill in Google OAuth + `DATABASE_URL`
 
@@ -78,7 +78,7 @@ Netlify reads `netlify.toml`:
 - **Build:** `npm run build -w homeslate-hosted && node scripts/write-redirects.mjs`
 - **Publish:** `dist/`
 - **Functions:** `apps/hosted/netlify/functions/`
-- **Node:** 22 (pinned in `[build.environment]`)
+- **Node:** 24 (pinned in `[build.environment]`)
 
 ### Required Netlify environment variables
 
