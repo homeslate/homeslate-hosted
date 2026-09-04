@@ -25,6 +25,11 @@
     "db:migrate:prod": "node scripts/db-migrate-prod.mjs",
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
+    "ops:lookup-user": "npx --yes tsx scripts/ops/lookup-user.ts",
+    "ops:sync-stripe-user": "npx --yes tsx scripts/ops/sync-stripe-user.ts",
+    "ops:grant-pro-comp": "npx --yes tsx scripts/ops/grant-pro-comp.ts",
+    "ops:revoke-pro-comp": "npx --yes tsx scripts/ops/revoke-pro-comp.ts",
+    "ops:db:studio:prod": "node scripts/ops/db-studio-prod.mjs",
     "postinstall": "node scripts/patch-homeslate-cjs-exports.mjs"
   },
   "dependencies": {
