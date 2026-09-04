@@ -43,6 +43,8 @@
     "@mantine/hooks": "^8.3.10",
     "@neondatabase/serverless": "^1.0.2",
     "@netlify/blobs": "^10.7.0",
+    "@sentry/node": "^10.73.0",
+    "@sentry/react": "^10.73.0",
     "@tabler/icons-react": "^3.35.0",
     "dayjs": "^1.11.19",
     "dotenv": "^17.3.1",

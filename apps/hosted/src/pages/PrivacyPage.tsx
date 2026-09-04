@@ -190,14 +190,10 @@ export function PrivacyPage() {
           We keep account and display data while your account is active. You can
           delete your account anytime from the profile menu in the app (avatar in
           the top bar). That removes your account, owned displays, saved layouts,
-          and stored Google tokens. If you have an active paid subscription,
-          cancel it first from <strong>Manage subscription</strong> in the
-          profile menu (Stripe Customer Portal) so billing stops. Account
-          deletion does not automatically cancel Stripe subscriptions today —
-          email{' '}
-          <a href="mailto:support@homeslate.dev">support@homeslate.dev</a> if
-          you need help. Displays shared with you by others are not affected.
-          You can also email{' '}
+          and stored Google tokens. If you have an active paid subscription, we
+          cancel it and remove your Stripe customer record as part of account
+          deletion. Displays shared with you by others are not affected. You can
+          also email{' '}
           <a href="mailto:support@homeslate.dev">support@homeslate.dev</a> or
           revoke Homeslate in{' '}
           <a href="https://myaccount.google.com/permissions">
