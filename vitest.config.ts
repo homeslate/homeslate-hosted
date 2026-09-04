@@ -1,9 +1,21 @@
 /// <reference types="vitest" />
-import { defineConfig } from "vitest/config";
-import react from "@vitejs/plugin-react";
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { defineConfig } from 'vitest/config';
+import react from '@vitejs/plugin-react';
+
+const root = path.dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig({
   plugins: [react()],
+  resolve: {
+    alias: {
+      'virtual:pwa-register': path.join(
+        root,
+        'apps/hosted/src/test/virtual-pwa-register.ts'
+      ),
+    },
+  },
   test: {
     environment: "node",
     include: [

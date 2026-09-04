@@ -42,7 +42,7 @@ export default defineConfig(() => ({
     react(),
     VitePWA({
       mode: 'development',
-      registerType: 'autoUpdate',
+      registerType: 'prompt',
       minify: false,
       includeAssets: ['icon.svg', 'vite.svg', 'icons/*.png'],
       manifest: {

@@ -1,0 +1,16 @@
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  transform: translateX(-50%);
+  z-index: 10000;
+  padding: 12px 20px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--mantine-color-dark-7, #25262b) 92%, transparent);
+  color: var(--mantine-color-gray-0, #fff);
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  pointer-events: none;
+}

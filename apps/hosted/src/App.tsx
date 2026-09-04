@@ -24,6 +24,8 @@ import {
   resolveDisplayId,
 } from './displayPersistence';
 import { resolveAppSurface } from './appSurface';
+import { setDisplaySession } from './pwaUpdate';
+
 const AuthPage = lazy(() => import('./pages/AuthPage').then((m) => ({ default: m.AuthPage })));
 const HomePage = lazy(() => import('./pages/HomePage').then((m) => ({ default: m.HomePage })));
 const PrivacyPage = lazy(() => import('./pages/PrivacyPage').then((m) => ({ default: m.PrivacyPage })));
@@ -94,6 +96,10 @@ if (_initialDisplayParam) {
   persistDisplayId(_initialDisplayParam);
 }
 
+if (resolveDisplayId()) {
+  setDisplaySession(true);
+}
+
 function AppInner() {
   const { isAuthenticated } = useAuth();
   const { pathname } = useLocation();
@@ -118,6 +124,7 @@ function AppInner() {
   }
 
   if (surface === 'pair') {
+    setDisplaySession(false);
     return (
       <Suspense fallback={<PageLoader />}>
         <PairPage />
@@ -126,27 +133,33 @@ function AppInner() {
   }
 
   if (surface === 'display' && displayParam) {
+    setDisplaySession(true);
     return <DisplayViewer displayId={displayParam} />;
   }
 
   if (surface === 'home') {
+    setDisplaySession(false);
     return <Suspense fallback={<PageLoader />}><HomePage /></Suspense>;
   }
 
   if (surface === 'privacy') {
+    setDisplaySession(false);
     return <Suspense fallback={<PageLoader />}><PrivacyPage /></Suspense>;
   }
 
   if (surface === 'terms') {
+    setDisplaySession(false);
     return <Suspense fallback={<PageLoader />}><TermsPage /></Suspense>;
   }
 
   if (surface === 'auth') {
+    setDisplaySession(false);
     return <Suspense fallback={<PageLoader />}><AuthPage /></Suspense>;
   }
 
   // In-app preview mode: render the viewer with an exit button overlay
   if (surface === 'preview' && preview) {
+    setDisplaySession(true);
     return (
       <div style={{ position: 'relative', width: '100%', height: '100%' }}>
         <DisplayViewer
@@ -174,6 +187,7 @@ function AppInner() {
     );
   }
 
+  setDisplaySession(false);
   return (
     <Routes>
       <Route path="/displays" element={<ManagementLayout />}>

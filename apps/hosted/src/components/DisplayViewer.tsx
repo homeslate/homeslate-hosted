@@ -11,6 +11,7 @@ import { apiClient } from '../services/apiClient';
 import type { NotesPatchRequest, TodosPatchRequest } from '../types/api';
 import { Display } from '@homeslate/display';
 import { displayRecordToDocument } from '../displayDocumentBridge';
+import { PwaUpdateToast } from './PwaUpdateToast';
 import classes from './DisplayViewer.module.css';
 
 interface DisplayConfig {
@@ -229,6 +230,7 @@ export function DisplayViewer({
 
     return (
       <div className={classes.pinScreen}>
+        <PwaUpdateToast />
         <Stack align="center" gap="lg">
           <IconLock size={40} opacity={0.7} />
           <Text size="xl" fw={600}>Enter Display PIN</Text>
@@ -263,6 +265,7 @@ export function DisplayViewer({
 
   return (
     <DisplayProvider displayId={displayId} isPreview={isPreview}>
+      <PwaUpdateToast />
       <HostGoogleRuntime>
         {mergedDocument ? (
           <Display
