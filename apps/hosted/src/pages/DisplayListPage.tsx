@@ -29,7 +29,9 @@ import { ShareDisplayModal } from '../components/ShareDisplayModal';
 import { RegisterDeviceModal } from '../components/RegisterDeviceModal';
 import { UpgradeModal } from '../components/UpgradeModal';
 import { AccountMenu } from '../components/AccountMenu';
+import { PlanUsageIndicator } from '../components/PlanUsageIndicator';
 import { wouldExceedDisplayLimit } from '../billing/entitlements';
+import { accountPlanUsage } from '../billing/planUsage';
 import { entitlementsForPlan } from '../billing/plans';
 import { shouldContinueUpgradePoll } from '../billing/upgradeReturn';
 import { apiClient, ApiError } from '../services/apiClient';
@@ -85,6 +87,12 @@ export function DisplayListPage() {
   }, [accessToken, refreshUser, upgradedParam, searchParams, setSearchParams]);
 
   const ownedDisplayCount = displays.filter((d) => d.isOwner !== false).length;
+  const ownedDisplay = displays.find((d) => d.isOwner !== false);
+  const accountUsage = accountPlanUsage(
+    user?.plan,
+    ownedDisplayCount,
+    ownedDisplay?.layouts.length
+  );
 
   const handleNewDisplay = async () => {
     if (!accessToken) return;
@@ -208,6 +216,10 @@ export function DisplayListPage() {
         <Group gap="sm">
           <IconLayoutDashboard size={24} className={classes.logo} />
           <Title order={4} className={classes.title}>Your Displays</Title>
+          <PlanUsageIndicator
+            usage={accountUsage}
+            onUpgradeClick={() => setUpgradeOpen(true)}
+          />
           {confirmingUpgrade && user?.plan !== 'pro' && (
             <Text size="sm" c="dimmed">Confirming your upgrade…</Text>
           )}

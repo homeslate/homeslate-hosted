@@ -61,7 +61,9 @@ import { v4 as uuidv4 } from 'uuid';
 import { ShareDisplayModal } from '../components/ShareDisplayModal';
 import { InviteModal } from '../components/InviteModal';
 import { UpgradeModal } from '../components/UpgradeModal';
+import { PlanUsageIndicator } from '../components/PlanUsageIndicator';
 import { wouldExceedViewLimit } from '../billing/entitlements';
+import { viewPlanUsage } from '../billing/planUsage';
 import { entitlementsForPlan } from '../billing/plans';
 import { AccountMenu } from '../components/AccountMenu';
 import { useAuth } from '../contexts/AuthContext';
@@ -330,7 +332,7 @@ function SortableViewCard({ layout, onSelect, onDelete, onRename, onToggleHidden
 // ─── Main page ─────────────────────────────────────────────────────────────────
 
 export function DisplayDetailPage() {
-  const { accessToken } = useAuth();
+  const { user, accessToken } = useAuth();
   const navigate = useNavigate();
   const {
     displays,
@@ -355,6 +357,9 @@ export function DisplayDetailPage() {
     openPreview,
   } = useDashboardStore();
   const display = displays.find((d) => d.id === selectedDisplayId);
+  const viewUsage = display
+    ? viewPlanUsage(display.ownerPlan ?? user?.plan, display.layouts.length)
+    : null;
   const colorMode: ColorMode = display?.colorMode ?? 'dark';
   const [editingName, setEditingName] = useState(false);
   const [nameValue, setNameValue] = useState(display?.name ?? '');
@@ -737,7 +742,13 @@ export function DisplayDetailPage() {
           {activePage === 'views' && (
             <>
               <Group justify="space-between" mb="md">
-                <Title order={5} className={classes.sectionTitle}>Views</Title>
+                <Group gap="sm">
+                  <Title order={5} className={classes.sectionTitle}>Views</Title>
+                  <PlanUsageIndicator
+                    usage={viewUsage}
+                    onUpgradeClick={() => setUpgradeOpen(true)}
+                  />
+                </Group>
                 <Group gap="xs">
                   <Button
                     variant="light"
