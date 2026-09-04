@@ -2,6 +2,9 @@
   command = "npm run build -w homeslate-hosted && node scripts/write-redirects.mjs"
   publish = "dist"
 
+[build.environment]
+  NODE_VERSION = "24"
+
 [functions]
   directory = "apps/hosted/netlify/functions"
   node_bundler = "esbuild"

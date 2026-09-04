@@ -77,4 +77,6 @@ Expect `400` (missing signature) or `500` (secret not loaded yet) — **not** `4
 1. Sign in as free user → hit display/view limit → Upgrade → Stripe Checkout (test card `4242…`)
 2. After redirect, confirm `users.plan = 'pro'` in Neon
 3. Profile menu → **Manage subscription** → cancel in Portal
-4. Confirm webhook sets `plan = 'free'`
+4. Confirm webhook sets `plan = 'free'` (at period end if canceled via Portal, or immediately if canceled in Stripe Dashboard)
+
+Validated on **homeslate.dev** in Stripe test mode (Mar 2026).
