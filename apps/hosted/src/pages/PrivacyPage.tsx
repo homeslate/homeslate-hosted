@@ -8,7 +8,7 @@ export function PrivacyPage() {
       <article className={classes.article}>
         <p className={classes.eyebrow}>Homeslate</p>
         <h1>Privacy Policy</h1>
-        <p className={classes.updated}>Last updated September 1, 2026</p>
+        <p className={classes.updated}>Last updated September 3, 2026</p>
         <p>
           This policy describes how Homeslate (<a href="https://homeslate.dev">homeslate.dev</a>)
           handles information when you use the hosted app. It is meant to
@@ -57,6 +57,14 @@ export function PrivacyPage() {
             <strong>Invites and sharing.</strong> Email addresses you enter when
             you invite someone to a display.
           </li>
+          <li>
+            <strong>Subscription and billing.</strong> If you subscribe to
+            Homeslate Pro, we store your plan (<code>free</code> or{' '}
+            <code>pro</code>), Stripe customer and subscription identifiers,
+            subscription status, and the price you selected. We do not store
+            full credit card numbers — payment details are handled by{' '}
+            <a href="https://stripe.com">Stripe</a>.
+          </li>
         </ul>
 
         <h2>How we use Google user data</h2>
@@ -73,6 +81,10 @@ export function PrivacyPage() {
           </li>
           <li>
             Show photos you explicitly pick on those displays.
+          </li>
+          <li>
+            Provide Pro features (higher display and view limits) when you
+            subscribe.
           </li>
         </ul>
         <p>
@@ -101,7 +113,21 @@ export function PrivacyPage() {
             People you invite to a display, who can see the calendar events
             and photos you put on that display.
           </li>
+          <li>
+            Stripe, when you subscribe to Pro or manage billing through the
+            Customer Portal. Stripe processes payments under its own privacy
+            policy.
+          </li>
         </ul>
+
+        <h2>Subscriptions and payments</h2>
+        <p>
+          Paid plans are optional. When you upgrade, checkout and subscription
+          management are provided by Stripe. We receive confirmation of your
+          subscription status and linked Stripe identifiers so we can apply Pro
+          entitlements in the app. We do not sell payment data or use it for
+          advertising.
+        </p>
 
         <h2>Data protection mechanisms for sensitive data</h2>
         <p>
@@ -164,8 +190,14 @@ export function PrivacyPage() {
           We keep account and display data while your account is active. You can
           delete your account anytime from the profile menu in the app (avatar in
           the top bar). That removes your account, owned displays, saved layouts,
-          and stored Google tokens. Displays shared with you by others are not
-          affected. You can also email{' '}
+          and stored Google tokens. If you have an active paid subscription,
+          cancel it first from <strong>Manage subscription</strong> in the
+          profile menu (Stripe Customer Portal) so billing stops. Account
+          deletion does not automatically cancel Stripe subscriptions today —
+          email{' '}
+          <a href="mailto:support@homeslate.dev">support@homeslate.dev</a> if
+          you need help. Displays shared with you by others are not affected.
+          You can also email{' '}
           <a href="mailto:support@homeslate.dev">support@homeslate.dev</a> or
           revoke Homeslate in{' '}
           <a href="https://myaccount.google.com/permissions">

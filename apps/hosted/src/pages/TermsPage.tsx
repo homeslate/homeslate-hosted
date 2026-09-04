@@ -8,7 +8,7 @@ export function TermsPage() {
       <article className={classes.article}>
         <p className={classes.eyebrow}>Homeslate</p>
         <h1>Terms of Service</h1>
-        <p className={classes.updated}>Last updated August 31, 2026</p>
+        <p className={classes.updated}>Last updated September 3, 2026</p>
         <p>
           These terms govern use of the hosted Homeslate app at{' '}
           <a href="https://homeslate.dev">homeslate.dev</a>. By signing in or
@@ -38,6 +38,30 @@ export function TermsPage() {
           attempt to break into the service, scrape other people&apos;s data,
           or use it to send spam or abuse Google APIs. We may suspend access
           if we need to protect the service or other users.
+        </p>
+
+        <h2>Plans and subscriptions</h2>
+        <p>
+          Homeslate offers a free plan with limited displays and views, and an
+          optional paid <strong>Pro</strong> plan with higher limits. Prices,
+          billing interval (monthly or annual), and features are shown when you
+          upgrade. Payments are processed by{' '}
+          <a href="https://stripe.com">Stripe</a>; we do not store your full
+          card number.
+        </p>
+        <p>
+          When you subscribe, you authorize recurring charges until you cancel.
+          Manage or cancel your subscription anytime from{' '}
+          <strong>Manage subscription</strong> in the profile menu (Stripe
+          Customer Portal). If you cancel, you typically keep Pro access through
+          the end of the current billing period unless Stripe or your Portal
+          settings say otherwise. After that, your account returns to the free
+          plan and free-tier limits apply again.
+        </p>
+        <p>
+          Fees are generally non-refundable except where required by law. If
+          billing fails, we may downgrade your plan or suspend Pro features
+          until payment is resolved.
         </p>
 
         <h2>Your content</h2>
