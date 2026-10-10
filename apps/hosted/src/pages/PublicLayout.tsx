@@ -2,6 +2,7 @@ import { useEffect, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@mantine/core';
 import { IconBrandGoogle } from '@tabler/icons-react';
+import { HomeslateMark } from '../components/HomeslateMark';
 import { useAuth } from '../contexts/AuthContext';
 import classes from './PublicLayout.module.css';
 
@@ -19,8 +20,8 @@ export function PublicLayout({ children }: { children: ReactNode }) {
     <div className={classes.shell}>
       <header className={classes.header}>
         <Link to="/" className={classes.brand}>
-          <img src="/icon.svg" alt="" width={32} height={32} />
-          <span>Homeslate</span>
+          <HomeslateMark size={32} className={classes.brandMark} />
+          <span>HomeSlate</span>
         </Link>
         <nav className={classes.nav} aria-label="Site">
           <Link to="/privacy" className={classes.navLink}>Privacy</Link>

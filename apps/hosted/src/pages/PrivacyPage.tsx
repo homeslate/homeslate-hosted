@@ -36,10 +36,12 @@ export function PrivacyPage() {
           </li>
           <li>
             <strong>Google Calendar data.</strong> Calendar widgets fetch the
-            calendars you select and their upcoming events, including titles,
-            times, and related calendar metadata. From a display you can also
-            create, edit, and delete events on those calendars. That data is
-            requested from Google to run those features. We do not sell it.
+            calendars you select and their events, including titles, times, and
+            related calendar metadata. Display devices may keep a short-lived
+            local copy on the device so widgets stay stable when the network
+            hiccups. From a display you can also create, edit, and delete events
+            on those calendars. That data is requested from Google to run those
+            features. We do not sell it.
           </li>
           <li>
             <strong>Google Photos you pick.</strong> If you use Google&apos;s

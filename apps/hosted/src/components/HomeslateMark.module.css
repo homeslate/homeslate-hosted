@@ -1,0 +1,16 @@
+.svg {
+  display: block;
+  flex-shrink: 0;
+}
+
+.bar {
+  fill: var(--homeslate-mark);
+}
+
+.accent {
+  fill: var(--homeslate-mark-accent);
+}
+
+.frame {
+  fill: var(--homeslate-icon-bg);
+}

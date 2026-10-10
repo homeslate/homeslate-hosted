@@ -44,13 +44,13 @@ export default defineConfig(() => ({
       mode: 'development',
       registerType: 'prompt',
       minify: false,
-      includeAssets: ['icon.svg', 'vite.svg', 'icons/*.png'],
+      includeAssets: ['icon.svg', 'icons/*.png'],
       manifest: {
         name: 'Homeslate',
         short_name: 'Homeslate',
         description: 'Smart home display platform',
-        theme_color: '#1a1b1e',
-        background_color: '#1a1b1e',
+        theme_color: '#11181d',
+        background_color: '#11181d',
         display: 'standalone',
         // display_override: fullscreen hides the Android status bar entirely
         // when the PWA is launched. 'standalone' is the fallback for browsers

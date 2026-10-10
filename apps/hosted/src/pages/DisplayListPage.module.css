@@ -19,7 +19,7 @@
 }
 
 .logo {
-  color: var(--mantine-color-indigo-4);
+  display: block;
 }
 
 .title {

@@ -26,15 +26,14 @@
   gap: 0.65rem;
   color: #e6e4dc;
   text-decoration: none;
-  font-family: 'Space Grotesk', 'Outfit', sans-serif;
+  font-family: var(--token-font-base);
   font-weight: 600;
   letter-spacing: -0.02em;
   font-size: 1.05rem;
 }
 
-.brand img {
+.brandMark {
   display: block;
-  border-radius: 8px;
 }
 
 .nav {

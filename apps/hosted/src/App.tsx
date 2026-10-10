@@ -43,11 +43,13 @@ function PageLoader() {
   );
 }
 
+const SITE_FONT = '"Public Sans", "Helvetica Neue", Arial, sans-serif';
+
 const DEFAULT_MANTINE_THEME = createTheme({
   primaryColor: 'indigo',
-  fontFamily: '"Outfit", "Inter", -apple-system, BlinkMacSystemFont, sans-serif',
+  fontFamily: SITE_FONT,
   headings: {
-    fontFamily: '"Outfit", "Inter", -apple-system, BlinkMacSystemFont, sans-serif',
+    fontFamily: SITE_FONT,
   },
   colors: {
     dark: [
@@ -77,6 +79,8 @@ function MantineBridge({ children }: { children: ReactNode }) {
       createTheme({
         ...DEFAULT_MANTINE_THEME,
         ...mantineThemeFromResolved(resolved),
+        fontFamily: SITE_FONT,
+        headings: { fontFamily: SITE_FONT },
       }),
     [resolved],
   );

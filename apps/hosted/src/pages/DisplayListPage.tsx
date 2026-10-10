@@ -25,6 +25,7 @@ import {
 } from '@tabler/icons-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useDashboardStore } from '../store/dashboardStore';
+import { HomeslateMark } from '../components/HomeslateMark';
 import { ShareDisplayModal } from '../components/ShareDisplayModal';
 import { RegisterDeviceModal } from '../components/RegisterDeviceModal';
 import { UpgradeModal } from '../components/UpgradeModal';
@@ -214,7 +215,7 @@ export function DisplayListPage() {
     <div className={classes.root}>
       <header className={classes.header}>
         <Group gap="sm">
-          <IconLayoutDashboard size={24} className={classes.logo} />
+          <HomeslateMark size={24} className={classes.logo} />
           <Title order={4} className={classes.title}>Your Displays</Title>
           <PlanUsageIndicator
             usage={accountUsage}

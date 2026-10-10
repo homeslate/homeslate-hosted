@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Space+Grotesk:wght@300;400;500;600;700&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=Nunito:wght@300;400;500;600;700&family=Sora:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500&family=Space+Mono:wght@400;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Public+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400;1,600&family=Outfit:wght@300;400;500;600;700&family=Space+Grotesk:wght@300;400;500;600;700&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=Nunito:wght@300;400;500;600;700&family=Sora:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500&family=Space+Mono:wght@400;700&display=swap');
 
 :root {
   /* Theme defaults (Cosmos) */
@@ -15,7 +15,10 @@
   --token-text-primary: #e8e8f0;
   --token-text-muted: #6c6c7e;
   --token-glow: rgba(99, 102, 241, 0.3);
-  --token-font-base: 'Outfit', 'Inter', sans-serif;
+  --token-font-base: 'Public Sans', 'Helvetica Neue', Arial, sans-serif;
+  --homeslate-mark: #f4f5f6;
+  --homeslate-mark-accent: #22aec2;
+  --homeslate-icon-bg: #11181d;
   /* Spacing / widget chrome — keeps layout density when viewer theme vars aren't mounted yet */
   --token-spacing-0: 0px;
   --token-spacing-1: 4px;
@@ -42,7 +45,10 @@
   --token-glow: rgba(99, 102, 241, 0.3);
   --token-interactive-primary-bg: #6366f1;
   --token-interactive-primary-fg: #ffffff;
-  --token-font-base: 'Inter', sans-serif;
+  --token-font-base: 'Public Sans', 'Helvetica Neue', Arial, sans-serif;
+  --homeslate-mark: #f4f5f6;
+  --homeslate-mark-accent: #22aec2;
+  --homeslate-icon-bg: #11181d;
   --token-spacing-0: 0px;
   --token-spacing-1: 4px;
   --token-spacing-2: 8px;
@@ -88,7 +94,14 @@ html.public-site #root {
   overflow: auto;
 }
 
+:root[data-mantine-color-scheme='light'] {
+  --homeslate-mark: #11181d;
+  --homeslate-mark-accent: #0b9cae;
+  --homeslate-icon-bg: #ffffff;
+}
+
 body {
+  font-family: var(--token-font-base);
   background: var(--token-surface-canvas, #0a0a0f);
   background-attachment: fixed;
   overscroll-behavior: none;

@@ -7,7 +7,7 @@
 }
 
 .heroCopy h1 {
-  font-family: 'Space Grotesk', 'Outfit', sans-serif;
+  font-family: var(--token-font-base);
   font-size: clamp(2.4rem, 5vw, 3.6rem);
   font-weight: 600;
   letter-spacing: -0.04em;
@@ -84,7 +84,7 @@
 
 .clock {
   margin: 0;
-  font-family: 'Space Grotesk', 'Outfit', sans-serif;
+  font-family: var(--token-font-base);
   font-size: 3.4rem;
   font-weight: 600;
   letter-spacing: -0.06em;
@@ -122,7 +122,7 @@
 }
 
 .section h2 {
-  font-family: 'Space Grotesk', 'Outfit', sans-serif;
+  font-family: var(--token-font-base);
   font-size: 1.5rem;
   letter-spacing: -0.03em;
   margin: 0 0 1rem;

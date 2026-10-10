@@ -1,6 +1,7 @@
 import { Center, Paper, Title, Text, Button, Stack, Anchor } from '@mantine/core';
-import { IconLayoutDashboard, IconBrandGoogle } from '@tabler/icons-react';
+import { IconBrandGoogle } from '@tabler/icons-react';
 import { Link } from 'react-router-dom';
+import { HomeslateMark } from '../components/HomeslateMark';
 import { useAuth } from '../contexts/AuthContext';
 import classes from './AuthPage.module.css';
 
@@ -12,11 +13,9 @@ export function AuthPage() {
       <Center className={classes.center}>
         <Paper className={classes.card} p="xl" radius="lg">
           <Stack align="center" gap="lg">
-            <div className={classes.iconWrap}>
-              <IconLayoutDashboard size={48} />
-            </div>
+            <HomeslateMark framed size={72} className={classes.icon} />
             <Stack align="center" gap={4}>
-              <Title order={2} className={classes.title}>Homeslate</Title>
+              <Title order={2} className={classes.title}>HomeSlate</Title>
               <Text c="dimmed" size="sm" ta="center">
                 Manage your home displays from any device
               </Text>
